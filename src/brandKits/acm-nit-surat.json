@@ -1,0 +1,47 @@
+{
+  "id": "acm-nit-surat",
+  "name": "ACM NIT Surat",
+  "version": 1,
+  "logos": {
+    "acm": {
+      "id": "acm",
+      "name": "ACM Logo",
+      "svgUrl": "/assets/acm-logo.svg",
+      "aspectRatio": 1.0,
+      "clearSpaceMm": 2,
+      "minWidthMm": 10
+    },
+    "svnit": {
+      "id": "svnit",
+      "name": "SVNIT Logo",
+      "svgUrl": "/assets/svnit-logo.svg",
+      "aspectRatio": 1.0,
+      "clearSpaceMm": 2,
+      "minWidthMm": 10
+    }
+  },
+  "colors": {
+    "brand-blue":     "#1a35de",
+    "brand-blue-light": "#5f90ff",
+    "brand-dark":     "#0f111a",
+    "white":          "#ffffff",
+    "text-primary":   "#f8fafc",
+    "text-secondary": "#94a3b8",
+    "success":        "#22c55e",
+    "warning":        "#f59e0b",
+    "error":          "#ef4444"
+  },
+  "fonts": {
+    "primary": {
+      "family": "Inter",
+      "weights": [300, 400, 500, 600, 700],
+      "url": "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+    },
+    "display": {
+      "family": "Space Grotesk",
+      "weights": [400, 500, 600, 700],
+      "url": "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    }
+  },
+  "strictLogoColors": true
+}
