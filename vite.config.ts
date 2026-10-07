@@ -18,4 +18,16 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('jspdf') || id.includes('pdf-lib') || id.includes('svg2pdf.js')) {
+            return 'pdf-libs';
+          }
+        },
+      },
+    },
+  },
 })
