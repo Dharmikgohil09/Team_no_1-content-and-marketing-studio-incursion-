@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { supabaseServer } from './supabase'
 
 dotenv.config()
 
@@ -79,10 +80,19 @@ app.post('/api/llm/refine', async (req, res) => {
 
 // ─── Health check ────────────────────────────────────────────────────────
 
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', async (_req, res) => {
+  let supabaseStatus = 'disconnected'
+  try {
+    const { error } = await supabaseServer.auth.getSession()
+    if (!error) supabaseStatus = 'connected'
+  } catch (err) {
+    supabaseStatus = 'error'
+  }
+
   res.json({ 
     status: 'ok', 
     llm: !!process.env.GEMINI_API_KEY ? 'enabled' : 'disabled (deterministic mode)',
+    supabase: supabaseStatus,
     ts: new Date().toISOString()
   })
 })
@@ -90,4 +100,6 @@ app.get('/api/health', (_req, res) => {
 app.listen(PORT, () => {
   console.log(`\n🚀 CMS Server running at http://localhost:${PORT}`)
   console.log(`   LLM mode: ${process.env.GEMINI_API_KEY ? '✓ Gemini API' : '⚠ No API key — deterministic fallback'}`)
+  console.log(`   Supabase: ${process.env.VITE_SUPABASE_URL ? '✓ Connected' : '⚠ Credentials missing'}`)
 })
+
