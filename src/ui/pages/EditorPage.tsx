@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { useProjectStore } from '../../store/projectStore'
 import { CardPreview } from '../components/CardPreview'
 import { getDefaultBrandKit } from '../../brandKits/loader'
+import { DEFAULT_SVNIT_LOGO, DEFAULT_ACM_LOGO } from '../../brandKits/defaultLogos'
 import { DEFAULT_ROLES } from '../../core/schema/Role'
 import type { CardTemplate } from '../../core/schema/CardTemplate'
-import type { Element, TextElement, ShapeElement } from '../../core/schema/Element'
+import type { Element, TextElement, ShapeElement, ImageElement } from '../../core/schema/Element'
 
 const SAMPLE_PERSON = {
   id: 'SAMPLE-001',
@@ -24,11 +25,45 @@ export function EditorPage() {
   const saveVersion       = useProjectStore(s => s.saveVersion)
   const setWizardStep     = useProjectStore(s => s.setWizardStep)
 
+  const instituteLogo      = useProjectStore(s => s.instituteLogo)
+  const clubLogo           = useProjectStore(s => s.clubLogo)
+  const setInstituteLogo   = useProjectStore(s => s.setInstituteLogo)
+  const setClubLogo        = useProjectStore(s => s.setClubLogo)
+  const resetInstituteLogo = useProjectStore(s => s.resetInstituteLogo)
+  const resetClubLogo      = useProjectStore(s => s.resetClubLogo)
+
+  const instituteInputRef = useRef<HTMLInputElement>(null)
+  const clubInputRef      = useRef<HTMLInputElement>(null)
+
   const [selectedEl, setSelectedEl] = useState<string | null>(null)
   const [previewRole, setPreviewRole] = useState<string>('participant')
   const [history, setHistory]         = useState<CardTemplate[]>([])
   const [historyIdx, setHistoryIdx]   = useState(-1)
   const [showValidation, setShowValidation] = useState(false)
+
+  function handleInstituteLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setInstituteLogo(reader.result)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function handleClubLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setClubLogo(reader.result)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
 
   const brandKit = getDefaultBrandKit()
   const roles    = project?.roles?.length ? project.roles : DEFAULT_ROLES.slice(0, 3)
@@ -153,6 +188,100 @@ export function EditorPage() {
 
         {/* Properties panel */}
         <div className="space-y-4">
+          {/* Card Logos (Institute & Club) */}
+          <div className="glass p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="section-heading text-sm">Card Logos</h3>
+              <span className="text-[10px] text-slate-400">SVNIT & ACM</span>
+            </div>
+
+            {/* Institute Logo */}
+            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-300">Institute Logo</span>
+                {instituteLogo === DEFAULT_SVNIT_LOGO ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-acm-600/20 text-acm-300 border border-acm-500/30">SVNIT Default</span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Custom Uploaded</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-surface-900 border border-white/10 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                  <img src={instituteLogo} alt="Institute Logo" className="max-w-full max-h-full object-contain" />
+                </div>
+                <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                  <input
+                    ref={instituteInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleInstituteLogoUpload}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => instituteInputRef.current?.click()}
+                    className="btn-secondary text-xs py-1.5 px-2.5 text-center truncate"
+                  >
+                    📁 Change Logo
+                  </button>
+                  {instituteLogo !== DEFAULT_SVNIT_LOGO && (
+                    <button
+                      type="button"
+                      onClick={resetInstituteLogo}
+                      className="text-[11px] text-slate-400 hover:text-white underline text-left"
+                    >
+                      Reset to SVNIT
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Club / Event Logo */}
+            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-300">Club / Event Logo</span>
+                {clubLogo === DEFAULT_ACM_LOGO ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-acm-600/20 text-acm-300 border border-acm-500/30">ACM Default</span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Custom Uploaded</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-surface-900 border border-white/10 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                  <img src={clubLogo} alt="Club Logo" className="max-w-full max-h-full object-contain" />
+                </div>
+                <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                  <input
+                    ref={clubInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleClubLogoUpload}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => clubInputRef.current?.click()}
+                    className="btn-secondary text-xs py-1.5 px-2.5 text-center truncate"
+                  >
+                    📁 Change Logo
+                  </button>
+                  {clubLogo !== DEFAULT_ACM_LOGO && (
+                    <button
+                      type="button"
+                      onClick={resetClubLogo}
+                      className="text-[11px] text-slate-400 hover:text-white underline text-left"
+                    >
+                      Reset to ACM
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Element list */}
           <div className="glass p-4">
             <h3 className="section-heading text-sm mb-3">Elements</h3>
@@ -299,6 +428,55 @@ function ElementProperties({ element, onChange }: {
             value={element.fill || '#000000'}
             onChange={e => onChange({ fill: e.target.value } as any)}
           />
+        </div>
+        <div>
+          <label className="label">Opacity</label>
+          <input
+            type="range"
+            className="w-full"
+            min={0} max={1} step={0.05}
+            value={element.opacity}
+            onChange={e => onChange({ opacity: Number(e.target.value) } as any)}
+          />
+          <span className="text-xs text-slate-500">{(element.opacity * 100).toFixed(0)}%</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (element.type === 'image') {
+    const fileRef = useRef<HTMLInputElement>(null)
+    const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          onChange({ src: reader.result } as any)
+        }
+      }
+      reader.readAsDataURL(file)
+    }
+
+    return (
+      <div className="space-y-3">
+        <div>
+          <label className="label">Image / Logo Preview</label>
+          <div className="w-full h-24 rounded-lg bg-surface-900 border border-white/10 flex items-center justify-center p-2 mb-2 overflow-hidden">
+            {element.src ? (
+              <img src={element.src} alt={element.id} className="max-w-full max-h-full object-contain" />
+            ) : (
+              <span className="text-xs text-slate-500">No image loaded</span>
+            )}
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="btn-secondary w-full text-xs py-2"
+          >
+            📁 Upload / Replace Image
+          </button>
         </div>
         <div>
           <label className="label">Opacity</label>

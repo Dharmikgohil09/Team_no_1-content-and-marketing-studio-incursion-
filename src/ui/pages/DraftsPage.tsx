@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProjectStore } from '../../store/projectStore'
-import { generateDraftsDeterministic } from '../../core/ai/draftGenerator'
+import { generateDrafts } from '../../core/ai/draftGenerator'
 import { CardPreview } from '../components/CardPreview'
 import type { CardTemplate } from '../../core/schema/CardTemplate'
 import type { Role } from '../../core/schema/Role'
@@ -26,6 +26,9 @@ export function DraftsPage() {
   const setActiveTemplate = useProjectStore(s => s.setActiveTemplate)
   const setWizardStep     = useProjectStore(s => s.setWizardStep)
 
+  const instituteLogo     = useProjectStore(s => s.instituteLogo)
+  const clubLogo          = useProjectStore(s => s.clubLogo)
+
   const [loading, setLoading]           = useState(false)
   const [drafts, setLocalDrafts]        = useState<CardTemplate[]>([])
   const [selectedIdx, setSelectedIdx]   = useState(0)
@@ -43,7 +46,7 @@ export function DraftsPage() {
   async function generate() {
     setLoading(true)
     try {
-      const generated = generateDraftsDeterministic(project!.eventContext, project!.roles)
+      const generated = await generateDrafts(project!.eventContext, project!.roles, { instituteLogo, clubLogo })
       setLocalDrafts(generated)
       setDrafts(generated)
     } finally {

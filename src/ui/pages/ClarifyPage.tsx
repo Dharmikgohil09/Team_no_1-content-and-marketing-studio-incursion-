@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProjectStore } from '../../store/projectStore'
 import { generateQuestions, type Question } from '../../core/ai/questionGenerator'
+import { DEFAULT_SVNIT_LOGO, DEFAULT_ACM_LOGO } from '../../brandKits/defaultLogos'
 import type { EventContext } from '../../core/schema/EventContext'
 import { DEFAULT_ROLES } from '../../core/schema/Role'
 
@@ -12,8 +13,38 @@ export function ClarifyPage() {
   const setRoles        = useProjectStore(s => s.setRoles)
   const setWizardStep   = useProjectStore(s => s.setWizardStep)
 
+  const instituteLogo      = useProjectStore(s => s.instituteLogo)
+  const clubLogo           = useProjectStore(s => s.clubLogo)
+  const setInstituteLogo   = useProjectStore(s => s.setInstituteLogo)
+  const setClubLogo        = useProjectStore(s => s.setClubLogo)
+  const resetInstituteLogo = useProjectStore(s => s.resetInstituteLogo)
+  const resetClubLogo      = useProjectStore(s => s.resetClubLogo)
+
+  const instInputRef = useRef<HTMLInputElement>(null)
+  const clubInputRef = useRef<HTMLInputElement>(null)
+
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({})
   const [questions, setQuestions] = useState<Question[]>([])
+
+  function handleInstituteUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') setInstituteLogo(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function handleClubUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') setClubLogo(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
 
   useEffect(() => {
     if (!project) { navigate('/studio/describe'); return }
@@ -118,6 +149,74 @@ export function ClarifyPage() {
           ))}
         </div>
       )}
+
+      {/* Logos Section */}
+      <div className="glass p-5 mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-sm font-semibold text-white">Event & Institute Logos</h3>
+            <p className="text-xs text-slate-400">SVNIT is used as default institute logo and ACM for club/event logo. You can upload custom logos anytime.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Institute Logo */}
+          <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-surface-900 border border-white/10 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+              <img src={instituteLogo} alt="SVNIT Logo" className="max-w-full max-h-full object-contain" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="text-xs font-medium text-slate-200">Institute Logo</span>
+                <span className="text-[10px] text-slate-400">{instituteLogo === DEFAULT_SVNIT_LOGO ? 'SVNIT' : 'Custom'}</span>
+              </div>
+              <input ref={instInputRef} type="file" accept="image/*" className="hidden" onChange={handleInstituteUpload} />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => instInputRef.current?.click()}
+                  className="btn-secondary text-[11px] py-1 px-2.5"
+                >
+                  📁 Change Logo
+                </button>
+                {instituteLogo !== DEFAULT_SVNIT_LOGO && (
+                  <button type="button" onClick={resetInstituteLogo} className="text-[11px] text-slate-400 hover:text-white underline">
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Club / Event Logo */}
+          <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-surface-900 border border-white/10 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+              <img src={clubLogo} alt="ACM Logo" className="max-w-full max-h-full object-contain" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="text-xs font-medium text-slate-200">Club / Event Logo</span>
+                <span className="text-[10px] text-slate-400">{clubLogo === DEFAULT_ACM_LOGO ? 'ACM' : 'Custom'}</span>
+              </div>
+              <input ref={clubInputRef} type="file" accept="image/*" className="hidden" onChange={handleClubUpload} />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => clubInputRef.current?.click()}
+                  className="btn-secondary text-[11px] py-1 px-2.5"
+                >
+                  📁 Change Logo
+                </button>
+                {clubLogo !== DEFAULT_ACM_LOGO && (
+                  <button type="button" onClick={resetClubLogo} className="text-[11px] text-slate-400 hover:text-white underline">
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Progress */}
       <div className="mt-6 mb-4 flex items-center justify-between text-xs text-slate-500">

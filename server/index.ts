@@ -68,14 +68,63 @@ User description: "${text}"
 // ─── Generate drafts endpoint ────────────────────────────────────────────
 
 app.post('/api/llm/generate-drafts', async (req, res) => {
-  // In no-LLM mode, this just signals to use built-in templates
-  res.status(501).json({ error: 'Use client-side deterministic drafts' })
+  try {
+    const { event, roles } = req.body
+    if (!process.env.GEMINI_API_KEY) {
+      // In deterministic mode, return 200 with notice to use client generator
+      return res.status(200).json({ mode: 'deterministic' })
+    }
+
+    const genAI = getGenAI()
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+
+    const prompt = `
+You are a expert graphic design generator for event ID cards.
+Given this event details: ${JSON.stringify(event)}
+And these roles: ${JSON.stringify(roles)}
+
+Suggest theme colors (primary, accent, background) and title style for 3 distinct card designs (Cyber/Modern, Bold Accent, Minimal Clean).
+Return ONLY valid JSON matching this shape:
+{
+  "theme": { "primary": "#hex", "accent": "#hex", "bgDark": "#hex" },
+  "styleHint": "description string"
+}
+`
+    const result = await model.generateContent(prompt)
+    const raw = result.response.text().trim()
+    const json = JSON.parse(raw.replace(/```json?\n?/g, '').replace(/```/g, ''))
+    res.json(json)
+  } catch (err: any) {
+    console.error('LLM generate-drafts error:', err.message)
+    res.status(200).json({ mode: 'deterministic' })
+  }
 })
 
 // ─── NL Refinement endpoint ──────────────────────────────────────────────
 
 app.post('/api/llm/refine', async (req, res) => {
-  res.status(501).json({ error: 'Use client-side deterministic refinement' })
+  try {
+    const { template, instruction } = req.body
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(200).json(template)
+    }
+
+    const genAI = getGenAI()
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+
+    const prompt = `
+Modify this card template JSON according to user instruction: "${instruction}"
+Return ONLY updated valid JSON template.
+Template JSON: ${JSON.stringify(template)}
+`
+    const result = await model.generateContent(prompt)
+    const raw = result.response.text().trim()
+    const json = JSON.parse(raw.replace(/```json?\n?/g, '').replace(/```/g, ''))
+    res.json(json)
+  } catch (err: any) {
+    console.error('LLM refine error:', err.message)
+    res.status(200).json(req.body.template)
+  }
 })
 
 // ─── Health check ────────────────────────────────────────────────────────
