@@ -15,6 +15,7 @@ const SAMPLE_PERSON = {
   role: 'participant',
   email: 'aarav@example.com',
   team: 'Team Alpha',
+  // No photoUrl — will show initials fallback by design
   photoUrl: '',
   extra: {},
 }

@@ -67,14 +67,14 @@ export function renderCard(opts: RenderOptions): RenderResult {
   data-card-height="${h}mm"
 >
   <defs>
-    ${buildDefs(template, role)}
+    ${buildDefs(template, role, w, h)}
   </defs>
-  <!-- Card background -->
-  <rect x="${-bleed}" y="${-bleed}" width="${totalW}" height="${totalH}" fill="white"/>
+  <!-- Card background (transparent — template bg shapes define card color) -->
+  <rect x="${-bleed}" y="${-bleed}" width="${totalW}" height="${totalH}" fill="#ffffff"/>
   <!-- Bleed indicator -->
   ${bleed > 0 ? `<rect x="${-bleed}" y="${-bleed}" width="${totalW}" height="${totalH}" fill="none" stroke="#cccccc" stroke-width="0.25" stroke-dasharray="1,1"/>` : ''}
-  <!-- Card face -->
-  <g id="card-face" transform="translate(0,0)">
+  <!-- Card face — clipped to card bounds -->
+  <g id="card-face" clip-path="url(#card-clip-${template.id})" transform="translate(0,0)">
 ${elementsSVG}
   </g>
   ${bleed > 0 ? cropMarksSVG(w, h, bleed) : ''}
@@ -83,14 +83,20 @@ ${elementsSVG}
   return { svg, warnings }
 }
 
-function buildDefs(template: CardTemplate, role: Role): string {
+function buildDefs(template: CardTemplate, role: Role, w?: number, h?: number): string {
+  const cardW = w ?? (template.orientation === 'portrait' ? template.size.heightMm : template.size.widthMm)
+  const cardH = h ?? (template.orientation === 'portrait' ? template.size.widthMm : template.size.heightMm)
+
   const allElements = [...template.elements, ...(template.backElements ?? [])]
-  const imageClipPaths = allElements
-    .filter(el => el.type === 'image' && (el as any).cornerRadius > 0)
+
+  // Clip paths for image/photo elements
+  const elemClipPaths = allElements
+    .filter(el => el.type === 'image' || el.type === 'photo')
     .map(el => {
-      const rx = (el as any).cornerRadius
-      return `<clipPath id="img-clip-${el.id}">
-        <rect x="${el.anchor.x}mm" y="${el.anchor.y}mm" width="${el.anchor.w}mm" height="${el.anchor.h}mm" rx="${rx}mm" ry="${rx}mm" />
+      const rx = (el as any).cornerRadius ?? 0
+      const a  = el.anchor
+      return `<clipPath id="el-clip-${el.id}">
+        <rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm" rx="${rx}mm" ry="${rx}mm" />
       </clipPath>`
     })
     .join('\n')
@@ -101,12 +107,12 @@ function buildDefs(template: CardTemplate, role: Role): string {
       text { font-family: 'Space Grotesk', 'Inter', -apple-system, sans-serif; }
     </style>
     <clipPath id="card-clip-${template.id}">
-      <rect x="0" y="0" width="${template.orientation === 'portrait' ? template.size.heightMm : template.size.widthMm}" height="${template.orientation === 'portrait' ? template.size.widthMm : template.size.heightMm}"/>
+      <rect x="0" y="0" width="${cardW}mm" height="${cardH}mm"/>
     </clipPath>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="rgba(0,0,0,0.4)"/>
     </filter>
-    ${imageClipPaths}
+    ${elemClipPaths}
   `
 }
 
@@ -214,9 +220,8 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
 function renderImage(el: ImageElement, ctx: BindingContext, warnings: string[]): string {
   const a    = el.anchor
   const src  = resolveBindings(el.src, ctx)
-  const clip = el.cornerRadius > 0
-    ? `clip-path="url(#img-clip-${el.id})"`
-    : ''
+  // Always clip to element bounds
+  const clip = `clip-path="url(#el-clip-${el.id})"`
 
   const preserveAR = el.preserveAspectRatio
     ? el.fit === 'contain' ? 'xMidYMid meet' : 'xMidYMid slice'
@@ -283,47 +288,49 @@ function renderShape(el: ShapeElement, ctx: BindingContext): string {
 }
 
 function renderPhoto(el: PhotoElement, ctx: BindingContext, warnings: string[]): string {
-  const a      = el.anchor
-  const src    = resolveBindings(el.binding, ctx)
-  const cx     = a.x + a.w / 2
-  const cy     = a.y + a.h / 2
-  const r      = Math.min(a.w, a.h) / 2
+  const a   = el.anchor
+  const src = resolveBindings(el.binding, ctx)
+  const cx  = a.x + a.w / 2
+  const cy  = a.y + a.h / 2
+  const r   = Math.min(a.w, a.h) / 2
 
+  // Inline clip path for the photo shape (circle/rounded/square)
   const clipId = `photo-clip-${el.id}`
-
-  let clipPath = ''
+  let shapeDef = ''
   if (el.shape === 'circle') {
-    clipPath = `<clipPath id="${clipId}"><circle cx="${cx}mm" cy="${cy}mm" r="${r}mm"/></clipPath>`
+    shapeDef = `<circle cx="${cx}mm" cy="${cy}mm" r="${r}mm"/>`
   } else if (el.shape === 'rounded') {
     const rr = el.cornerRadius > 0 ? el.cornerRadius : r * 0.2
-    clipPath = `<clipPath id="${clipId}"><rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm" rx="${rr}mm"/></clipPath>`
+    shapeDef = `<rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm" rx="${rr}mm"/>`
   } else {
-    clipPath = `<clipPath id="${clipId}"><rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm"/></clipPath>`
+    shapeDef = `<rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm"/>`
   }
+  const clipPathDef = `<clipPath id="${clipId}">${shapeDef}</clipPath>`
 
   if (src) {
     return `
-    <defs>${clipPath}</defs>
+    <defs>${clipPathDef}</defs>
     <image id="${el.id}" href="${src}" x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm"
       preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>
     `
   }
 
-  // Fallback: initials avatar
-  warnings.push(`No photo for person "${resolveBindings(el.initialsBinding, ctx)}" — using initials`)
-  const name    = resolveBindings(el.initialsBinding, ctx)
+  // Fallback: colored initials avatar
+  const name     = resolveBindings(el.initialsBinding, ctx)
   const initials = getInitials(name)
   const bgColor  = resolveBindings(el.initialsBg, ctx) || ctx.role.palette.primary
-  const fontSizeMm = r * 0.7
+  const fontSizeMm = r * 0.65
 
   return `
-  <defs>${clipPath}</defs>
+  <defs>${clipPathDef}</defs>
   <g id="${el.id}" clip-path="url(#${clipId})">
-    <${el.shape === 'circle' ? `circle cx="${cx}mm" cy="${cy}mm" r="${r}mm"` : `rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm"`} fill="${bgColor}"/>
+    <${el.shape === 'circle'
+      ? `circle cx="${cx}mm" cy="${cy}mm" r="${r}mm"`
+      : `rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm"`} fill="${bgColor}"/>
     <text x="${cx}mm" y="${cy}mm"
-      font-family="Inter, sans-serif"
+      font-family="Space Grotesk, Inter, sans-serif"
       font-size="${fontSizeMm}mm"
-      font-weight="600"
+      font-weight="700"
       fill="${el.initialsColor}"
       text-anchor="middle"
       dominant-baseline="central"
