@@ -31,13 +31,12 @@ export async function generateDrafts(
 
 /** Pre-defined role color palettes for dynamic assignment */
 const ROLE_COLOR_PALETTES = [
-  { stroke: '#5f90ff', color: '#bbd4ff', fill: '#1a35de' }, // Blue (Participant)
-  { stroke: '#a78bfa', color: '#c4b5fd', fill: '#7c3aed' }, // Purple (Organizer)
-  { stroke: '#34d399', color: '#6ee7b7', fill: '#059669' }, // Emerald (Mentor)
-  { stroke: '#f59e0b', color: '#fcd34d', fill: '#d97706' }, // Amber (Volunteer)
-  { stroke: '#fb7185', color: '#fda4af', fill: '#e11d48' }, // Rose (Speaker)
-  { stroke: '#22d3ee', color: '#a5f3fc', fill: '#0891b2' }, // Cyan (VIP/Judge)
-  { stroke: '#f472b6', color: '#fbcfe8', fill: '#db2777' }, // Pink
+  { stroke: '#2563eb', color: '#60a5fa', fill: '#2563eb' }, // Royal Blue (Participant)
+  { stroke: '#7c3aed', color: '#c084fc', fill: '#7c3aed' }, // Electric Violet (Organizer)
+  { stroke: '#059669', color: '#34d399', fill: '#059669' }, // Emerald (Mentor)
+  { stroke: '#d97706', color: '#fbbf24', fill: '#d97706' }, // Amber (Volunteer)
+  { stroke: '#e11d48', color: '#fb7185', fill: '#e11d48' }, // Rose (Speaker)
+  { stroke: '#0891b2', color: '#38bdf8', fill: '#0891b2' }, // Cyan
 ]
 
 /**
@@ -134,33 +133,24 @@ export function generateDraftsDeterministic(
 
     // Customize Template Name & Description based on Event Context
     if (idx === 0) {
-      tpl.name = `${theme.tag} Gradient — ${eventName}`
-      tpl.description = `Dynamic ${theme.type} layout customized for ${eventName} with ${organizerName}.`
+      tpl.name = `Executive Split — ${eventName}`
+      tpl.description = `Dual-tone executive pass with white header, prominent circular photo, and dark credential section.`
     } else if (idx === 1) {
-      tpl.name = `Bold Band — ${eventName}`
-      tpl.description = `High contrast role band designed for ${eventName}.`
+      tpl.name = `Tech Indigo — ${eventName}`
+      tpl.description = `Futuristic tech badge with purple header, glowing avatar halo, and credential block.`
     } else {
-      tpl.name = `Minimal Clean — ${eventName}`
-      tpl.description = `Sleek, typography-first card layout customized for ${eventName}.`
+      tpl.name = `Matte Obsidian Accent — ${eventName}`
+      tpl.description = `Minimalist dark card with offset portrait frame and vibrant role color block.`
     }
 
     // Customize template elements
     tpl.elements = tpl.elements.map(el => {
       // Shape elements
       if (el.type === 'shape') {
-        if (el.id === 'bg-dark' || el.id === 'bg') {
-          return { ...el, fill: theme.bgDark }
-        }
-        if (el.id === 'geo-circle-1' || el.id === 'hero-band') {
-          return { ...el, fill: theme.primary }
-        }
-        if (el.id === 'geo-circle-2') {
-          return { ...el, fill: theme.accent }
-        }
         if (el.id === 'photo-ring' || el.id === 'avatar-border') {
           return { ...el, roleConditional: shapeStrokeConditional }
         }
-        if (el.id === 'role-badge' || el.id === 'role-indicator') {
+        if (el.id === 'role-badge' || el.id === 'role-indicator' || el.id === 'role-color-block' || el.id === 'bottom-accent-band' || el.id === 'hero-band') {
           return { ...el, roleConditional: shapeFillConditional }
         }
       }
@@ -171,13 +161,13 @@ export function generateDraftsDeterministic(
           return { ...el, content: organizerName }
         }
         if (el.id === 'event-name-header' || el.id === 'event-name' || el.id === 'event-title') {
-          return { ...el, content: eventName, color: theme.textHeader }
+          return { ...el, content: eventName }
         }
         if (el.id === 'event-tagline' && taglineText) {
           return { ...el, content: taglineText }
         }
         if (el.id === 'event-venue-date') {
-          const combined = [dateText, venueText].filter(Boolean).join(' • ')
+          const combined = [venueText, dateText].filter(Boolean).join(' • ')
           if (combined) {
             return { ...el, content: combined }
           }
@@ -199,27 +189,6 @@ export function generateDraftsDeterministic(
 
       return el
     })
-
-    // If template 1 (Bold Band), ensure date & venue element exists if provided
-    if (idx === 1 && (dateText || venueText)) {
-      const existingVenueDate = tpl.elements.find(e => e.id === 'event-venue-date')
-      if (!existingVenueDate) {
-        tpl.elements.push({
-          type: 'text',
-          id: 'event-venue-date',
-          anchor: { x: 30, y: 34, w: 52, h: 5 },
-          content: [dateText, venueText].filter(Boolean).join(' • '),
-          fontFamily: 'Inter',
-          fontSize: 5,
-          fontWeight: '400',
-          color: '#64748b',
-          align: 'left',
-          verticalAlign: 'middle',
-          maxLines: 1,
-          minFontSize: 4,
-        } as any)
-      }
-    }
 
     return tpl
   })

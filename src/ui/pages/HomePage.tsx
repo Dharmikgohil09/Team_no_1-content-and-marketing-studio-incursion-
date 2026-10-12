@@ -141,12 +141,12 @@ export function HomePage() {
                     ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
                   {DEMO_PEOPLE.map(person => {
                     const role = roleMap[person.role]
                     return (
                       <div key={person.id} className="space-y-2">
-                        <div className="card-preview-wrapper rounded-xl overflow-hidden">
+                        <div className="card-preview-wrapper rounded-xl overflow-hidden max-w-[260px] mx-auto shadow-2xl">
                           <CardPreview
                             template={tpl}
                             role={role}

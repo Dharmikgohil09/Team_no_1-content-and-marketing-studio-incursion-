@@ -153,7 +153,7 @@ export function EditorPage() {
 
           {/* Card canvas */}
           <div className="glass p-6 flex flex-col items-center gap-6">
-            <div className="w-full max-w-lg card-preview-wrapper">
+            <div className="w-full max-w-[340px] card-preview-wrapper">
               <CardPreview
                 template={template}
                 role={role}

@@ -243,7 +243,7 @@ function DraftCard({ draft, isSelected, onClick, roles, previewRoleId, person, b
       </div>
 
       {/* Card preview */}
-      <div className="rounded-xl overflow-hidden card-preview-wrapper">
+      <div className="rounded-xl overflow-hidden card-preview-wrapper max-w-[280px] mx-auto">
         <CardPreview
           template={draft}
           role={role ?? roles[0]}

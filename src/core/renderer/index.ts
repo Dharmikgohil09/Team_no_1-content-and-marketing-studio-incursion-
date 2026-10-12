@@ -62,6 +62,7 @@ export function renderCard(opts: RenderOptions): RenderResult {
   width="${mm(totalW)}mm"
   height="${mm(totalH)}mm"
   data-role="${role.id}"
+  class="svg-card-display"
   data-card-width="${w}mm"
   data-card-height="${h}mm"
 >
@@ -83,17 +84,29 @@ ${elementsSVG}
 }
 
 function buildDefs(template: CardTemplate, role: Role): string {
+  const allElements = [...template.elements, ...(template.backElements ?? [])]
+  const imageClipPaths = allElements
+    .filter(el => el.type === 'image' && (el as any).cornerRadius > 0)
+    .map(el => {
+      const rx = (el as any).cornerRadius
+      return `<clipPath id="img-clip-${el.id}">
+        <rect x="${el.anchor.x}mm" y="${el.anchor.y}mm" width="${el.anchor.w}mm" height="${el.anchor.h}mm" rx="${rx}mm" ry="${rx}mm" />
+      </clipPath>`
+    })
+    .join('\n')
+
   return `
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap');
-      text { font-family: 'Inter', sans-serif; }
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap');
+      text { font-family: 'Space Grotesk', 'Inter', -apple-system, sans-serif; }
     </style>
     <clipPath id="card-clip-${template.id}">
       <rect x="0" y="0" width="${template.orientation === 'portrait' ? template.size.heightMm : template.size.widthMm}" height="${template.orientation === 'portrait' ? template.size.widthMm : template.size.heightMm}"/>
     </clipPath>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="rgba(0,0,0,0.3)"/>
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="rgba(0,0,0,0.4)"/>
     </filter>
+    ${imageClipPaths}
   `
 }
 
@@ -175,21 +188,21 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
   const textAnchor = el.align === 'center' ? 'middle' : el.align === 'right' ? 'end' : 'start'
   const xPos = el.align === 'center' ? a.x + a.w / 2 : el.align === 'right' ? a.x + a.w : a.x
 
-  const lineHeightMm = fontSizeMm * 1.2
+  const lineHeightMm = fontSizeMm * 1.25
   const startY = el.verticalAlign === 'middle'
-    ? a.y + (a.h - fit.lines.length * lineHeightMm) / 2 + fontSizeMm * 0.8
+    ? a.y + (a.h - fit.lines.length * lineHeightMm) / 2 + fontSizeMm * 0.85
     : el.verticalAlign === 'bottom'
     ? a.y + a.h - (fit.lines.length - 1) * lineHeightMm
     : a.y + fontSizeMm * 0.9
 
   const tspans = fit.lines.map((line, i) =>
-    `<tspan x="${xPos}" dy="${i === 0 ? 0 : lineHeightMm}mm" xml:space="preserve">${escapeXml(line)}</tspan>`
+    `<tspan x="${xPos}mm" dy="${i === 0 ? 0 : lineHeightMm}mm" xml:space="preserve">${escapeXml(line)}</tspan>`
   ).join('')
 
   return `<text
     id="${el.id}"
     x="${xPos}mm" y="${startY}mm"
-    font-family="${el.fontFamily}, Inter, sans-serif"
+    font-family="${el.fontFamily}, 'Space Grotesk', 'Inter', sans-serif"
     font-size="${fontSizeMm}mm"
     font-weight="${fontWeight}"
     fill="${color}"
@@ -205,38 +218,33 @@ function renderImage(el: ImageElement, ctx: BindingContext, warnings: string[]):
     ? `clip-path="url(#img-clip-${el.id})"`
     : ''
 
-  const clipDef = el.cornerRadius > 0
-    ? `<!-- img clip defined in defs -->`
-    : ''
-
-  // For logos, we reference the SVG directly
   const preserveAR = el.preserveAspectRatio
     ? el.fit === 'contain' ? 'xMidYMid meet' : 'xMidYMid slice'
     : 'none'
 
-  if (el.isLogo && src.startsWith('/assets/')) {
-    return `<image
-      id="${el.id}"
-      href="${src}"
-      x="${a.x}mm" y="${a.y}mm"
-      width="${a.w}mm" height="${a.h}mm"
-      preserveAspectRatio="${preserveAR}"
-      opacity="${el.opacity}"
-    />`
-  }
-
   if (!src) {
-    warnings.push(`Missing image src in element "${el.id}"`)
-    return `<rect id="${el.id}" x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm" fill="#e2e8f0" stroke="#94a3b8" stroke-width="0.3"/>`
+    const rx = el.cornerRadius > 0 ? el.cornerRadius : 2
+    const cx = a.x + a.w / 2
+    const headR = a.w * 0.22
+    const headCy = a.y + a.h * 0.38
+    return `<g id="${el.id}" ${clip}>
+      <rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm" rx="${rx}mm" fill="#f8fafc" stroke="#cbd5e1" stroke-width="0.3"/>
+      <!-- Silhouette Head -->
+      <circle cx="${cx}mm" cy="${headCy}mm" r="${headR}mm" fill="#94a3b8"/>
+      <!-- Silhouette Shoulders -->
+      <path d="M ${a.x + a.w * 0.16} ${a.y + a.h} A ${a.w * 0.4} ${a.h * 0.35} 0 0 1 ${a.x + a.w * 0.84} ${a.y + a.h} Z" fill="#94a3b8"/>
+    </g>`
   }
 
   return `<image
     id="${el.id}"
     href="${src}"
+    xlink:href="${src}"
     x="${a.x}mm" y="${a.y}mm"
     width="${a.w}mm" height="${a.h}mm"
     preserveAspectRatio="${preserveAR}"
     opacity="${el.opacity}"
+    ${clip}
   />`
 }
 
