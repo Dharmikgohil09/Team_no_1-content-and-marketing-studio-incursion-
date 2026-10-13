@@ -20,6 +20,22 @@ function getGenAI() {
   return new GoogleGenerativeAI(key)
 }
 
+async function generateWithGemini(genAI: GoogleGenerativeAI, prompt: string): Promise<string> {
+  const models = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-2.5-flash-lite']
+  let lastErr: any = null
+  for (const m of models) {
+    try {
+      const model = genAI.getGenerativeModel({ model: m })
+      const res = await model.generateContent(prompt)
+      return res.response.text().trim()
+    } catch (e: any) {
+      lastErr = e
+      console.warn(`Model ${m} failed: ${e.message?.slice(0, 100)}. Trying fallback...`)
+    }
+  }
+  throw lastErr || new Error('All Gemini models failed')
+}
+
 // ─── Intent extraction endpoint ────────────────────────────────────────────
 
 app.post('/api/llm/extract-intent', async (req, res) => {
@@ -28,8 +44,6 @@ app.post('/api/llm/extract-intent', async (req, res) => {
     if (!text) { res.status(400).json({ error: 'text required' }); return }
 
     const genAI = getGenAI()
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-
     const prompt = `
 You are an event design assistant. Extract structured data from the user's event description.
 Return ONLY valid JSON matching this exact shape (no markdown, no explanation):
@@ -55,9 +69,8 @@ IMPORTANT: Only extract information explicitly mentioned. Do NOT invent data. Se
 
 User description: "${text}"
 `
-    const result = await model.generateContent(prompt)
-    const raw    = result.response.text().trim()
-    const json   = JSON.parse(raw.replace(/```json?\n?/g, '').replace(/```/g, ''))
+    const raw = await generateWithGemini(genAI, prompt)
+    const json = JSON.parse(raw.replace(/```json?\n?/g, '').replace(/```/g, ''))
     res.json(json)
   } catch (err: any) {
     console.error('LLM extract-intent error:', err.message)
@@ -71,13 +84,10 @@ app.post('/api/llm/generate-drafts', async (req, res) => {
   try {
     const { event, roles } = req.body
     if (!process.env.GEMINI_API_KEY) {
-      // In deterministic mode, return 200 with notice to use client generator
       return res.status(200).json({ mode: 'deterministic' })
     }
 
     const genAI = getGenAI()
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-
     const prompt = `
 You are a expert graphic design generator for event ID cards.
 Given this event details: ${JSON.stringify(event)}
@@ -90,8 +100,7 @@ Return ONLY valid JSON matching this shape:
   "styleHint": "description string"
 }
 `
-    const result = await model.generateContent(prompt)
-    const raw = result.response.text().trim()
+    const raw = await generateWithGemini(genAI, prompt)
     const json = JSON.parse(raw.replace(/```json?\n?/g, '').replace(/```/g, ''))
     res.json(json)
   } catch (err: any) {
@@ -110,15 +119,12 @@ app.post('/api/llm/refine', async (req, res) => {
     }
 
     const genAI = getGenAI()
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-
     const prompt = `
 Modify this card template JSON according to user instruction: "${instruction}"
 Return ONLY updated valid JSON template.
 Template JSON: ${JSON.stringify(template)}
 `
-    const result = await model.generateContent(prompt)
-    const raw = result.response.text().trim()
+    const raw = await generateWithGemini(genAI, prompt)
     const json = JSON.parse(raw.replace(/```json?\n?/g, '').replace(/```/g, ''))
     res.json(json)
   } catch (err: any) {
