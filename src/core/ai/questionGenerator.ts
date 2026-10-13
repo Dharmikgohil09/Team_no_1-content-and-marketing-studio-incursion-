@@ -20,11 +20,12 @@ const ROLE_OPTIONS = [
 ]
 
 const CATEGORY_OPTIONS = [
+  { value: 'music',       label: 'Singing Concert / Music Festival / Live Band' },
   { value: 'hackathon',   label: 'Hackathon / Coding Competition' },
   { value: 'sports',      label: 'Sports Tournament / Athletic Event' },
   { value: 'conference',  label: 'Conference / Summit / Seminar' },
   { value: 'robotics',    label: 'Robotics / Engineering Competition' },
-  { value: 'cultural',    label: 'Cultural / Arts / Music Festival' },
+  { value: 'cultural',    label: 'Cultural / Arts / Dance Festival' },
   { value: 'workshop',    label: 'Technical Workshop / Bootcamp' },
 ]
 

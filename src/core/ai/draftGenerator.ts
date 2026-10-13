@@ -5,20 +5,21 @@ import type { Element } from '../schema/Element'
 import { getRoleOrDefault, DEFAULT_ROLES } from '../schema/Role'
 import { DEFAULT_SVNIT_LOGO, DEFAULT_ACM_LOGO } from '../../brandKits/defaultLogos'
 
-export type EventCategory = 'sports' | 'hackathon' | 'robotics' | 'conference' | 'cultural' | 'workshop' | 'general'
+export type EventCategory = 'sports' | 'hackathon' | 'robotics' | 'conference' | 'cultural' | 'music' | 'workshop' | 'general'
 
 export function detectEventCategory(event: EventContext): EventCategory {
   const catObj = (event as any).category
   if (catObj && catObj.status !== 'missing' && catObj.value) {
     const explicit = String(catObj.value).toLowerCase()
-    if (['sports', 'hackathon', 'robotics', 'conference', 'cultural', 'workshop'].includes(explicit)) {
+    if (['sports', 'hackathon', 'robotics', 'conference', 'cultural', 'music', 'workshop'].includes(explicit)) {
       return explicit as EventCategory
     }
   }
   const text = `${event.name?.value || ''} ${(event as any).description?.value || ''} ${(event as any).themeHint?.value || ''}`.toLowerCase()
+  if (/(?:music|concert|singing|song|band|raag|raga|musical|vocal|melody|rhythm|audio|orchestra|gig|acoustic|live\s*stage|dj|soundfest|sangeet)/i.test(text)) return 'music'
   if (/(?:sports?|tournament|football|cricket|basketball|badminton|athletics?|championship|league|match|referee|players?)/i.test(text)) return 'sports'
   if (/(?:robotics?|robots?|robos?|bots?|battlebots?|mechatronics)/i.test(text)) return 'robotics'
-  if (/(?:cultural|fest|festival|music|dance|arts?|celebration)/i.test(text)) return 'cultural'
+  if (/(?:cultural|fest|festival|dance|arts?|celebration|drama|theatre)/i.test(text)) return 'cultural'
   if (/(?:conference|summit|symposium|keynote|business|seminar)/i.test(text)) return 'conference'
   if (/(?:workshop|bootcamp|masterclass|training)/i.test(text)) return 'workshop'
   if (/(?:hackathon|coding|codefest|hacknit|datathon|programming)/i.test(text)) return 'hackathon'
@@ -69,7 +70,9 @@ function buildModernMinimalFront(
   const isPlayer = roleId === 'player'
 
   // Refined palette mapping
-  const lowerBg = category === 'sports'
+  const lowerBg = category === 'music'
+    ? (isOrganizer ? '#140526' : isJudge ? '#1f0d38' : '#080112')
+    : category === 'sports'
     ? (isOrganizer ? '#0f172a' : isJudge ? '#1e293b' : '#0a192f')
     : isOrganizer
     ? '#090b10'
@@ -83,7 +86,9 @@ function buildModernMinimalFront(
     ? '#2b0b18'
     : '#091128'
 
-  const accentColor = category === 'sports'
+  const accentColor = category === 'music'
+    ? (isOrganizer ? '#f59e0b' : isJudge ? '#e2e8f0' : isSpeaker ? '#ec4899' : '#d946ef')
+    : category === 'sports'
     ? (isOrganizer ? '#f59e0b' : isJudge ? '#e2e8f0' : '#38bdf8')
     : isOrganizer
     ? '#f59e0b'
@@ -97,7 +102,9 @@ function buildModernMinimalFront(
     ? '#fbbf24'
     : '#38bdf8'
 
-  const badgeTypeLabel = category === 'sports'
+  const badgeTypeLabel = category === 'music'
+    ? (isSpeaker ? 'HEADLINE VOCALIST' : isOrganizer ? 'CONCERT DIRECTOR' : isJudge ? 'MUSIC EVALUATOR' : isVolunteer ? 'STAGE & SOUND CREW' : 'LIVE CONCERT PASS')
+    : category === 'sports'
     ? (isJudge ? 'OFFICIAL MATCH REFEREE' : isOrganizer ? 'TOURNAMENT DIRECTOR' : isMentor ? 'TEAM COACH' : isPlayer ? 'ATHLETIC ROSTER PASS' : 'ATHLETIC PASS')
     : category === 'robotics'
     ? (isJudge ? 'TECHNICAL JURY ACCREDITATION' : isMentor ? 'ENGINEERING MENTOR' : isOrganizer ? 'LEAD MARSHAL' : 'ROBOTICS COMPETITOR PASS')
@@ -119,16 +126,109 @@ function buildModernMinimalFront(
     ? 'MENTOR & ADVISOR'
     : 'PARTICIPANT PASS'
 
-  const ringStroke = isOrganizer ? '#f59e0b' : isJudge ? '#e2e8f0' : '#ffffff'
+  const ringStroke = isOrganizer ? '#f59e0b' : isJudge ? '#e2e8f0' : category === 'music' ? '#ec4899' : '#ffffff'
+
+  const musicModernMinimalMotifs: Element[] = category === 'music' ? [
+    // 1. Stage Spotlight Left
+    {
+      type: 'shape',
+      id: 'music-spotlight-left',
+      anchor: { x: 0, y: 0, w: 25, h: 42 },
+      shape: 'polygon',
+      points: '0,0 6,0 25,42 0,42',
+      fill: '#ec4899',
+      stroke: 'transparent',
+      strokeWidth: 0,
+      cornerRadius: 0,
+      opacity: 0.12,
+    },
+    // 2. Stage Spotlight Right
+    {
+      type: 'shape',
+      id: 'music-spotlight-right',
+      anchor: { x: 29, y: 0, w: 25, h: 42 },
+      shape: 'polygon',
+      points: '19,0 25,0 25,42 0,42',
+      fill: '#8b5cf6',
+      stroke: 'transparent',
+      strokeWidth: 0,
+      cornerRadius: 0,
+      opacity: 0.12,
+    },
+    // 3. Acoustic Soundwave Reverberation Ring around avatar
+    {
+      type: 'shape',
+      id: 'music-acoustic-ring',
+      anchor: { x: 12, y: 22, w: 30, h: 30 },
+      shape: 'circle',
+      fill: 'transparent',
+      stroke: '#ec4899',
+      strokeWidth: 0.5,
+      cornerRadius: 15,
+      opacity: 0.35,
+    },
+    // 4. Floating Eighth Note Left ♪
+    {
+      type: 'shape',
+      id: 'music-note-left',
+      anchor: { x: 4, y: 24, w: 7, h: 9 },
+      shape: 'path',
+      d: 'M 0.5 7 C 0.5 5.8 2 5 3.5 5.2 L 3.5 1.5 C 3.5 1 3.8 0.5 4.5 0.5 C 5.5 0.5 6.5 1.2 7 2.2 C 6.5 2.8 5.5 3 4.7 2.6 L 4.7 6.8 C 4.5 7.9 3.2 8.8 1.8 8.8 C 0.8 8.8 0.5 8 0.5 7 Z',
+      fill: '#f472b6',
+      stroke: 'transparent',
+      strokeWidth: 0,
+      cornerRadius: 0,
+      opacity: 0.5,
+    },
+    // 5. Floating Beamed Double Note Right ♫
+    {
+      type: 'shape',
+      id: 'music-note-right',
+      anchor: { x: 43, y: 24, w: 8, h: 9 },
+      shape: 'path',
+      d: 'M 0.5 7.2 C 0.5 6 1.8 5.2 3 5.4 L 3 1.8 L 8 0.6 L 8 5 C 6.8 4.8 5.5 5.6 5.5 6.8 C 5.5 7.8 6.6 8.5 7.8 8.4 C 8.7 8.3 9.2 7.6 9.2 6.5 L 9.2 0 L 2 1.2 L 2 5.8 C 1 5.6 0.5 6.3 0.5 7.2 Z',
+      fill: '#a78bfa',
+      stroke: 'transparent',
+      strokeWidth: 0,
+      cornerRadius: 0,
+      opacity: 0.5,
+    },
+    // 6. Dynamic Audio Equalizer Waveform Bars across the lower background
+    ...[3.2, 5.5, 8.4, 11.2, 6.5, 9.8, 13.5, 8.2, 12.0, 7.5, 10.2, 5.0, 8.8, 11.5, 6.2, 3.8].map((h, i) => ({
+      type: 'shape' as const,
+      id: `music-eq-bar-${i}`,
+      anchor: { x: 3.5 + i * 3.0, y: 84 - h, w: 1.8, h },
+      shape: 'rect' as const,
+      fill: '#ec4899',
+      stroke: 'transparent',
+      strokeWidth: 0,
+      cornerRadius: 0.8,
+      opacity: 0.28,
+    })),
+  ] : [
+    // Subtle Monogram Wireframe Lines in background (Ref 1 texture)
+    {
+      type: 'shape' as const,
+      id: 'bg-wireframe',
+      anchor: { x: 0, y: 64, w: 54, h: 21 },
+      shape: 'polygon' as const,
+      points: '0,21 12,0 24,21 36,0 48,21 54,10',
+      fill: 'transparent',
+      stroke: role.palette.primary,
+      strokeWidth: 0.35,
+      cornerRadius: 0,
+      opacity: 0.22,
+    },
+  ]
 
   const elements: Element[] = [
-    // 1. Top White Header Section
+    // 1. Top Header Section (Dark electric purple for music, white for standard)
     {
       type: 'shape',
       id: 'header-bg',
       anchor: { x: 0, y: 0, w: 54, h: 38 },
       shape: 'rect',
-      fill: isOrganizer ? '#f8fafc' : '#ffffff',
+      fill: category === 'music' ? '#15062a' : isOrganizer ? '#f8fafc' : '#ffffff',
       stroke: 'transparent',
       strokeWidth: 0,
       cornerRadius: 0,
@@ -140,8 +240,8 @@ function buildModernMinimalFront(
       id: 'lanyard-slot',
       anchor: { x: 22, y: 2.2, w: 10, h: 2.6 },
       shape: 'rect',
-      fill: '#e2e8f0',
-      stroke: '#cbd5e1',
+      fill: category === 'music' ? '#271046' : '#e2e8f0',
+      stroke: category === 'music' ? '#431d75' : '#cbd5e1',
       strokeWidth: 0.35,
       cornerRadius: 1.3,
       opacity: 1,
@@ -179,7 +279,7 @@ function buildModernMinimalFront(
       fontFamily: 'Space Grotesk',
       fontSize: 2.7,
       fontWeight: '700',
-      color: isOrganizer ? '#b45309' : '#64748b',
+      color: category === 'music' ? '#f472b6' : isOrganizer ? '#b45309' : '#64748b',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -194,7 +294,7 @@ function buildModernMinimalFront(
       fontFamily: 'Space Grotesk',
       fontSize: 4.6,
       fontWeight: '700',
-      color: '#0f172a',
+      color: category === 'music' ? '#ffffff' : '#0f172a',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -209,7 +309,7 @@ function buildModernMinimalFront(
       fontFamily: 'Inter',
       fontSize: 2.7,
       fontWeight: '500',
-      color: '#94a3b8',
+      color: category === 'music' ? '#c084fc' : '#94a3b8',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -252,19 +352,8 @@ function buildModernMinimalFront(
       cornerRadius: 0,
       opacity: 0.9,
     },
-    // 10. Subtle Monogram Wireframe Lines in background (Ref 1 texture)
-    {
-      type: 'shape',
-      id: 'bg-wireframe',
-      anchor: { x: 0, y: 64, w: 54, h: 21 },
-      shape: 'polygon',
-      points: '0,21 12,0 24,21 36,0 48,21 54,10',
-      fill: 'transparent',
-      stroke: role.palette.primary,
-      strokeWidth: 0.35,
-      cornerRadius: 0,
-      opacity: 0.22,
-    },
+    // 10. Category Motifs (Music equalizers & notes or wireframe)
+    ...musicModernMinimalMotifs,
     // 11. Circular Photo Ring Border (intersecting split cleanly)
     {
       type: 'shape',
@@ -336,7 +425,19 @@ function buildModernMinimalFront(
       type: 'text',
       id: 'person-detail',
       anchor: { x: 2, y: 67.2, w: 50, h: 4 },
-      content: isOrganizer
+      content: category === 'music'
+        ? (isOrganizer
+          ? 'Concert Management & Production'
+          : isJudge
+          ? 'Honorary Music Jury'
+          : isSpeaker
+          ? 'Headline Artist & Vocalist'
+          : isVolunteer
+          ? 'Audio & Stage Crew'
+          : isMentor
+          ? 'Musical Director & Mentor'
+          : 'Arena Pass Holder')
+        : isOrganizer
         ? 'Executive Organizing Committee'
         : isJudge
         ? 'Grand Jury & Evaluation Panel'
@@ -350,7 +451,7 @@ function buildModernMinimalFront(
       fontFamily: 'Inter',
       fontSize: 3.6,
       fontWeight: '500',
-      color: '#94a3b8',
+      color: category === 'music' ? '#e2e8f0' : '#94a3b8',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -361,11 +462,11 @@ function buildModernMinimalFront(
       type: 'text',
       id: 'event-venue-date',
       anchor: { x: 2, y: 71.6, w: 50, h: 3.5 },
-      content: `${event.venue?.value || 'SVNIT, Surat'} · ${event.dateStart?.value || '2024'}`,
+      content: `${event.venue?.value || 'SVNIT, Surat'} · ${event.dateStart?.value || '2026'}` + (category === 'music' ? ' · LIVE CONCERT' : ''),
       fontFamily: 'Inter',
       fontSize: 3.1,
       fontWeight: '400',
-      color: '#64748b',
+      color: category === 'music' ? '#cbd5e1' : '#64748b',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -386,11 +487,11 @@ function buildModernMinimalFront(
       type: 'text',
       id: 'footer-branding',
       anchor: { x: 2, y: 84.4, w: 50, h: 2.4 },
-      content: 'ACM NIT SURAT · SVNIT SURAT',
+      content: category === 'music' ? 'LIVE CONCERT ARENA · SVNIT SURAT' : 'ACM NIT SURAT · SVNIT SURAT',
       fontFamily: 'Space Grotesk',
       fontSize: 2.2,
       fontWeight: '600',
-      color: '#64748b',
+      color: category === 'music' ? '#a855f7' : '#64748b',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -419,7 +520,9 @@ function buildCreativeTechFront(
   const isMentor = roleId === 'mentor'
   const isPlayer = roleId === 'player'
 
-  const techBg = category === 'sports'
+  const techBg = category === 'music'
+    ? (isOrganizer ? '#140526' : isJudge ? '#1f0d38' : '#0e0322')
+    : category === 'sports'
     ? (isOrganizer ? '#0f172a' : isJudge ? '#1e293b' : '#081426')
     : category === 'cultural'
     ? (isOrganizer ? '#1a0b2e' : '#1e052d')
@@ -439,7 +542,9 @@ function buildCreativeTechFront(
     ? '#260a18'
     : '#160d38'
 
-  const accentColor = category === 'sports'
+  const accentColor = category === 'music'
+    ? (isOrganizer ? '#fbbf24' : '#d946ef')
+    : category === 'sports'
     ? (isOrganizer ? '#f59e0b' : isJudge ? '#e2e8f0' : '#38bdf8')
     : category === 'cultural'
     ? (isOrganizer ? '#fbbf24' : '#ec4899')
@@ -450,7 +555,91 @@ function buildCreativeTechFront(
     : role.palette.accent || '#8b5cf6'
 
   // Dynamic category-based motifs
-  const categoryMotifs: Element[] = category === 'sports' ? [
+  const categoryMotifs: Element[] = category === 'music' ? [
+    // Music: Stage Crossing Laser Beams
+    {
+      type: 'shape',
+      id: 'music-laser-1',
+      anchor: { x: 0, y: 5, w: 54, h: 36 },
+      shape: 'line',
+      fill: 'transparent',
+      stroke: '#ec4899',
+      strokeWidth: 0.45,
+      cornerRadius: 0,
+      opacity: 0.45,
+    },
+    {
+      type: 'shape',
+      id: 'music-laser-2',
+      anchor: { x: 0, y: 41, w: 54, h: 36 },
+      shape: 'line',
+      fill: 'transparent',
+      stroke: '#8b5cf6',
+      strokeWidth: 0.45,
+      cornerRadius: 0,
+      opacity: 0.45,
+    },
+    // Concentric Vinyl Sound Grooves behind avatar
+    {
+      type: 'shape',
+      id: 'music-groove-1',
+      anchor: { x: 12, y: 11.5, w: 30, h: 30 },
+      shape: 'circle',
+      fill: 'transparent',
+      stroke: '#ec4899',
+      strokeWidth: 0.4,
+      cornerRadius: 15,
+      opacity: 0.35,
+    },
+    {
+      type: 'shape',
+      id: 'music-groove-2',
+      anchor: { x: 9, y: 8.5, w: 36, h: 36 },
+      shape: 'circle',
+      fill: 'transparent',
+      stroke: '#a855f7',
+      strokeWidth: 0.3,
+      cornerRadius: 18,
+      opacity: 0.25,
+    },
+    // Floating Musical Notes (Vector Paths)
+    {
+      type: 'shape',
+      id: 'music-note-crest-1',
+      anchor: { x: 3, y: 14, w: 8, h: 9 },
+      shape: 'path',
+      d: 'M 0.5 7.2 C 0.5 6 1.8 5.2 3 5.4 L 3 1.8 L 8 0.6 L 8 5 C 6.8 4.8 5.5 5.6 5.5 6.8 C 5.5 7.8 6.6 8.5 7.8 8.4 C 8.7 8.3 9.2 7.6 9.2 6.5 L 9.2 0 L 2 1.2 L 2 5.8 C 1 5.6 0.5 6.3 0.5 7.2 Z',
+      fill: '#ec4899',
+      stroke: 'transparent',
+      strokeWidth: 0,
+      cornerRadius: 0,
+      opacity: 0.6,
+    },
+    {
+      type: 'shape',
+      id: 'music-note-crest-2',
+      anchor: { x: 43, y: 14, w: 7, h: 9 },
+      shape: 'path',
+      d: 'M 0.5 7 C 0.5 5.8 2 5 3.5 5.2 L 3.5 1.5 C 3.5 1 3.8 0.5 4.5 0.5 C 5.5 0.5 6.5 1.2 7 2.2 C 6.5 2.8 5.5 3 4.7 2.6 L 4.7 6.8 C 4.5 7.9 3.2 8.8 1.8 8.8 C 0.8 8.8 0.5 8 0.5 7 Z',
+      fill: '#a855f7',
+      stroke: 'transparent',
+      strokeWidth: 0,
+      cornerRadius: 0,
+      opacity: 0.6,
+    },
+    // Sonic Equalizer Waveform Bars across the background
+    ...[2.8, 5.0, 7.8, 10.5, 6.0, 9.2, 12.8, 8.0, 11.2, 7.0, 9.5, 4.5, 8.0, 10.8, 5.8, 3.2].map((h, i) => ({
+      type: 'shape' as const,
+      id: `music-crest-eq-${i}`,
+      anchor: { x: 3.5 + i * 3.0, y: 72 - h, w: 1.8, h },
+      shape: 'rect' as const,
+      fill: '#d946ef',
+      stroke: 'transparent',
+      strokeWidth: 0,
+      cornerRadius: 0.8,
+      opacity: 0.22,
+    })),
+  ] : category === 'sports' ? [
     // Sports: Athletic Speed Chevrons & Motion Lines
     {
       type: 'shape',
@@ -638,7 +827,9 @@ function buildCreativeTechFront(
     },
   ]
 
-  const orgSubtitle = category === 'sports'
+  const orgSubtitle = category === 'music'
+    ? 'LIVE CONCERT ARENA · SVNIT'
+    : category === 'sports'
     ? 'SPORTS COUNCIL · SVNIT'
     : category === 'cultural'
     ? 'CULTURAL FESTIVAL · SVNIT'
@@ -650,13 +841,19 @@ function buildCreativeTechFront(
 
   const roleBadgeLabel = category === 'sports'
     ? (isPlayer ? 'ATHLETE' : isJudge ? 'REFEREE' : isOrganizer ? 'DIRECTOR' : role.label.toUpperCase())
+    : category === 'music'
+    ? (isSpeaker ? 'VOCALIST' : isOrganizer ? 'PRODUCER' : isJudge ? 'JURY' : role.label.toUpperCase())
     : role.label.toUpperCase()
 
   const personDetailText = category === 'sports'
     ? (isOrganizer ? 'Tournament Operations' : isJudge ? 'Match Official Panel' : isMentor ? 'Coaching Staff' : isPlayer ? 'Squad: {{person.team}}' : '{{person.team}}')
+    : category === 'music'
+    ? (isOrganizer ? 'Concert Production Team' : isJudge ? 'Jury & Music Board' : isMentor ? 'Musical Director' : isSpeaker ? 'Headline Vocalist & Artist' : '{{person.team}}')
     : isOrganizer ? 'Core Organizing Team' : isJudge ? 'Judge & Panelist' : isMentor ? 'Mentor & Coach' : isVolunteer ? 'Operations Support' : '{{person.team}}'
 
-  const footerText = category === 'sports'
+  const footerText = category === 'music'
+    ? 'OFFICIAL CONCERT TOUR PASS · SVNIT SURAT'
+    : category === 'sports'
     ? 'OFFICIAL ATHLETIC PASS · SVNIT SURAT'
     : category === 'cultural'
     ? 'FESTIVAL ACCREDITATION · SVNIT SURAT'
@@ -759,13 +956,13 @@ function buildCreativeTechFront(
       initialsColor: '#ffffff',
       initialsBg: role.palette.primary,
     },
-    // 8. Crisp White Lower Zone (y: 47 to 85.6)
+    // 8. Lower Zone (Dark midnight for music, crisp white for standard)
     {
       type: 'shape',
       id: 'info-zone-bg',
       anchor: { x: 0, y: 47, w: 54, h: 38.6 },
       shape: 'rect',
-      fill: '#f8fafc',
+      fill: category === 'music' ? '#120526' : '#f8fafc',
       stroke: 'transparent',
       strokeWidth: 0,
       cornerRadius: 0,
@@ -778,7 +975,7 @@ function buildCreativeTechFront(
       anchor: { x: 0, y: 41, w: 54, h: 9 },
       shape: 'polygon',
       points: '0,9 27,0 54,9 54,9 0,9',
-      fill: '#f8fafc',
+      fill: category === 'music' ? '#120526' : '#f8fafc',
       stroke: 'transparent',
       strokeWidth: 0,
       cornerRadius: 0,
@@ -819,7 +1016,7 @@ function buildCreativeTechFront(
       fontFamily: 'Space Grotesk',
       fontSize: 8,
       fontWeight: '700',
-      color: '#0f172a',
+      color: category === 'music' ? '#ffffff' : '#0f172a',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -834,7 +1031,7 @@ function buildCreativeTechFront(
       fontFamily: 'Inter',
       fontSize: 3.9,
       fontWeight: '600',
-      color: '#334155',
+      color: category === 'music' ? '#c084fc' : '#334155',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -845,11 +1042,11 @@ function buildCreativeTechFront(
       type: 'text',
       id: 'event-venue-date',
       anchor: { x: 2, y: 59, w: 50, h: 3.5 },
-      content: `${event.venue?.value || 'SVNIT, Surat'} · ${event.dateStart?.value || '2026'}`,
+      content: `${event.venue?.value || 'SVNIT, Surat'} · ${event.dateStart?.value || '2026'}` + (category === 'music' ? ' · LIVE CONCERT' : ''),
       fontFamily: 'Inter',
       fontSize: 3.2,
       fontWeight: '400',
-      color: '#64748b',
+      color: category === 'music' ? '#cbd5e1' : '#64748b',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -861,8 +1058,8 @@ function buildCreativeTechFront(
       id: 'person-qr',
       anchor: { x: 23, y: 63.5, w: 8, h: 8 },
       urlPattern: `https://acm.svnit.ac.in/verify/{{person.id}}`,
-      fgColor: techBg,
-      bgColor: '#f1f5f9',
+      fgColor: category === 'music' ? '#ffffff' : techBg,
+      bgColor: category === 'music' ? '#1f0d3d' : '#f1f5f9',
       errorCorrection: 'M',
     },
     // 15. Vector Barcode Strip
@@ -872,8 +1069,8 @@ function buildCreativeTechFront(
       anchor: { x: 7, y: 73, w: 40, h: 8 },
       valueBinding: '{{person.id}}',
       format: 'CODE128',
-      fgColor: '#0f172a',
-      bgColor: '#f8fafc',
+      fgColor: category === 'music' ? '#ffffff' : '#0f172a',
+      bgColor: category === 'music' ? '#120526' : '#f8fafc',
     },
     // 16. Footer Validity Micro-Text
     {
@@ -884,7 +1081,7 @@ function buildCreativeTechFront(
       fontFamily: 'Space Grotesk',
       fontSize: 2.2,
       fontWeight: '600',
-      color: '#94a3b8',
+      color: category === 'music' ? '#a855f7' : '#94a3b8',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -913,7 +1110,9 @@ function buildPremiumEditorialFront(
   const isMentor = roleId === 'mentor'
   const isPlayer = roleId === 'player'
 
-  const obsidianBg = category === 'sports'
+  const obsidianBg = category === 'music'
+    ? '#070110'
+    : category === 'sports'
     ? '#080e1a'
     : category === 'cultural'
     ? '#150720'
@@ -923,7 +1122,9 @@ function buildPremiumEditorialFront(
     ? '#0a0d14'
     : '#090a10'
 
-  const accentColor = category === 'sports'
+  const accentColor = category === 'music'
+    ? (isOrganizer ? '#fbbf24' : isSpeaker ? '#f43f5e' : '#d946ef')
+    : category === 'sports'
     ? (isOrganizer ? '#f59e0b' : isJudge ? '#e2e8f0' : isPlayer ? '#dc2626' : '#2563eb')
     : category === 'cultural'
     ? (isOrganizer ? '#fbbf24' : '#d946ef')
@@ -943,7 +1144,9 @@ function buildPremiumEditorialFront(
     ? '#7c3aed'
     : '#2563eb'
 
-  const headerCategoryText = category === 'sports'
+  const headerCategoryText = category === 'music'
+    ? 'BACKSTAGE VIP'
+    : category === 'sports'
     ? 'ATHLETIC PASS'
     : category === 'cultural'
     ? 'CULTURE VIP'
@@ -955,13 +1158,17 @@ function buildPremiumEditorialFront(
     ? 'COHORT PASS'
     : 'ACM PASS'
 
-  const serialText = category === 'sports'
+  const serialText = category === 'music'
+    ? 'TOUR-{{person.id}}'
+    : category === 'sports'
     ? 'ROSTER-{{person.id}}'
     : category === 'robotics'
     ? 'UNIT-{{person.id}}'
     : 'ID-{{person.id}}'
 
-  const personDetailContent = category === 'sports'
+  const personDetailContent = category === 'music'
+    ? (isOrganizer ? 'Tour & Stage Director' : isJudge ? 'Jury & Soundboard Board' : isSpeaker ? 'Headline Artist & Vocalist' : 'Arena VIP Guest')
+    : category === 'sports'
     ? (isOrganizer ? 'Tournament Executive' : isJudge ? 'Certified Match Official' : isMentor ? 'Tactical Coaching Staff' : isPlayer ? 'Squad: {{person.team}}' : '{{person.team}}')
     : isOrganizer
     ? 'Executive Leadership'
@@ -990,6 +1197,46 @@ function buildPremiumEditorialFront(
       cornerRadius: 0,
       opacity: 1,
     },
+    // Music-specific spotlight, watermark note, and frequency spectrum
+    ...(category === 'music' ? [
+      {
+        type: 'shape' as const,
+        id: 'editorial-music-spotlight',
+        anchor: { x: 0, y: 0, w: 36, h: 52 },
+        shape: 'polygon' as const,
+        points: '0,0 12,0 36,52 0,52',
+        fill: '#ec4899',
+        stroke: 'transparent',
+        strokeWidth: 0,
+        cornerRadius: 0,
+        opacity: 0.12,
+      },
+      // Floating Watermark Musical Note in lower background
+      {
+        type: 'shape' as const,
+        id: 'editorial-music-watermark',
+        anchor: { x: 34, y: 64, w: 16, h: 18 },
+        shape: 'path' as const,
+        d: 'M 0.5 7.2 C 0.5 6 1.8 5.2 3 5.4 L 3 1.8 L 8 0.6 L 8 5 C 6.8 4.8 5.5 5.6 5.5 6.8 C 5.5 7.8 6.6 8.5 7.8 8.4 C 8.7 8.3 9.2 7.6 9.2 6.5 L 9.2 0 L 2 1.2 L 2 5.8 C 1 5.6 0.5 6.3 0.5 7.2 Z',
+        fill: '#d946ef',
+        stroke: 'transparent',
+        strokeWidth: 0,
+        cornerRadius: 0,
+        opacity: 0.22,
+      },
+      // Vertical audio frequency spectrum equalizer bars flanking the photo frame
+      ...[4.5, 9.2, 14.0, 7.5].map((h, i) => ({
+        type: 'shape' as const,
+        id: `editorial-freq-bar-${i}`,
+        anchor: { x: 31.5 + i * 1.1, y: 49 - h, w: 0.65, h },
+        shape: 'rect' as const,
+        fill: '#ec4899',
+        stroke: 'transparent',
+        strokeWidth: 0,
+        cornerRadius: 0.3,
+        opacity: 0.45,
+      })),
+    ] : []),
     // 2. Lanyard Slot Hole (Ref 3 clasp cut)
     {
       type: 'shape',
@@ -1205,16 +1452,18 @@ function buildCardBackElements(
   style: 'modern-minimal' | 'creative-tech' | 'premium-editorial',
   category: EventCategory = 'general'
 ): Element[] {
-  const isDark = style !== 'modern-minimal'
+  const isDark = style !== 'modern-minimal' || category === 'music'
   const bgFill = style === 'creative-tech'
-    ? (category === 'sports' ? '#081426' : category === 'cultural' ? '#1e052d' : category === 'robotics' ? '#0a101d' : '#170b38')
+    ? (category === 'music' ? '#0e0322' : category === 'sports' ? '#081426' : category === 'cultural' ? '#1e052d' : category === 'robotics' ? '#0a101d' : '#170b38')
     : style === 'premium-editorial'
-    ? (category === 'sports' ? '#080e1a' : category === 'cultural' ? '#150720' : category === 'robotics' ? '#070b12' : '#090a10')
-    : '#ffffff'
+    ? (category === 'music' ? '#070110' : category === 'sports' ? '#080e1a' : category === 'cultural' ? '#150720' : category === 'robotics' ? '#070b12' : '#090a10')
+    : (category === 'music' ? '#120424' : '#ffffff')
   const textColor = isDark ? '#ffffff' : '#0f172a'
   const subtextColor = isDark ? '#94a3b8' : '#64748b'
 
-  const rule1 = category === 'sports'
+  const rule1 = category === 'music'
+    ? '1. Pass grants admission to concert arena, stage pit, and soundboard areas.'
+    : category === 'sports'
     ? '1. Pass must be visibly worn at all times by roster athletes and officials in the arena.'
     : category === 'cultural'
     ? '1. Festival badge grants entry to designated cultural venues and stage arenas.'
@@ -1224,7 +1473,9 @@ function buildCardBackElements(
     ? '1. Delegate pass grants entry to keynote auditoriums and executive sessions.'
     : '1. Badge must be visibly worn at all times within SVNIT campus and hackathon venues.'
 
-  const rule2 = category === 'sports'
+  const rule2 = category === 'music'
+    ? '2. Identification pass is strictly non-transferable and remains property of SVNIT.'
+    : category === 'sports'
     ? '2. Unauthorized badge transfer leads to immediate team disqualification.'
     : category === 'cultural'
     ? '2. This identification pass is strictly non-transferable and remains property of SVNIT.'
@@ -1234,7 +1485,9 @@ function buildCardBackElements(
     ? '2. Badge must be displayed at all times within conference halls.'
     : '2. This identification pass is strictly non-transferable and remains property of ACM NIT Surat.'
 
-  const rule3 = category === 'sports'
+  const rule3 = category === 'music'
+    ? '3. Scan QR code at backstage security and technical soundboard checkpoints.'
+    : category === 'sports'
     ? '3. Scan QR code at field entry checkpoints for roster validation.'
     : category === 'cultural'
     ? '3. Scan QR code for stage verification and event wristband verification.'
@@ -1505,10 +1758,21 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d1Tags: ['cultural', 'fest', 'radiance', 'arts', 'celebration'],
     d2Name: n => `Celebration Mosaic — ${n}`,
     d2Desc: 'Vibrant cultural identity card with festive star diamond motifs, chevron apex, and event entry barcode.',
-    d2Tags: ['cultural', 'festive', 'mosaic', 'music', 'barcode'],
+    d2Tags: ['cultural', 'festive', 'mosaic', 'celebration', 'barcode'],
     d3Name: n => `Artisan VIP Pass — ${n}`,
     d3Desc: 'Deep velvet festival pass with asymmetric artist portrait framing, vibrant accent block, and stage accreditation.',
     d3Tags: ['cultural', 'artisan', 'editorial', 'artist-pass', 'vip'],
+  },
+  music: {
+    d1Name: n => `Concert Acoustic — ${n}`,
+    d1Desc: 'Atmospheric live concert badge with sweeping stage spotlights, dynamic audio equalizer bars, acoustic soundwave ripples, and musical notation.',
+    d1Tags: ['music', 'concert', 'acoustic', 'soundwave', 'spotlight', 'live'],
+    d2Name: n => `Neon Soundwave — ${n}`,
+    d2Desc: 'High-energy musical identity pass with dual stage lasers, concentric vinyl sound grooves, floating musical notes, and sonic equalizer visualizer.',
+    d2Tags: ['music', 'concert', 'neon', 'soundwave', 'equalizer', 'lasers'],
+    d3Name: n => `VIP Backstage Pass — ${n}`,
+    d3Desc: 'Exclusive backstage laminate tour badge with matte obsidian stage depth, radiant VIP accent block, and scannable arena credentials.',
+    d3Tags: ['music', 'vip', 'backstage', 'tour-pass', 'editorial', 'concert'],
   },
   workshop: {
     d1Name: n => `Academic Minimal — ${n}`,
@@ -1556,7 +1820,7 @@ export function generateDraftsDeterministic(
   const eventName = event.name?.value || 'Event Name'
 
   const category: EventCategory = (
-    (llmSuggestions?.category && ['sports', 'hackathon', 'robotics', 'conference', 'cultural', 'workshop', 'general'].includes(llmSuggestions.category))
+    (llmSuggestions?.category && ['sports', 'hackathon', 'robotics', 'conference', 'cultural', 'music', 'workshop', 'general'].includes(llmSuggestions.category))
       ? llmSuggestions.category
       : detectEventCategory(event)
   )

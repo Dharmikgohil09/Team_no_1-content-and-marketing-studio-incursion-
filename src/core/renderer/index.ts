@@ -327,6 +327,9 @@ function renderShape(el: ShapeElement, ctx: BindingContext): string {
       if (!el.points) return ''
       // SVG transform translate accepts unitless numbers
       return `<polygon id="${el.id}" points="${el.points}" transform="translate(${a.x}, ${a.y})" ${baseAttrs}/>`
+    case 'path':
+      if (!el.d) return ''
+      return `<path id="${el.id}" d="${el.d}" transform="translate(${a.x}, ${a.y})" ${baseAttrs}/>`
     default:
       return ''
   }

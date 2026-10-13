@@ -54,7 +54,7 @@ export const ShapeElementSchema = z.object({
   type:         z.literal('shape'),
   id:           z.string(),
   anchor:       AnchorSchema,
-  shape:        z.enum(['rect','circle','ellipse','line','polygon']),
+  shape:        z.enum(['rect','circle','ellipse','line','polygon','path']),
   fill:         z.string().default('transparent'),
   stroke:       z.string().default('transparent'),
   strokeWidth:  z.number().default(0),
@@ -64,6 +64,8 @@ export const ShapeElementSchema = z.object({
   fillBinding:  z.string().optional(),
   /** SVG polygon points (relative to anchor) */
   points:       z.string().optional(),
+  /** SVG path d string (relative to anchor) */
+  d:            z.string().optional(),
   roleConditional: z.record(z.string(), z.object({
     fill:   z.string().optional(),
     stroke: z.string().optional(),

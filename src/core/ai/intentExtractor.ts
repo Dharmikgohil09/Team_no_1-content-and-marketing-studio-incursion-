@@ -32,6 +32,7 @@ const MONTH_MAP: Record<string, string> = {
 }
 
 const ROLE_KEYWORDS: Array<{ pattern: RegExp; id: string; label: string }> = [
+  { pattern: /artists?|singers?|vocalists?|musicians?|performers?/i, id: 'artist', label: 'Artist' },
   { pattern: /players?/i,       id: 'player',      label: 'Player' },
   { pattern: /referees?|umpires?/i, id: 'referee', label: 'Referee' },
   { pattern: /participants?/i,  id: 'participant', label: 'Participant' },
@@ -60,28 +61,31 @@ export function parseIntentDeterministic(text: string): IntentResult {
 
   // 1. Event Name: look for "called X", "named X", "titled X", "cards for X at/on", or quoted names
   const namePatterns = [
-    /(?:called|named|titled)\s+["']?([^"',.\n]+?)["']?(?:\s+(?:at|on|for|with|in)|$|\.|\,)/i,
-    /(?:hackathon|tournament|conference|event|workshop|competition)\s+(?:called|named)\s+["']?([^"',.\n]+?)["']?/i,
-    /(?:cards|passes|badges)\s+for\s+(?:an?\s+|the\s+)?([A-Z0-9][A-Za-z0-9\s-]{2,40}?)(?:\s+(?:at|on|in|with)|$|\.|\,)/i,
+    /(?:called|named|titled)\s+["']?([^"',.\n]+?)["']?(?:\s+(?:at|on|for|with|in|happening|scheduled|taking\s+place)|$|\.|\,)/i,
+    /(?:hackathon|tournament|conference|event|workshop|competition|concert)\s+(?:called|named)\s+["']?([^"',.\n]+?)["']?(?:\s+(?:at|on|for|with|in|happening|scheduled|taking\s+place)|$|\.|\,)/i,
+    /(?:cards|passes|badges)\s+for\s+(?:an?\s+|the\s+)?([A-Z0-9][A-Za-z0-9\s-]{2,40}?)(?:\s+(?:at|on|in|with|happening)|$|\.|\,)/i,
     /["']([^"'\n]{3,40})["']/,
   ]
   for (const pat of namePatterns) {
     const m = text.match(pat)
     if (m && m[1]?.trim() && !/^(an|a|the|our|college)\b/i.test(m[1].trim())) {
-      ctx.name = { value: m[1].trim(), status: 'provided' }
+      const cleanName = m[1].trim().replace(/\s+(?:happening|taking\s+place|scheduled).*$/i, '').trim()
+      ctx.name = { value: cleanName, status: 'provided' }
       break
     }
   }
 
   // 2. Event Category
   let category = 'general'
-  if (/(?:sports?|tournament|football|cricket|basketball|badminton|athletics?|championship|league|match|referee|players?)/i.test(text)) {
+  if (/(?:music|concert|singing|song|band|raag|raga|musical|vocal|melody|rhythm|audio|orchestra|gig|acoustic|live\s*stage|dj|soundfest|sangeet)/i.test(text)) {
+    category = 'music'
+  } else if (/(?:sports?|tournament|football|cricket|basketball|badminton|athletics?|championship|league|match|referee|players?)/i.test(text)) {
     category = 'sports'
   } else if (/(?:hackathon|coding|codefest|hacknit|datathon|programming)/i.test(text)) {
     category = 'hackathon'
   } else if (/(?:robotics?|robots?|bots?|battlebots?|mechatronics)/i.test(text)) {
     category = 'robotics'
-  } else if (/(?:cultural|fest|festival|music|dance|arts?|celebration)/i.test(text)) {
+  } else if (/(?:cultural|fest|festival|dance|arts?|celebration|drama|theatre)/i.test(text)) {
     category = 'cultural'
   } else if (/(?:conference|summit|symposium|keynote|business|seminar)/i.test(text)) {
     category = 'conference'

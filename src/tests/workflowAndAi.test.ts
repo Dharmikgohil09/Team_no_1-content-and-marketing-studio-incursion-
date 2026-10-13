@@ -388,4 +388,131 @@ describe('Workflow & AI Improvements — Tests 1 to 7', () => {
       }
     })
   })
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // TEST 8: Singing Concert & Music Festival Theme Visuals
+  // ───────────────────────────────────────────────────────────────────────────
+  describe('Test 8: Singing Concert & Music Festival Theme Visuals', () => {
+    const input =
+      'Singing concert named Raag happening on 24 October 2026 at SVNIT Surat campus. ' +
+      'We have 50 vocalists, 10 stage managers and 5 jury panelists. ' +
+      'Cards need artist photo, stage name, role and scannable verification.'
+
+    it('identifies music category and extracts vocalist / stage roles', () => {
+      const result = parseIntentDeterministic(input)
+      const ctx = result.eventContext
+
+      expect(ctx.name.value).toBe('Raag')
+      expect((ctx as any).category.value).toBe('music')
+      expect(ctx.venue.value).toContain('SVNIT Surat')
+      expect(ctx.dateStart.value).toContain('24 October 2026')
+
+      const roleIds = result.roles.map(r => r.id)
+      expect(roleIds).toContain('artist')
+    })
+
+    it('generates rich concert stage background visuals in all 3 drafts', () => {
+      const result = parseIntentDeterministic(input)
+      const roles = result.roles.map(r => getRoleOrDefault(r.id))
+      const drafts = generateDraftsDeterministic(result.eventContext, roles)
+
+      expect(drafts).toHaveLength(3)
+      const [d1, d2, d3] = drafts
+
+      // Verify names and tags
+      expect(d1.name).toContain('Concert Acoustic')
+      expect(d1.tags).toContain('music')
+      expect(d1.tags).toContain('concert')
+
+      expect(d2.name).toContain('Neon Soundwave')
+      expect(d2.tags).toContain('neon')
+      expect(d2.tags).toContain('equalizer')
+
+      expect(d3.name).toContain('VIP Backstage Pass')
+      expect(d3.tags).toContain('backstage')
+
+      // Draft 1 must have stage spotlights, acoustic ripple ring, musical notes, and 16 equalizer bars
+      const d1HasSpotlights = d1.elements.some(e => e.id === 'music-spotlight-left' || e.id === 'music-spotlight-right')
+      const d1HasAcousticRing = d1.elements.some(e => e.id === 'music-acoustic-ring')
+      const d1HasMusicalNotes = d1.elements.some(e => e.id === 'music-note-left' || e.id === 'music-note-right')
+      const d1HasEqBars = d1.elements.some(e => e.id?.startsWith('music-eq-bar-'))
+
+      expect(d1HasSpotlights).toBe(true)
+      expect(d1HasAcousticRing).toBe(true)
+      expect(d1HasMusicalNotes).toBe(true)
+      expect(d1HasEqBars).toBe(true)
+
+      // Draft 2 must have crossing stage lasers, vinyl grooves, floating notes, and sonic equalizer
+      const d2HasLasers = d2.elements.some(e => e.id === 'music-laser-1' || e.id === 'music-laser-2')
+      const d2HasVinylGrooves = d2.elements.some(e => e.id === 'music-groove-1')
+      const d2HasNotes = d2.elements.some(e => e.id === 'music-note-crest-1' || e.id === 'music-note-crest-2')
+      const d2HasEqBars = d2.elements.some(e => e.id?.startsWith('music-crest-eq-'))
+
+      expect(d2HasLasers).toBe(true)
+      expect(d2HasVinylGrooves).toBe(true)
+      expect(d2HasNotes).toBe(true)
+      expect(d2HasEqBars).toBe(true)
+
+      // Draft 3 must have stage spotlight, watermark note, and vertical frequency spectrum bars
+      const d3HasSpotlight = d3.elements.some(e => e.id === 'editorial-music-spotlight')
+      const d3HasWatermarkNote = d3.elements.some(e => e.id === 'editorial-music-watermark')
+      const d3HasFreqBars = d3.elements.some(e => e.id?.startsWith('editorial-freq-bar-'))
+
+      expect(d3HasSpotlight).toBe(true)
+      expect(d3HasWatermarkNote).toBe(true)
+      expect(d3HasFreqBars).toBe(true)
+    })
+
+    it('renders vector SVG with musical note paths, equalizers, and concert credentials without errors', () => {
+      const result = parseIntentDeterministic(input)
+      const roles = result.roles.map(r => getRoleOrDefault(r.id))
+      const drafts = generateDraftsDeterministic(result.eventContext, roles)
+
+      const samplePerson = {
+        id: 'VOX-001',
+        name: 'Arijit Sen',
+        role: 'artist',
+        team: 'Lead Vocal Ensemble',
+      }
+
+      // Render Draft 1 front
+      const { svg: svgFront } = renderCard({
+        template: drafts[0],
+        person: samplePerson as any,
+        role: getRoleOrDefault('artist'),
+        event: result.eventContext,
+        face: 'front',
+      })
+      expect(svgFront).toContain('Arijit Sen')
+      expect(svgFront).toContain('Raag')
+      expect(svgFront).toContain('music-note-left')
+      expect(svgFront).toContain('music-eq-bar-')
+      expect(svgFront).not.toMatch(/[=" ]NaN[" ]/)
+
+      // Render Draft 2 front
+      const { svg: svgD2 } = renderCard({
+        template: drafts[1],
+        person: samplePerson as any,
+        role: getRoleOrDefault('artist'),
+        event: result.eventContext,
+        face: 'front',
+      })
+      expect(svgD2).toContain('Arijit Sen')
+      expect(svgD2).toContain('music-laser-1')
+      expect(svgD2).toContain('music-note-crest-1')
+      expect(svgD2).not.toMatch(/[=" ]NaN[" ]/)
+
+      // Render Draft 1 back
+      const { svg: svgBack } = renderCard({
+        template: drafts[0],
+        person: samplePerson as any,
+        role: getRoleOrDefault('artist'),
+        event: result.eventContext,
+        face: 'back',
+      })
+      expect(svgBack).toContain('TERMS &amp; EVENT GUIDELINES')
+      expect(svgBack).toContain('soundboard')
+      expect(svgBack).not.toMatch(/[=" ]NaN[" ]/)
+    })
+  })
 })

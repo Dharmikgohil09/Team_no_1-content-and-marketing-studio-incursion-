@@ -21,7 +21,7 @@ function getGenAI() {
 }
 
 async function generateWithGemini(genAI: GoogleGenerativeAI, prompt: string): Promise<string> {
-  const models = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-2.5-flash-lite']
+  const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
   let lastErr: any = null
   for (const m of models) {
     try {
@@ -65,7 +65,7 @@ Return ONLY a valid JSON object matching this exact shape (no markdown, no backt
 {
   "eventContext": {
     "name":             { "value": "string or null", "status": "provided or missing" },
-    "category":         { "value": "sports|hackathon|robotics|conference|cultural|workshop|general", "status": "provided or missing" },
+    "category":         { "value": "sports|hackathon|robotics|conference|cultural|music|workshop|general", "status": "provided or missing" },
     "description":      { "value": "string or null", "status": "provided or missing" },
     "tagline":          { "value": "string or null", "status": "provided or missing" },
     "dateStart":        { "value": "string or null", "status": "provided or missing" },
@@ -82,7 +82,7 @@ Return ONLY a valid JSON object matching this exact shape (no markdown, no backt
     "contact":          { "value": null, "status": "missing" }
   },
   "roles": [
-    { "id": "participant|organizer|mentor|volunteer|judge|speaker|player|referee|custom", "label": "string", "count": null }
+    { "id": "participant|organizer|mentor|volunteer|judge|speaker|player|referee|artist|vocalist|custom", "label": "string", "count": null }
   ],
   "designType": "idCard",
   "confidence": 0.0 to 1.0
@@ -116,15 +116,16 @@ Event: ${JSON.stringify(event)}
 Roles: ${JSON.stringify(roles)}
 
 Create 3 distinct design concepts that genuinely match the event category and theme:
+- If MUSIC / CONCERT / SINGING: use live concert stage ambiance, audio equalizer waveforms, spotlight beams, glowing neon gradients (magenta/violet/cyan), musical note motifs.
 - If SPORTS: use athletic motion, dynamic jersey/stadium accents, energetic palettes (e.g. navy/gold, emerald/volt, crimson/white).
 - If HACKATHON: use modern technology, cyber/electric accents, clean tech geometry.
 - If ROBOTICS: use engineering caliper lines, technical precision, cyan/amber/slate.
-- If CULTURAL/MUSIC: use celebratory artistic flair, festive gradients, vibrant expression.
-- If CONFERENCE/SEMINAR: use executive prestige, editorial typography, subtle institutional pinstripes.
+- If CULTURAL / ARTS: use celebratory artistic flair, festive gradients, vibrant expression.
+- If CONFERENCE / SEMINAR: use executive prestige, editorial typography, subtle institutional pinstripes.
 
 Return ONLY a valid JSON object matching this exact shape (no markdown, no backticks):
 {
-  "category": "sports|hackathon|robotics|conference|cultural|workshop|general",
+  "category": "sports|hackathon|robotics|conference|cultural|music|workshop|general",
   "visualDirection": "Brief description of the visual identity",
   "drafts": [
     {
@@ -132,7 +133,7 @@ Return ONLY a valid JSON object matching this exact shape (no markdown, no backt
       "name": "Modern Minimal",
       "primaryColor": "#hex",
       "accentColor": "#hex",
-      "motif": "sports-stripes|tech-circuits|clean-minimal|engineering-grid|celebratory-arcs"
+      "motif": "sports-stripes|tech-circuits|concert-soundwaves|clean-minimal|engineering-grid|celebratory-arcs"
     },
     {
       "id": "bold-dynamic",
