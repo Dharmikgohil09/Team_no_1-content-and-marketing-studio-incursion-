@@ -9,12 +9,12 @@ import { CardPreview } from '../components/CardPreview'
 import { getDefaultBrandKit } from '../../brandKits/loader'
 
 const KNOWN_COLUMNS = {
-  name:     ['name', 'full name', 'fullname', 'participant name'],
-  role:     ['role', 'type', 'category'],
-  email:    ['email', 'e-mail', 'mail'],
-  team:     ['team', 'team name', 'group'],
-  id:       ['id', 'participant id', 'uid', 'student id', 'roll no'],
-  photoUrl: ['photo', 'photo url', 'image', 'picture'],
+  name:     ['name', 'full name', 'fullname', 'participant name', 'participant', 'student name', 'candidate name', 'first name', 'full_name', 'username', 'person name', 'attendee name', 'attendee', 'display name', 'member name', 'name of participant'],
+  role:     ['role', 'type', 'category', 'designation', 'position', 'ticket type', 'pass type'],
+  email:    ['email', 'e-mail', 'mail', 'email address'],
+  team:     ['team', 'team name', 'group', 'organization', 'org', 'college', 'institute', 'department'],
+  id:       ['id', 'participant id', 'uid', 'student id', 'roll no', 'registration no', 'reg no', 'ticket id'],
+  photoUrl: ['photo', 'photo url', 'image', 'picture', 'avatar', 'photo_url', 'image url', 'profile'],
 }
 
 export function DataPage() {
@@ -31,6 +31,9 @@ export function DataPage() {
   const [rowStatuses, setRowStatuses]   = useState<PersonRowStatus[]>([])
   const [previewIdx, setPreviewIdx]     = useState(0)
   const [error, setError]               = useState('')
+
+  const samplePhotoUrl    = useProjectStore(s => s.samplePhotoUrl)
+  const setSamplePhotoUrl = useProjectStore(s => s.setSamplePhotoUrl)
 
   const brandKit = getDefaultBrandKit()
   const roles    = project?.roles ?? DEFAULT_ROLES.slice(0, 3)
@@ -104,7 +107,22 @@ export function DataPage() {
       const errors:   string[] = []
       const warnings: string[] = []
 
-      const name = row[inverseMap.name] ?? ''
+      let name = (row[inverseMap.name] ?? '').trim()
+      if (!name) {
+        // Fallback: check other columns that might contain name
+        for (const [k, v] of Object.entries(row)) {
+          if (/name|participant|student|attendee/i.test(k) && v && typeof v === 'string' && v.trim()) {
+            name = v.trim()
+            break
+          }
+        }
+      }
+      if (!name) {
+        // Fallback to first non-role, non-id field if available
+        const otherVals = Object.entries(row).filter(([k, v]) => k !== inverseMap.role && k !== inverseMap.id && v && typeof v === 'string')
+        if (otherVals.length > 0) name = (otherVals[0][1] as string).trim()
+      }
+
       const role = (row[inverseMap.role] ?? 'participant').toLowerCase()
       const id   = row[inverseMap.id] ?? nanoid(8)
 
@@ -120,10 +138,10 @@ export function DataPage() {
 
       const person: Person = {
         id,
-        name:     name || '[No Name]',
+        name:     name || 'Participant Name',
         role:     roles.some(r => r.id === role) ? role : 'participant',
         email:    row[inverseMap.email] ?? undefined,
-        team:     row[inverseMap.team] ?? undefined,
+        team:     row[inverseMap.team] ?? 'Team Alpha',
         photoUrl: row[inverseMap.photoUrl] ?? undefined,
         extra,
       }
@@ -137,7 +155,37 @@ export function DataPage() {
 
   const errorCount   = rowStatuses.filter(s => s.errors.length > 0).length
   const warningCount = rowStatuses.filter(s => s.warnings.length > 0).length
-  const previewPerson = rowStatuses[previewIdx]?.person
+  const samplePerson: Person = {
+    id: 'P001',
+    name: 'Priya Mehta',
+    role: 'participant',
+    team: 'Team Alpha',
+    email: 'priya.mehta@svnit.ac.in',
+    extra: {},
+  }
+  const rawPreviewPerson = rowStatuses[previewIdx]?.person || people[previewIdx] || (people.length > 0 ? people[0] : samplePerson)
+  const previewPerson: Person = {
+    ...rawPreviewPerson,
+    photoUrl: rawPreviewPerson.photoUrl || samplePhotoUrl || '',
+  }
+
+  function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        const url = reader.result
+        setSamplePhotoUrl(url)
+        // Also update in people array if available
+        if (people.length > 0 && people[previewIdx]) {
+          const updated = people.map((p, i) => i === previewIdx ? { ...p, photoUrl: url } : p)
+          setPeople(updated)
+        }
+      }
+    }
+    reader.readAsDataURL(file)
+  }
 
   return (
     <div className="animate-slide-up">
@@ -267,11 +315,34 @@ export function DataPage() {
                   template={template}
                   role={roles.find(r => r.id === previewPerson.role) ?? roles[0]}
                   person={previewPerson}
-                  event={project?.eventContext}
+                  event={{
+                    ...project?.eventContext,
+                    name: { value: project?.eventContext?.name?.value || 'INCURSION 2026', status: 'provided' },
+                    venue: { value: project?.eventContext?.venue?.value || 'SVNIT, Surat', status: 'provided' },
+                    dateStart: { value: project?.eventContext?.dateStart?.value || '20-22 March 2026', status: 'provided' },
+                    organizer: { value: project?.eventContext?.organizer?.value || 'ACM NIT Surat', status: 'provided' },
+                    tagline: { value: project?.eventContext?.tagline?.value || 'Flagship Tech Hackathon', status: 'provided' },
+                  } as any}
                   brandKit={brandKit}
                 />
               </div>
               <p className="text-center text-xs text-slate-500 mt-2">{previewPerson.name}</p>
+              <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-white/5">
+                <span className="text-xs text-slate-400">Photo:</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  id="datapage-photo-upload"
+                  className="hidden"
+                  onChange={handlePhotoUpload}
+                />
+                <label
+                  htmlFor="datapage-photo-upload"
+                  className="btn-secondary text-[11px] py-1 px-2.5 cursor-pointer flex items-center gap-1.5"
+                >
+                  📷 Upload Portrait Photo
+                </label>
+              </div>
             </div>
           ) : (
             <div className="glass p-8 text-center">

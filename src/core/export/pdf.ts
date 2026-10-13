@@ -28,8 +28,45 @@ export interface PdfExportOptions {
  * For production, svg2pdf.js would be used for true vector embedding.
  * Here we create properly-sized pages with SVG data.
  */
+async function svgToPngBytes(svgString: string, width: number, height: number): Promise<Uint8Array | null> {
+  if (typeof document === 'undefined') return null
+  return new Promise((resolve) => {
+    try {
+      const canvas = document.createElement('canvas')
+      canvas.width  = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return resolve(null)
+
+      const img = new Image()
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+      const url = URL.createObjectURL(svgBlob)
+
+      img.onload = () => {
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, width, height)
+        ctx.drawImage(img, 0, 0, width, height)
+        URL.revokeObjectURL(url)
+        canvas.toBlob((blob) => {
+          if (!blob) return resolve(null)
+          blob.arrayBuffer()
+            .then(buf => resolve(new Uint8Array(buf)))
+            .catch(() => resolve(null))
+        }, 'image/png')
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        resolve(null)
+      }
+      img.src = url
+    } catch {
+      resolve(null)
+    }
+  })
+}
+
 export async function exportPdf(opts: PdfExportOptions): Promise<Uint8Array> {
-  const { template, roles, people, event, brandKit, includeBleed } = opts
+  const { template, roles, people, event, brandKit, includeBleed, dpi = 300 } = opts
   const size = template.size
   const w    = template.orientation === 'portrait' ? size.heightMm : size.widthMm
   const h    = template.orientation === 'portrait' ? size.widthMm  : size.heightMm
@@ -38,6 +75,8 @@ export async function exportPdf(opts: PdfExportOptions): Promise<Uint8Array> {
   const totalH = h + bleed * 2
 
   const pdf = await PDFDocument.create()
+  const pxW = Math.round(mmToPxAtDpi(totalW, dpi))
+  const pxH = Math.round(mmToPxAtDpi(totalH, dpi))
 
   for (const person of people) {
     const role = roles.find(r => r.id === person.role) ?? roles[0]
@@ -56,29 +95,45 @@ export async function exportPdf(opts: PdfExportOptions): Promise<Uint8Array> {
     // Add a page at exact card size (in PDF points)
     const page = pdf.addPage([totalW * MM_PER_PT, totalH * MM_PER_PT])
 
-    // Add SVG as embedded data annotation
-    // (In production use svg2pdf.js for true vector embedding)
-    // For now embed the SVG as a metadata note and white background
-    page.drawRectangle({
-      x:      0,
-      y:      0,
-      width:  totalW * MM_PER_PT,
-      height: totalH * MM_PER_PT,
-      color:  rgb(1, 1, 1),
-    })
-
-    // Draw person name as proof of per-card generation
-    page.drawText(`${person.name} — ${role.label}`, {
-      x:    bleed * MM_PER_PT + 5,
-      y:    totalH * MM_PER_PT / 2,
-      size: 10,
-    })
-
-    page.drawText(`ID: ${person.id}`, {
-      x:    bleed * MM_PER_PT + 5,
-      y:    totalH * MM_PER_PT / 2 - 14,
-      size: 8,
-    })
+    const pngBytes = await svgToPngBytes(svg, pxW, pxH)
+    if (pngBytes) {
+      try {
+        const pngImage = await pdf.embedPng(pngBytes)
+        page.drawImage(pngImage, {
+          x:      0,
+          y:      0,
+          width:  totalW * MM_PER_PT,
+          height: totalH * MM_PER_PT,
+        })
+      } catch (e) {
+        console.warn('Could not embed PNG into PDF, falling back to vector text', e)
+        page.drawRectangle({
+          x:      0,
+          y:      0,
+          width:  totalW * MM_PER_PT,
+          height: totalH * MM_PER_PT,
+          color:  rgb(1, 1, 1),
+        })
+        page.drawText(`${person.name} — ${role.label}`, {
+          x:    bleed * MM_PER_PT + 5,
+          y:    totalH * MM_PER_PT / 2,
+          size: 10,
+        })
+      }
+    } else {
+      page.drawRectangle({
+        x:      0,
+        y:      0,
+        width:  totalW * MM_PER_PT,
+        height: totalH * MM_PER_PT,
+        color:  rgb(1, 1, 1),
+      })
+      page.drawText(`${person.name} — ${role.label}`, {
+        x:    bleed * MM_PER_PT + 5,
+        y:    totalH * MM_PER_PT / 2,
+        size: 10,
+      })
+    }
   }
 
   pdf.setTitle(event.name.value ?? 'ID Cards')
@@ -86,6 +141,7 @@ export async function exportPdf(opts: PdfExportOptions): Promise<Uint8Array> {
 
   return pdf.save()
 }
+
 
 /** Download a PDF Uint8Array as a file */
 export function downloadPdf(data: Uint8Array, filename: string): void {

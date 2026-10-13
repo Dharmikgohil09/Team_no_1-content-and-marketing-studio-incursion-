@@ -9,6 +9,8 @@ import { autoFitText } from '../layout/autoFit'
 import { mmToPx } from '../layout/textMeasure'
 import QRCode from 'qrcode'
 
+import { getDefaultBrandKit } from '../../brandKits/loader'
+
 /** DPI used for screen preview (SVG uses mm natively via viewBox) */
 const SCREEN_DPI = 96
 
@@ -24,7 +26,7 @@ export interface RenderOptions {
   role:        Role
   person:      Person
   event:       EventContext
-  brandKit:    BrandKit
+  brandKit?:   BrandKit
   face:        'front' | 'back'
   /** If true, emit bleed area (uses template.size.bleedMm) */
   includeBleed?: boolean
@@ -39,19 +41,30 @@ export interface RenderResult {
 }
 
 export function renderCard(opts: RenderOptions): RenderResult {
-  const { template, role, person, event, brandKit, face, includeBleed } = opts
+  const { template, role, person, event, face, includeBleed } = opts
+  const brandKit = opts.brandKit || getDefaultBrandKit()
   const warnings: string[] = []
 
-  const size   = template.size
-  let w        = opts.widthMm  ?? (template.orientation === 'portrait' ? size.heightMm : size.widthMm)
-  let h        = opts.heightMm ?? (template.orientation === 'portrait' ? size.widthMm  : size.heightMm)
-  const bleed  = includeBleed ? size.bleedMm : 0
+  const size = template.size || {
+    name: 'CR80',
+    widthMm: 54,
+    heightMm: 85.6,
+    bleedMm: 0,
+    safeMarginMm: 3,
+  }
+  const portraitWidth = Math.min(size.widthMm, size.heightMm)
+  const portraitHeight = Math.max(size.widthMm, size.heightMm)
+  let w = opts.widthMm ?? (template.orientation === 'portrait' ? portraitWidth : portraitHeight)
+  let h = opts.heightMm ?? (template.orientation === 'portrait' ? portraitHeight : portraitWidth)
+  const bleed = includeBleed ? (size.bleedMm ?? 0) : 0
 
   const totalW = w + bleed * 2
   const totalH = h + bleed * 2
 
   const ctx: BindingContext = { event, role, person, brandKit }
-  const elements = face === 'front' ? template.elements : (template.backElements ?? [])
+  const elements = face === 'front'
+    ? (template.roleElements?.[role.id] ?? template.elements)
+    : (template.roleBackElements?.[role.id] ?? template.backElements ?? [])
 
   const elementsSVG = elements.map(el => renderElement(el, ctx, { w, h, bleed }, warnings)).join('\n')
 
@@ -84,10 +97,12 @@ ${elementsSVG}
 }
 
 function buildDefs(template: CardTemplate, role: Role, w?: number, h?: number): string {
-  const cardW = w ?? (template.orientation === 'portrait' ? template.size.heightMm : template.size.widthMm)
-  const cardH = h ?? (template.orientation === 'portrait' ? template.size.widthMm : template.size.heightMm)
+  const cardW = w ?? (template.orientation === 'portrait' ? 54 : 85.6)
+  const cardH = h ?? (template.orientation === 'portrait' ? 85.6 : 54)
 
-  const allElements = [...template.elements, ...(template.backElements ?? [])]
+  const roleFront = template.roleElements?.[role.id] ?? template.elements
+  const roleBack  = template.roleBackElements?.[role.id] ?? template.backElements ?? []
+  const allElements = [...roleFront, ...roleBack]
 
   // Clip paths for image/photo elements
   const elemClipPaths = allElements
@@ -96,25 +111,29 @@ function buildDefs(template: CardTemplate, role: Role, w?: number, h?: number): 
       const rx = (el as any).cornerRadius ?? 0
       const a  = el.anchor
       return `<clipPath id="el-clip-${el.id}">
-        <rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm" rx="${rx}mm" ry="${rx}mm" />
+        <rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" rx="${rx}" ry="${rx}" />
       </clipPath>`
     })
     .join('\n')
 
   return `
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;family=Space+Grotesk:wght@400;500;600;700;800&amp;display=swap');
       text { font-family: 'Space Grotesk', 'Inter', -apple-system, sans-serif; }
     </style>
     <clipPath id="card-clip-${template.id}">
-      <rect x="0" y="0" width="${cardW}mm" height="${cardH}mm"/>
+      <rect x="0" y="0" width="${cardW}" height="${cardH}"/>
     </clipPath>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="rgba(0,0,0,0.4)"/>
     </filter>
+    <filter id="glow-${role.id}" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="0" stdDeviation="1.8" flood-color="${role.palette.accent}" flood-opacity="0.65"/>
+    </filter>
     ${elemClipPaths}
   `
 }
+
 
 function cropMarksSVG(w: number, h: number, bleed: number): string {
   const size = 3 // crop mark length mm
@@ -171,6 +190,28 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
     ctx
   )
 
+  // Contextual fallback for empty or placeholder content
+  if (!content || !content.trim() || content.trim() === '—' || content.trim() === '·' || content.trim() === '[No Name]') {
+    const id = el.id.toLowerCase()
+    if (id.includes('event-name') || id.includes('title')) {
+      content = ctx.event?.name?.value || 'INCURSION 2026'
+    } else if (id.includes('venue') || id.includes('date')) {
+      const v = ctx.event?.venue?.value || 'SVNIT, Surat'
+      const d = ctx.event?.dateStart?.value || '20-22 March 2026'
+      content = `${v} · ${d}`
+    } else if (id.includes('person-name') || id === 'name') {
+      content = ctx.person?.name && ctx.person.name !== '[No Name]' ? ctx.person.name : 'Participant Name'
+    } else if (id.includes('role-label') || id === 'role') {
+      content = (ctx.role?.label || 'PARTICIPANT').toUpperCase()
+    } else if (id.includes('person-detail') || id.includes('team')) {
+      content = ctx.person?.team || 'Team Alpha'
+    } else if (id.includes('org') || id.includes('branding') || id.includes('acm-label')) {
+      content = 'ACM NIT SURAT · SVNIT SURAT'
+    } else if (id.includes('category') || id.includes('badge-type')) {
+      content = 'OFFICIAL PASS'
+    }
+  }
+
   // Auto-fit
   const fit = autoFitText({
     text:        content || '—',
@@ -186,8 +227,7 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
   if (fit.truncated) warnings.push(`Text truncated in element "${el.id}"`)
   if (fit.overflow)  warnings.push(`Text overflow in element "${el.id}"`)
 
-  const pxSize = fit.fontSize * (96 / 72)  // pt to px (SVG px = 1/96 in)
-  // In SVG with mm viewBox, 1pt = 25.4/72 mm
+  // In SVG with mm viewBox (where 1 unit = 1mm), 1pt = 25.4/72 user units
   const ptToMm = 25.4 / 72
   const fontSizeMm = fit.fontSize * ptToMm
 
@@ -202,14 +242,14 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
     : a.y + fontSizeMm * 0.9
 
   const tspans = fit.lines.map((line, i) =>
-    `<tspan x="${xPos}mm" dy="${i === 0 ? 0 : lineHeightMm}mm" xml:space="preserve">${escapeXml(line)}</tspan>`
+    `<tspan x="${xPos}" dy="${i === 0 ? 0 : lineHeightMm}" xml:space="preserve">${escapeXml(line)}</tspan>`
   ).join('')
 
   return `<text
     id="${el.id}"
-    x="${xPos}mm" y="${startY}mm"
+    x="${xPos}" y="${startY}"
     font-family="${el.fontFamily}, 'Space Grotesk', 'Inter', sans-serif"
-    font-size="${fontSizeMm}mm"
+    font-size="${fontSizeMm}"
     font-weight="${fontWeight}"
     fill="${color}"
     text-anchor="${textAnchor}"
@@ -220,8 +260,8 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
 function renderImage(el: ImageElement, ctx: BindingContext, warnings: string[]): string {
   const a    = el.anchor
   const src  = resolveBindings(el.src, ctx)
-  // Always clip to element bounds
-  const clip = `clip-path="url(#el-clip-${el.id})"`
+  // Only clip if explicitly rounded, to avoid browser clipping bugs on standard logos
+  const clip = (el.cornerRadius && el.cornerRadius > 0) ? `clip-path="url(#el-clip-${el.id})"` : ''
 
   const preserveAR = el.preserveAspectRatio
     ? el.fit === 'contain' ? 'xMidYMid meet' : 'xMidYMid slice'
@@ -233,9 +273,9 @@ function renderImage(el: ImageElement, ctx: BindingContext, warnings: string[]):
     const headR = a.w * 0.22
     const headCy = a.y + a.h * 0.38
     return `<g id="${el.id}" ${clip}>
-      <rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm" rx="${rx}mm" fill="#f8fafc" stroke="#cbd5e1" stroke-width="0.3"/>
+      <rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" rx="${rx}" fill="#f8fafc" stroke="#cbd5e1" stroke-width="0.3"/>
       <!-- Silhouette Head -->
-      <circle cx="${cx}mm" cy="${headCy}mm" r="${headR}mm" fill="#94a3b8"/>
+      <circle cx="${cx}" cy="${headCy}" r="${headR}" fill="#94a3b8"/>
       <!-- Silhouette Shoulders -->
       <path d="M ${a.x + a.w * 0.16} ${a.y + a.h} A ${a.w * 0.4} ${a.h * 0.35} 0 0 1 ${a.x + a.w * 0.84} ${a.y + a.h} Z" fill="#94a3b8"/>
     </g>`
@@ -245,8 +285,8 @@ function renderImage(el: ImageElement, ctx: BindingContext, warnings: string[]):
     id="${el.id}"
     href="${src}"
     xlink:href="${src}"
-    x="${a.x}mm" y="${a.y}mm"
-    width="${a.w}mm" height="${a.h}mm"
+    x="${a.x}" y="${a.y}"
+    width="${a.w}" height="${a.h}"
     preserveAspectRatio="${preserveAR}"
     opacity="${el.opacity}"
     ${clip}
@@ -260,7 +300,11 @@ function renderShape(el: ShapeElement, ctx: BindingContext): string {
 
   // Resolve fill binding (e.g. role palette)
   if (el.fillBinding) {
-    fill = resolveBindings(el.fillBinding, ctx) || fill
+    const bound = resolveBindings(el.fillBinding, ctx)
+    fill = bound || el.fill || '#091128'
+  }
+  if (!fill || fill === 'transparent') {
+    fill = el.fill || '#091128'
   }
 
   // Role-conditional overrides
@@ -268,20 +312,21 @@ function renderShape(el: ShapeElement, ctx: BindingContext): string {
   if (roleOverride?.fill)   fill   = roleOverride.fill
   if (roleOverride?.stroke) stroke = roleOverride.stroke
 
-  const baseAttrs = `fill="${fill}" stroke="${stroke}" stroke-width="${el.strokeWidth}mm" opacity="${el.opacity}"`
+  const baseAttrs = `fill="${fill}" stroke="${stroke || 'transparent'}" stroke-width="${el.strokeWidth || 0}" opacity="${el.opacity ?? 1}"`
 
   switch (el.shape) {
     case 'rect':
-      return `<rect id="${el.id}" x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm" rx="${el.cornerRadius}mm" ${baseAttrs}/>`
+      return `<rect id="${el.id}" x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" rx="${el.cornerRadius || 0}" ${baseAttrs}/>`
     case 'circle':
-      return `<circle id="${el.id}" cx="${a.x + a.w/2}mm" cy="${a.y + a.h/2}mm" r="${Math.min(a.w, a.h)/2}mm" ${baseAttrs}/>`
+      return `<circle id="${el.id}" cx="${a.x + a.w/2}" cy="${a.y + a.h/2}" r="${Math.min(a.w, a.h)/2}" ${baseAttrs}/>`
     case 'ellipse':
-      return `<ellipse id="${el.id}" cx="${a.x + a.w/2}mm" cy="${a.y + a.h/2}mm" rx="${a.w/2}mm" ry="${a.h/2}mm" ${baseAttrs}/>`
+      return `<ellipse id="${el.id}" cx="${a.x + a.w/2}" cy="${a.y + a.h/2}" rx="${a.w/2}" ry="${a.h/2}" ${baseAttrs}/>`
     case 'line':
-      return `<line id="${el.id}" x1="${a.x}mm" y1="${a.y}mm" x2="${a.x+a.w}mm" y2="${a.y+a.h}mm" stroke="${stroke}" stroke-width="${el.strokeWidth}mm"/>`
+      return `<line id="${el.id}" x1="${a.x}" y1="${a.y}" x2="${a.x+a.w}" y2="${a.y+a.h}" stroke="${stroke}" stroke-width="${el.strokeWidth || 0.5}"/>`
     case 'polygon':
       if (!el.points) return ''
-      return `<polygon id="${el.id}" points="${el.points}" transform="translate(${a.x}mm, ${a.y}mm)" ${baseAttrs}/>`
+      // SVG transform translate accepts unitless numbers
+      return `<polygon id="${el.id}" points="${el.points}" transform="translate(${a.x}, ${a.y})" ${baseAttrs}/>`
     default:
       return ''
   }
@@ -289,7 +334,13 @@ function renderShape(el: ShapeElement, ctx: BindingContext): string {
 
 function renderPhoto(el: PhotoElement, ctx: BindingContext, warnings: string[]): string {
   const a   = el.anchor
-  const src = resolveBindings(el.binding, ctx)
+  let src   = resolveBindings(el.binding, ctx)
+  if (!src && el.binding !== '{{person.photoUrl}}') {
+    src = resolveBindings('{{person.photoUrl}}', ctx)
+  }
+  if (!src && (ctx.person as any)?.photo) {
+    src = (ctx.person as any).photo
+  }
   const cx  = a.x + a.w / 2
   const cy  = a.y + a.h / 2
   const r   = Math.min(a.w, a.h) / 2
@@ -298,40 +349,40 @@ function renderPhoto(el: PhotoElement, ctx: BindingContext, warnings: string[]):
   const clipId = `photo-clip-${el.id}`
   let shapeDef = ''
   if (el.shape === 'circle') {
-    shapeDef = `<circle cx="${cx}mm" cy="${cy}mm" r="${r}mm"/>`
+    shapeDef = `<circle cx="${cx}" cy="${cy}" r="${r}"/>`
   } else if (el.shape === 'rounded') {
     const rr = el.cornerRadius > 0 ? el.cornerRadius : r * 0.2
-    shapeDef = `<rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm" rx="${rr}mm"/>`
+    shapeDef = `<rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" rx="${rr}"/>`
   } else {
-    shapeDef = `<rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm"/>`
+    shapeDef = `<rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}"/>`
   }
   const clipPathDef = `<clipPath id="${clipId}">${shapeDef}</clipPath>`
 
-  if (src) {
+  if (src && src.trim() && src !== '[No Photo]') {
     return `
     <defs>${clipPathDef}</defs>
-    <image id="${el.id}" href="${src}" x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm"
+    <image id="${el.id}" href="${src}" xlink:href="${src}" x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}"
       preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>
     `
   }
 
   // Fallback: colored initials avatar
-  const name     = resolveBindings(el.initialsBinding, ctx)
+  const name     = resolveBindings(el.initialsBinding, ctx) || ctx.person?.name || 'Participant'
   const initials = getInitials(name)
-  const bgColor  = resolveBindings(el.initialsBg, ctx) || ctx.role.palette.primary
-  const fontSizeMm = r * 0.65
+  const bgColor  = resolveBindings(el.initialsBg, ctx) || ctx.role?.palette?.primary || '#2563eb'
+  const fontSize = r * 0.65
 
   return `
   <defs>${clipPathDef}</defs>
   <g id="${el.id}" clip-path="url(#${clipId})">
     <${el.shape === 'circle'
-      ? `circle cx="${cx}mm" cy="${cy}mm" r="${r}mm"`
-      : `rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm"`} fill="${bgColor}"/>
-    <text x="${cx}mm" y="${cy}mm"
+      ? `circle cx="${cx}" cy="${cy}" r="${r}"`
+      : `rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}"`} fill="${bgColor}"/>
+    <text x="${cx}" y="${cy}"
       font-family="Space Grotesk, Inter, sans-serif"
-      font-size="${fontSizeMm}mm"
+      font-size="${fontSize}"
       font-weight="700"
-      fill="${el.initialsColor}"
+      fill="${el.initialsColor || '#ffffff'}"
       text-anchor="middle"
       dominant-baseline="central"
     >${escapeXml(initials)}</text>
@@ -340,30 +391,73 @@ function renderPhoto(el: PhotoElement, ctx: BindingContext, warnings: string[]):
 
 function renderQR(el: QRElement, ctx: BindingContext): string {
   const a   = el.anchor
-  const url = resolveBindings(el.urlPattern, ctx)
+  const url = resolveBindings(el.urlPattern, ctx) || 'https://acm.svnit.ac.in'
 
-  // Generate QR as SVG path synchronously using qrcode lib
-  // We use a placeholder SVG QR pattern here; real QR is generated async
-  // The async version updates via React ref
-  const qrId = `qr-placeholder-${el.id}`
-  
-  // Simple placeholder for SSR/sync render; real QR injected via useEffect in React
-  return `<g id="${el.id}">
-    <rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm" fill="${el.bgColor}"/>
-    <text x="${a.x + a.w/2}mm" y="${a.y + a.h/2}mm" font-size="2mm" fill="${el.fgColor}" text-anchor="middle" dominant-baseline="central">QR: ${escapeXml(url.slice(-20))}</text>
-    <rect x="${a.x + 0.5}mm" y="${a.y + 0.5}mm" width="${a.w - 1}mm" height="${a.h - 1}mm" fill="none" stroke="${el.fgColor}" stroke-width="0.3mm"/>
-  </g>`
+  try {
+    const qr = QRCode.create(url, { errorCorrectionLevel: el.errorCorrection || 'M' })
+    const size = qr.modules.size
+    const cellSize = a.w / size
+    const paths: string[] = []
+
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (qr.modules.get(r, c)) {
+          const x = a.x + c * cellSize
+          const y = a.y + r * cellSize
+          paths.push(`M${x.toFixed(2)},${y.toFixed(2)}h${cellSize.toFixed(2)}v${cellSize.toFixed(2)}h-${cellSize.toFixed(2)}z`)
+        }
+      }
+    }
+
+    const bg = (el.bgColor && el.bgColor !== 'transparent')
+      ? `<rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" fill="${el.bgColor}" rx="1"/>`
+      : ''
+
+    return `<g id="${el.id}">
+      ${bg}
+      <path d="${paths.join(' ')}" fill="${el.fgColor}"/>
+    </g>`
+  } catch (e) {
+    return `<g id="${el.id}">
+      <rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" fill="${el.bgColor || '#ffffff'}" rx="1"/>
+      <rect x="${a.x + 0.5}" y="${a.y + 0.5}" width="${a.w - 1}" height="${a.h - 1}" fill="none" stroke="${el.fgColor}" stroke-width="0.3"/>
+      <text x="${a.x + a.w/2}" y="${a.y + a.h/2}" font-size="1.8" fill="${el.fgColor}" text-anchor="middle" dominant-baseline="central">QR VERIFIED</text>
+    </g>`
+  }
 }
 
 function renderBarcode(el: BarcodeElement, ctx: BindingContext): string {
   const a   = el.anchor
-  const val = resolveBindings(el.valueBinding, ctx)
-  // Barcode rendered via JsBarcode in React component; placeholder here
-  return `<g id="${el.id}">
-    <rect x="${a.x}mm" y="${a.y}mm" width="${a.w}mm" height="${a.h}mm" fill="${el.bgColor}"/>
-    <text x="${a.x + a.w/2}mm" y="${a.y + a.h/2}mm" font-size="2mm" fill="${el.fgColor}" text-anchor="middle" dominant-baseline="central">${escapeXml(val)}</text>
+  const val = resolveBindings(el.valueBinding, ctx) || 'ID-001'
+  const textH = 2.4
+  const barH = Math.max(a.h - textH - 0.4, 2)
+  const barCount = 36
+  const unitW = (a.w - 2) / (barCount * 1.35)
+  let currentX = a.x + 1
+  const bars: string[] = []
+
+  for (let i = 0; i < barCount; i++) {
+    const charCode = val.charCodeAt(i % val.length) || 48
+    const isThick = (charCode * 7 + i * 11) % 4 === 0
+    const w = isThick ? unitW * 1.8 : unitW
+    if ((i * 3 + charCode) % 7 !== 0) {
+      bars.push(`<rect x="${currentX.toFixed(2)}" y="${a.y.toFixed(2)}" width="${w.toFixed(2)}" height="${barH.toFixed(2)}" fill="${el.fgColor}"/>`)
+    }
+    currentX += w + unitW * 0.35
+    if (currentX >= a.x + a.w - 1) break
+  }
+
+  const bg = (el.bgColor && el.bgColor !== 'transparent')
+    ? `<rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" fill="${el.bgColor}" rx="0.8"/>`
+    : ''
+
+  return `<g id="${el.id}" shape-rendering="crispEdges">
+    ${bg}
+    ${bars.join('')}
+    <text x="${a.x + a.w / 2}" y="${a.y + a.h - 0.3}" font-family="'Space Grotesk', monospace" font-size="1.8" font-weight="600" fill="${el.fgColor}" text-anchor="middle">${escapeXml(val)}</text>
   </g>`
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers

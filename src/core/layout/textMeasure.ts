@@ -55,8 +55,19 @@ function getOffscreenCanvas(): HTMLCanvasElement | OffscreenCanvas {
     _canvas.width = 1
     _canvas.height = 1
   } else {
-    // SSR/server: return a mock
-    _canvas = { getContext: () => ({ font: '', measureText: (t: string) => ({ width: t.length * 8 }) }) } as unknown as HTMLCanvasElement
+    // SSR/server: return a mock that scales with font size
+    let currentFont = '12px sans-serif'
+    _canvas = {
+      getContext: () => ({
+        set font(v: string) { currentFont = v },
+        get font() { return currentFont },
+        measureText: (t: string) => {
+          const match = currentFont.match(/(\d+(\.\d+)?)px/)
+          const px = match ? parseFloat(match[1]) : 10
+          return { width: t.length * px * 0.52 }
+        }
+      })
+    } as unknown as HTMLCanvasElement
   }
   return _canvas
 }

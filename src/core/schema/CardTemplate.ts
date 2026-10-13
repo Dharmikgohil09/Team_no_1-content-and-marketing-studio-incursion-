@@ -32,6 +32,10 @@ export const CardTemplateSchema = z.object({
   elements:       z.array(ElementSchema),
   backElements:   z.array(ElementSchema).optional(),
 
+  /** Role-specific layer overrides: roleId -> Element[] */
+  roleElements:   z.record(z.string(), z.array(ElementSchema)).optional(),
+  roleBackElements: z.record(z.string(), z.array(ElementSchema)).optional(),
+
   /** metadata tags for registry search */
   tags:           z.array(z.string()).default([]),
   /** which roles this template supports (empty = all) */

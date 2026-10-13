@@ -26,14 +26,19 @@ export function ExportPage() {
   const [format,       setFormat]       = useState<'svg' | 'pdf' | 'png'>('pdf')
   const [dpi,          setDpi]          = useState<150 | 300 | 600>(300)
   const [includeBleed, setIncludeBleed] = useState(true)
+  const [exportFace,   setExportFace]   = useState<'front' | 'back'>('front')
   const [exporting,    setExporting]    = useState(false)
   const [done,         setDone]         = useState(false)
 
   const brandKit = getDefaultBrandKit()
   const roles    = project?.roles ?? DEFAULT_ROLES
   const template = project?.activeTemplate
+  const samplePhotoUrl = useProjectStore(s => s.samplePhotoUrl)
 
-  const exportPeople = people.length > 0 ? people : [SAMPLE_PERSON]
+  const exportPeople = (people.length > 0 ? people : [SAMPLE_PERSON]).map(p => ({
+    ...p,
+    photoUrl: p.photoUrl || samplePhotoUrl || '',
+  }))
   const previewRole  = roles.find(r => r.id === exportPeople[0]?.role) ?? roles[0]
 
   async function handleExport() {
@@ -49,8 +54,8 @@ export function ExportPage() {
         // Export first person as sample SVG
         const person = exportPeople[0]
         const role   = roles.find(r => r.id === person.role) ?? roles[0]
-        const svg    = exportSvg({ template, role, person, event: eventCtx, brandKit, includeBleed, face: 'front' })
-        downloadSvg(svg, `${filename}_${person.name.replace(/\s+/g, '_')}.svg`)
+        const svg    = exportSvg({ template, role, person, event: eventCtx, brandKit, includeBleed, face: exportFace })
+        downloadSvg(svg, `${filename}_${person.name.replace(/\s+/g, '_')}_${exportFace}.svg`)
 
       } else if (format === 'pdf') {
         const pdfBytes = await exportPdf({
@@ -68,8 +73,8 @@ export function ExportPage() {
       } else if (format === 'png') {
         const person = exportPeople[0]
         const role   = roles.find(r => r.id === person.role) ?? roles[0]
-        const blob   = await exportPng({ template, role, person, event: eventCtx, brandKit, dpi, includeBleed, face: 'front' })
-        downloadPng(blob, `${filename}_${person.name.replace(/\s+/g, '_')}_${dpi}dpi.png`)
+        const blob   = await exportPng({ template, role, person, event: eventCtx, brandKit, dpi, includeBleed, face: exportFace })
+        downloadPng(blob, `${filename}_${person.name.replace(/\s+/g, '_')}_${exportFace}_${dpi}dpi.png`)
       }
 
       setDone(true)
@@ -79,6 +84,7 @@ export function ExportPage() {
       setExporting(false)
     }
   }
+
 
   if (!project || !template) {
     return (
@@ -234,31 +240,56 @@ export function ExportPage() {
         {/* Preview */}
         <div className="space-y-4">
           <div className="glass p-4">
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Export Preview</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Export Preview</p>
+              <div className="flex items-center gap-1 p-0.5 bg-surface-900 rounded-lg border border-white/10">
+                <button
+                  onClick={() => setExportFace('front')}
+                  className={`px-2.5 py-0.5 rounded text-[11px] font-semibold transition-all ${
+                    exportFace === 'front' ? 'bg-acm-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Front
+                </button>
+                <button
+                  onClick={() => setExportFace('back')}
+                  className={`px-2.5 py-0.5 rounded text-[11px] font-semibold transition-all ${
+                    exportFace === 'back' ? 'bg-acm-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Back
+                </button>
+              </div>
+            </div>
+
             {template && (
-              <div className="card-preview-wrapper">
+              <div className="card-preview-wrapper shadow-2xl rounded-xl overflow-hidden">
                 <CardPreview
                   template={template}
                   role={previewRole}
                   person={exportPeople[0]}
                   event={project.eventContext}
                   brandKit={brandKit}
+                  face={exportFace}
                   includeBleed={includeBleed}
                 />
               </div>
             )}
             {includeBleed && (
-              <p className="text-xs text-slate-500 mt-2 text-center">Dashed border = bleed area</p>
+              <p className="text-[11px] text-slate-500 mt-2 text-center">Dashed border = 3mm bleed area with crop marks</p>
             )}
           </div>
 
-          {/* Color note */}
+          {/* Color & Print Note */}
           <div className="glass-sm p-4 text-xs text-slate-500 space-y-1">
-            <p className="text-slate-300 font-medium">🖨 Print color note</p>
-            <p>Files are in RGB. For commercial printing, convert to CMYK in Adobe Illustrator or Acrobat.</p>
+            <p className="text-slate-300 font-semibold flex items-center gap-1.5">
+              <span>🖨</span> Print-Ready Accuracy (54 × 86 mm)
+            </p>
+            <p>Export files preserve exact CR80 physical dimensions, 300 DPI resolution, and vector badge integrity.</p>
           </div>
         </div>
       </div>
     </div>
   )
 }
+

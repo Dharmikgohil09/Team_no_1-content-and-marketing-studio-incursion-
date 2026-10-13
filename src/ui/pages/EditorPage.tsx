@@ -30,14 +30,17 @@ export function EditorPage() {
   const setClubLogo        = useProjectStore(s => s.setClubLogo)
   const resetInstituteLogo = useProjectStore(s => s.resetInstituteLogo)
   const resetClubLogo      = useProjectStore(s => s.resetClubLogo)
+  const samplePhotoUrl     = useProjectStore(s => s.samplePhotoUrl)
+  const setSamplePhotoUrl  = useProjectStore(s => s.setSamplePhotoUrl)
 
   const instituteInputRef = useRef<HTMLInputElement>(null)
   const clubInputRef      = useRef<HTMLInputElement>(null)
   const photoInputRef     = useRef<HTMLInputElement>(null)
-  const [personPhotoUrl, setPersonPhotoUrl] = useState<string>('')
+  const [personPhotoUrl, setPersonPhotoUrl] = useState<string>(samplePhotoUrl || '')
 
   const [selectedEl, setSelectedEl] = useState<string | null>(null)
   const [previewRole, setPreviewRole] = useState<string>('participant')
+  const [face, setFace]               = useState<'front' | 'back'>('front')
   const [history, setHistory]         = useState<CardTemplate[]>([])
   const [historyIdx, setHistoryIdx]   = useState(-1)
   const [showValidation, setShowValidation] = useState(false)
@@ -71,13 +74,16 @@ export function EditorPage() {
     if (!file) return
     const reader = new FileReader()
     reader.onload = () => {
-      if (typeof reader.result === 'string') setPersonPhotoUrl(reader.result)
+      if (typeof reader.result === 'string') {
+        setPersonPhotoUrl(reader.result)
+        setSamplePhotoUrl(reader.result)
+      }
     }
     reader.readAsDataURL(file)
   }
 
   const brandKit = getDefaultBrandKit()
-  const roles    = project?.roles?.length ? project.roles : DEFAULT_ROLES.slice(0, 3)
+  const roles    = project?.roles?.length ? project.roles : DEFAULT_ROLES
   const template = project?.activeTemplate
   const role     = roles.find(r => r.id === previewRole) ?? roles[0]
   const person   = { ...BASE_SAMPLE_PERSON, role: previewRole, photoUrl: personPhotoUrl }
@@ -104,15 +110,30 @@ export function EditorPage() {
 
   function updateElement(elementId: string, patch: Partial<Element>) {
     if (!template) return
-    const newElements = template.elements.map(el =>
-      el.id === elementId ? { ...el, ...patch } : el
-    ) as Element[]
-    const newTpl = { ...template, elements: newElements }
+    const updateList = (list: Element[]) =>
+      list.map(el => (el.id === elementId ? ({ ...el, ...patch } as Element) : el))
+
+    const newElements = updateList(template.elements)
+    const newRoleElements = template.roleElements ? { ...template.roleElements } : undefined
+    if (newRoleElements && newRoleElements[previewRole]) {
+      newRoleElements[previewRole] = updateList(newRoleElements[previewRole])
+    }
+
+    const newTpl: CardTemplate = {
+      ...template,
+      elements: newElements,
+      roleElements: newRoleElements,
+    }
     pushHistory(template)
     updateTemplate(newTpl)
   }
 
-  const selected = template?.elements.find(el => el.id === selectedEl)
+  const activeElementList = face === 'front'
+    ? (template?.roleElements?.[previewRole] ?? template?.elements ?? [])
+    : (template?.roleBackElements?.[previewRole] ?? template?.backElements ?? [])
+
+  const selected = activeElementList.find(el => el.id === selectedEl)
+
 
   if (!project || !template) {
     return (
@@ -143,23 +164,44 @@ export function EditorPage() {
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
         {/* Canvas area */}
         <div className="space-y-4">
-          {/* Role preview tabs */}
-          <div className="flex gap-2 flex-wrap">
-            {roles.map(r => (
+          {/* Controls: Role preview & Face toggle */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex gap-2 flex-wrap">
+              {roles.map(r => (
+                <button
+                  key={r.id}
+                  id={`editor-role-${r.id}`}
+                  onClick={() => setPreviewRole(r.id)}
+                  style={{
+                    backgroundColor: previewRole === r.id ? r.palette.primary + '33' : undefined,
+                    borderColor:     previewRole === r.id ? r.palette.primary : undefined,
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border
+                    ${previewRole === r.id ? 'text-white' : 'text-slate-400 border-white/[0.08] hover:text-white'}`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1 p-1 bg-surface-900 rounded-lg border border-white/10 shrink-0">
               <button
-                key={r.id}
-                id={`editor-role-${r.id}`}
-                onClick={() => setPreviewRole(r.id)}
-                style={{
-                  backgroundColor: previewRole === r.id ? r.palette.primary + '33' : undefined,
-                  borderColor:     previewRole === r.id ? r.palette.primary : undefined,
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border
-                  ${previewRole === r.id ? 'text-white' : 'text-slate-400 border-white/[0.08] hover:text-white'}`}
+                onClick={() => setFace('front')}
+                className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
+                  face === 'front' ? 'bg-acm-600 text-white shadow-glow-acm' : 'text-slate-400 hover:text-white'
+                }`}
               >
-                {r.label}
+                Front Face
               </button>
-            ))}
+              <button
+                onClick={() => setFace('back')}
+                className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
+                  face === 'back' ? 'bg-acm-600 text-white shadow-glow-acm' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Back Face
+              </button>
+            </div>
           </div>
 
           {/* Card canvas */}
@@ -171,9 +213,10 @@ export function EditorPage() {
                 person={person}
                 event={project.eventContext}
                 brandKit={brandKit}
-                face="front"
+                face={face}
               />
             </div>
+
 
             {/* All roles side by side */}
             <div className="w-full">
@@ -338,9 +381,12 @@ export function EditorPage() {
 
           {/* Element list */}
           <div className="glass p-4">
-            <h3 className="section-heading text-sm mb-3">Elements</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="section-heading text-sm">Elements ({face === 'front' ? 'Front' : 'Back'})</h3>
+              <span className="text-[10px] text-slate-400 font-mono">{activeElementList.length} items</span>
+            </div>
             <div className="space-y-1 max-h-64 overflow-y-auto">
-              {template.elements.map(el => (
+              {activeElementList.map(el => (
                 <button
                   key={el.id}
                   onClick={() => setSelectedEl(el.id === selectedEl ? null : el.id)}
@@ -356,6 +402,7 @@ export function EditorPage() {
               ))}
             </div>
           </div>
+
 
           {/* Selected element properties */}
           {selected && (

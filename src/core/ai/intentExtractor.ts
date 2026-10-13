@@ -36,8 +36,12 @@ const ROLE_KEYWORDS: Array<{ pattern: RegExp; id: string; label: string }> = [
   { pattern: /organiz(?:er|or)s?/i, id: 'organizer', label: 'Organizer' },
   { pattern: /mentors?/i,       id: 'mentor',      label: 'Mentor' },
   { pattern: /volunteers?/i,    id: 'volunteer',   label: 'Volunteer' },
+  { pattern: /judges?/i,        id: 'judge',       label: 'Judge' },
   { pattern: /speakers?/i,      id: 'speaker',     label: 'Speaker' },
+  { pattern: /sponsors?/i,      id: 'sponsor',     label: 'Sponsor' },
+  { pattern: /vips?|guests?/i,  id: 'vip',         label: 'VIP' },
 ]
+
 
 const DURATION_PATTERNS = [
   { pattern: /(\d+)\s*-?\s*hour/i, unit: 'hour' },

@@ -39,7 +39,27 @@ function resolvePath(path: string, ctx: BindingContext): unknown {
   }
   // Final unwrap if it's still a tracked field
   if (typeof obj === 'object' && obj !== null && 'value' in obj && 'status' in obj) {
-    return obj.value
+    const val = obj.value
+    if (val !== undefined && val !== null && val !== '') return val
+  }
+
+  // Provide sensible event/person/role fallbacks if unresolved or empty
+  if (obj === undefined || obj === null || obj === '' || obj === '[No Name]') {
+    const trimmed = path.trim()
+    if (trimmed.startsWith('event.name')) return ctx.event?.name?.value || 'INCURSION 2026'
+    if (trimmed.startsWith('event.venue')) return ctx.event?.venue?.value || 'SVNIT, Surat'
+    if (trimmed.startsWith('event.dateStart')) return ctx.event?.dateStart?.value || '20-22 March 2026'
+    if (trimmed.startsWith('event.organizer')) return ctx.event?.organizer?.value || 'ACM NIT Surat'
+    if (trimmed.startsWith('event.tagline')) return ctx.event?.tagline?.value || 'Flagship Tech Hackathon'
+    if (trimmed === 'person.name') return ctx.person?.name && ctx.person.name !== '[No Name]' ? ctx.person.name : 'Participant Name'
+    if (trimmed === 'person.photo' || trimmed === 'person.photoUrl' || trimmed === 'person.avatar' || trimmed === 'person.image') {
+      return ctx.person?.photoUrl || (ctx.person as any)?.photo || (ctx.person as any)?.avatar || ''
+    }
+    if (trimmed === 'person.team' || trimmed === 'person.college' || trimmed === 'person.org' || trimmed === 'person.department') {
+      return ctx.person?.team || ctx.person?.extra?.college || ctx.person?.extra?.department || 'Team Alpha'
+    }
+    if (trimmed === 'person.id' || trimmed === 'person.uid' || trimmed === 'person.regNo') return ctx.person?.id || 'ID-042'
+    if (trimmed === 'role.label' || trimmed === 'person.role') return ctx.role?.label || 'Participant'
   }
   return obj
 }

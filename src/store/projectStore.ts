@@ -19,6 +19,7 @@ interface ProjectState {
   // Brand / Event Logos
   instituteLogo: string
   clubLogo:      string
+  samplePhotoUrl?: string
 
   // Actions
   newProject: (name?: string) => DesignProject
@@ -33,6 +34,7 @@ interface ProjectState {
   setWizardStep: (step: number) => void
   addNlMessage: (role: 'user' | 'assistant', content: string) => void
   setPeople: (people: Person[]) => void
+  setSamplePhotoUrl: (url: string) => void
 
   setInstituteLogo: (dataUrl: string) => void
   setClubLogo: (dataUrl: string) => void
@@ -125,27 +127,39 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ people })
   },
 
+  setSamplePhotoUrl(url: string) {
+    set({ samplePhotoUrl: url })
+  },
+
   setInstituteLogo(dataUrl: string) {
     updateBrandKitLogo('acm-nit-surat', 'svnit', dataUrl)
     set(s => {
-      const updateTemplateElements = (elements: any[]) =>
-        elements.map(el =>
-          el.type === 'image' && (el.id === 'svnit-logo' || el.id.includes('svnit') || el.id.includes('institute'))
+      const updateList = (elements: any[]) =>
+        (elements || []).map(el =>
+          el.type === 'image' && (el.id === 'svnit-logo' || el.id?.includes('svnit') || el.id?.includes('institute'))
             ? { ...el, src: dataUrl }
             : el
         )
+      const updateRoleMap = (roleMap?: Record<string, any[]>) => {
+        if (!roleMap) return undefined
+        const res: Record<string, any[]> = {}
+        for (const [k, v] of Object.entries(roleMap)) res[k] = updateList(v)
+        return res
+      }
+
+      const patchTpl = (tpl: any) => ({
+        ...tpl,
+        elements: updateList(tpl.elements),
+        backElements: tpl.backElements ? updateList(tpl.backElements) : undefined,
+        roleElements: updateRoleMap(tpl.roleElements),
+        roleBackElements: updateRoleMap(tpl.roleBackElements),
+      })
 
       const activeTemplate = s.project?.activeTemplate
-        ? {
-            ...s.project.activeTemplate,
-            elements: updateTemplateElements(s.project.activeTemplate.elements)
-          }
+        ? patchTpl(s.project.activeTemplate)
         : undefined
 
-      const drafts = s.project?.drafts?.map(draft => ({
-        ...draft,
-        elements: updateTemplateElements(draft.elements)
-      }))
+      const drafts = s.project?.drafts?.map(patchTpl)
 
       return {
         instituteLogo: dataUrl,
@@ -163,24 +177,32 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setClubLogo(dataUrl: string) {
     updateBrandKitLogo('acm-nit-surat', 'acm', dataUrl)
     set(s => {
-      const updateTemplateElements = (elements: any[]) =>
-        elements.map(el =>
-          el.type === 'image' && (el.id === 'acm-logo' || el.id.includes('acm') || el.id.includes('club') || el.id.includes('event'))
+      const updateList = (elements: any[]) =>
+        (elements || []).map(el =>
+          el.type === 'image' && (el.id === 'acm-logo' || el.id?.includes('acm') || el.id?.includes('club') || el.id?.includes('event'))
             ? { ...el, src: dataUrl }
             : el
         )
+      const updateRoleMap = (roleMap?: Record<string, any[]>) => {
+        if (!roleMap) return undefined
+        const res: Record<string, any[]> = {}
+        for (const [k, v] of Object.entries(roleMap)) res[k] = updateList(v)
+        return res
+      }
+
+      const patchTpl = (tpl: any) => ({
+        ...tpl,
+        elements: updateList(tpl.elements),
+        backElements: tpl.backElements ? updateList(tpl.backElements) : undefined,
+        roleElements: updateRoleMap(tpl.roleElements),
+        roleBackElements: updateRoleMap(tpl.roleBackElements),
+      })
 
       const activeTemplate = s.project?.activeTemplate
-        ? {
-            ...s.project.activeTemplate,
-            elements: updateTemplateElements(s.project.activeTemplate.elements)
-          }
+        ? patchTpl(s.project.activeTemplate)
         : undefined
 
-      const drafts = s.project?.drafts?.map(draft => ({
-        ...draft,
-        elements: updateTemplateElements(draft.elements)
-      }))
+      const drafts = s.project?.drafts?.map(patchTpl)
 
       return {
         clubLogo: dataUrl,

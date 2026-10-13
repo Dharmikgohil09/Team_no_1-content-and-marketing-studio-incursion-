@@ -16,8 +16,10 @@ const ROLE_OPTIONS = [
   { value: 'organizer',   label: 'Organizer' },
   { value: 'mentor',      label: 'Mentor' },
   { value: 'volunteer',   label: 'Volunteer' },
+  { value: 'judge',       label: 'Judge' },
   { value: 'speaker',     label: 'Speaker' },
 ]
+
 
 /**
  * Generate adaptive questions for fields still marked 'missing'.

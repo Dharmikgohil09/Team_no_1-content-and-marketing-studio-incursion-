@@ -38,14 +38,31 @@ export function CardPreview({
   onClick,
   selected,
 }: CardPreviewProps) {
-  const eventCtx = event ?? makeEmptyEventContext()
+  const eventCtx = useMemo(() => {
+    const base = event ?? makeEmptyEventContext()
+    return {
+      ...base,
+      name: { value: base.name?.value || 'INCURSION 2026', status: base.name?.status || 'provided' },
+      venue: { value: base.venue?.value || 'SVNIT, Surat', status: base.venue?.status || 'provided' },
+      dateStart: { value: base.dateStart?.value || '20-22 March 2026', status: base.dateStart?.status || 'provided' },
+      organizer: { value: base.organizer?.value || 'ACM NIT Surat', status: base.organizer?.status || 'provided' },
+      tagline: { value: base.tagline?.value || 'Flagship Tech Hackathon', status: base.tagline?.status || 'provided' },
+    }
+  }, [event])
+
+  const effectivePerson = useMemo(() => ({
+    ...person,
+    name: person?.name && person.name !== '[No Name]' ? person.name : 'Participant Name',
+    team: person?.team || 'Team Alpha',
+    id: person?.id || 'ID-042',
+  }), [person])
 
   const { svg, warnings } = useMemo(() => {
     try {
       return renderCard({
         template,
         role,
-        person,
+        person: effectivePerson,
         event:    eventCtx,
         brandKit,
         face,
