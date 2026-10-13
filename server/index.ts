@@ -45,32 +45,54 @@ app.post('/api/llm/extract-intent', async (req, res) => {
 
     const genAI = getGenAI()
     const prompt = `
-You are an event design assistant. Extract structured data from the user's event description.
-Return ONLY valid JSON matching this exact shape (no markdown, no explanation):
+You are an expert event understanding and design assistant for an ID card & event branding studio.
+Analyze the user's natural language event description and extract all explicit information.
+
+CRITICAL RULES:
+1. Treat explicit user-provided information as the absolute source of truth.
+2. NEVER invent fake event names, dates, venues, or roles. If a detail is not provided, set value to null and status to "missing".
+3. Distinguish confirmed provided information from missing information.
+4. Extract the event category accurately:
+   - "sports" for tournaments, leagues, matches, athletic competitions (football, cricket, etc.)
+   - "hackathon" for hackathons, coding contests, codefests
+   - "robotics" for robotics, battlebots, hardware competitions
+   - "conference" for business conferences, summits, symposiums
+   - "cultural" for arts, music, dance festivals, cultural celebrations
+   - "workshop" for hands-on bootcamps, masterclasses, technical seminars
+   - "general" if not specifically categorized.
+
+Return ONLY a valid JSON object matching this exact shape (no markdown, no backticks, no conversational text):
 {
   "eventContext": {
-    "name":      { "value": "string|null", "status": "provided|missing" },
-    "tagline":   { "value": "string|null", "status": "provided|missing" },
-    "dateStart": { "value": "YYYY-MM-DD|null", "status": "provided|missing" },
-    "dateEnd":   { "value": "YYYY-MM-DD|null", "status": "provided|missing" },
-    "duration":  { "value": "string|null", "status": "provided|missing" },
-    "venue":     { "value": "string|null", "status": "provided|missing" },
-    "organizer": { "value": "string|null", "status": "provided|missing" },
-    "website":   { "value": null, "status": "missing" },
-    "contact":   { "value": null, "status": "missing" }
+    "name":             { "value": "string or null", "status": "provided or missing" },
+    "category":         { "value": "sports|hackathon|robotics|conference|cultural|workshop|general", "status": "provided or missing" },
+    "description":      { "value": "string or null", "status": "provided or missing" },
+    "tagline":          { "value": "string or null", "status": "provided or missing" },
+    "dateStart":        { "value": "string or null", "status": "provided or missing" },
+    "dateEnd":          { "value": "string or null", "status": "provided or missing" },
+    "duration":         { "value": "string or null", "status": "provided or missing" },
+    "venue":            { "value": "string or null", "status": "provided or missing" },
+    "organizer":        { "value": "string or null", "status": "provided or missing" },
+    "participantCount": { "value": null, "status": "provided or missing" },
+    "requestedFields":  { "value": ["name", "photo", "team", "role", "id", "qr"], "status": "provided or missing" },
+    "hasPhotos":        { "value": true or false or null, "status": "provided or missing" },
+    "hasQrCode":        { "value": true or false or null, "status": "provided or missing" },
+    "themeHint":        { "value": "string or null", "status": "provided or missing" },
+    "website":          { "value": null, "status": "missing" },
+    "contact":          { "value": null, "status": "missing" }
   },
   "roles": [
-    { "id": "participant|organizer|mentor|volunteer|speaker", "label": "string", "count": number|null }
+    { "id": "participant|organizer|mentor|volunteer|judge|speaker|player|referee|custom", "label": "string", "count": null }
   ],
   "designType": "idCard",
-  "confidence": 0.0-1.0
+  "confidence": 0.0 to 1.0
 }
-IMPORTANT: Only extract information explicitly mentioned. Do NOT invent data. Set status "missing" for anything not stated.
 
-User description: "${text}"
+User description:
+"${text}"
 `
     const raw = await generateWithGemini(genAI, prompt)
-    const json = JSON.parse(raw.replace(/```json?\n?/g, '').replace(/```/g, ''))
+    const json = JSON.parse(raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim())
     res.json(json)
   } catch (err: any) {
     console.error('LLM extract-intent error:', err.message)
@@ -89,19 +111,48 @@ app.post('/api/llm/generate-drafts', async (req, res) => {
 
     const genAI = getGenAI()
     const prompt = `
-You are a expert graphic design generator for event ID cards.
-Given this event details: ${JSON.stringify(event)}
-And these roles: ${JSON.stringify(roles)}
+You are a senior art director creating event-specific ID badge proposals.
+Event: ${JSON.stringify(event)}
+Roles: ${JSON.stringify(roles)}
 
-Suggest theme colors (primary, accent, background) and title style for 3 distinct card designs (Cyber/Modern, Bold Accent, Minimal Clean).
-Return ONLY valid JSON matching this shape:
+Create 3 distinct design concepts that genuinely match the event category and theme:
+- If SPORTS: use athletic motion, dynamic jersey/stadium accents, energetic palettes (e.g. navy/gold, emerald/volt, crimson/white).
+- If HACKATHON: use modern technology, cyber/electric accents, clean tech geometry.
+- If ROBOTICS: use engineering caliper lines, technical precision, cyan/amber/slate.
+- If CULTURAL/MUSIC: use celebratory artistic flair, festive gradients, vibrant expression.
+- If CONFERENCE/SEMINAR: use executive prestige, editorial typography, subtle institutional pinstripes.
+
+Return ONLY a valid JSON object matching this exact shape (no markdown, no backticks):
 {
-  "theme": { "primary": "#hex", "accent": "#hex", "bgDark": "#hex" },
-  "styleHint": "description string"
+  "category": "sports|hackathon|robotics|conference|cultural|workshop|general",
+  "visualDirection": "Brief description of the visual identity",
+  "drafts": [
+    {
+      "id": "modern-minimal",
+      "name": "Modern Minimal",
+      "primaryColor": "#hex",
+      "accentColor": "#hex",
+      "motif": "sports-stripes|tech-circuits|clean-minimal|engineering-grid|celebratory-arcs"
+    },
+    {
+      "id": "bold-dynamic",
+      "name": "Bold Dynamic",
+      "primaryColor": "#hex",
+      "accentColor": "#hex",
+      "motif": "sports-stripes|tech-circuits|clean-minimal|engineering-grid|celebratory-arcs"
+    },
+    {
+      "id": "premium-editorial",
+      "name": "Premium Editorial",
+      "primaryColor": "#hex",
+      "accentColor": "#hex",
+      "motif": "sports-stripes|tech-circuits|clean-minimal|engineering-grid|celebratory-arcs"
+    }
+  ]
 }
 `
     const raw = await generateWithGemini(genAI, prompt)
-    const json = JSON.parse(raw.replace(/```json?\n?/g, '').replace(/```/g, ''))
+    const json = JSON.parse(raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim())
     res.json(json)
   } catch (err: any) {
     console.error('LLM generate-drafts error:', err.message)

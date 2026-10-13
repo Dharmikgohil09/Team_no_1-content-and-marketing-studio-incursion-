@@ -17,92 +17,87 @@ const ROLE_OPTIONS = [
   { value: 'mentor',      label: 'Mentor' },
   { value: 'volunteer',   label: 'Volunteer' },
   { value: 'judge',       label: 'Judge' },
-  { value: 'speaker',     label: 'Speaker' },
 ]
 
+const CATEGORY_OPTIONS = [
+  { value: 'hackathon',   label: 'Hackathon / Coding Competition' },
+  { value: 'sports',      label: 'Sports Tournament / Athletic Event' },
+  { value: 'conference',  label: 'Conference / Summit / Seminar' },
+  { value: 'robotics',    label: 'Robotics / Engineering Competition' },
+  { value: 'cultural',    label: 'Cultural / Arts / Music Festival' },
+  { value: 'workshop',    label: 'Technical Workshop / Bootcamp' },
+]
 
 /**
- * Generate adaptive questions for fields still marked 'missing'.
- * Questions are ordered by importance.
+ * Generate adaptive questions ONLY for fields that are genuinely missing and necessary.
+ * Never repeats questions whose answers already exist or are provided.
  */
 export function generateQuestions(event: EventContext, roles: Role[]): Question[] {
   const questions: Question[] = []
 
-  if (event.name.status === 'missing') {
+  // 1. Event Name (Required if not provided)
+  const hasName = event.name?.status !== 'missing' && event.name?.value && event.name.value.trim() !== ''
+  if (!hasName) {
     questions.push({
       id: 'q-event-name',
       label: 'What is the name of your event?',
-      hint: 'e.g. "InCursion 2024", "HackNIT", "ACM TechFest"',
+      hint: 'e.g. "CodeStorm 2026", "SVNIT Champions League"',
       type: 'text',
       field: 'name',
       required: true,
     })
   }
 
-  if (event.dateStart.status === 'missing') {
+  // 2. Event Category (Only if completely unknown or vague)
+  const hasCategory = (event as any).category?.status !== 'missing' && (event as any).category?.value
+  if (!hasCategory && !hasName) {
+    questions.push({
+      id: 'q-category',
+      label: 'What type of event is this?',
+      hint: 'Helps us generate category-specific visual themes',
+      type: 'select',
+      options: CATEGORY_OPTIONS,
+      field: 'category',
+      required: true,
+    })
+  }
+
+  // 3. Date (Required if not provided)
+  const hasDate = event.dateStart?.status !== 'missing' && event.dateStart?.value && event.dateStart.value.trim() !== ''
+  if (!hasDate) {
     questions.push({
       id: 'q-date-start',
-      label: 'When does the event start?',
-      hint: 'Date will appear on the ID card',
-      type: 'date',
+      label: 'What date should appear on the card?',
+      hint: 'e.g. "18 October 2026" or "20-22 March 2026"',
+      type: 'text',
       field: 'dateStart',
       required: true,
     })
   }
 
-  if (event.venue.status === 'missing') {
+  // 4. Venue (Required if not provided)
+  const hasVenue = event.venue?.status !== 'missing' && event.venue?.value && event.venue.value.trim() !== ''
+  if (!hasVenue) {
     questions.push({
       id: 'q-venue',
-      label: 'Where is the event held?',
-      hint: 'e.g. "SVNIT, Surat", "NIT Campus"',
+      label: 'Where is the event taking place (venue)?',
+      hint: 'e.g. "SVNIT Surat", "Main Auditorium"',
       type: 'text',
       field: 'venue',
       required: true,
     })
   }
 
-  if (event.tagline.status === 'missing') {
-    questions.push({
-      id: 'q-tagline',
-      label: 'Event tagline or subtitle?',
-      hint: 'Short motto shown below the event name (optional)',
-      type: 'text',
-      field: 'tagline',
-      required: false,
-    })
-  }
-
-  if (roles.length === 0) {
+  // 5. Roles (Only if no roles were detected)
+  if (!roles || roles.length === 0) {
     questions.push({
       id: 'q-roles',
       label: 'Which roles need ID cards?',
-      hint: 'Select all that apply — each role gets a distinct color',
+      hint: 'Select all that apply — each role gets a distinctive visual badge',
       type: 'multiselect',
       options: ROLE_OPTIONS,
       field: 'roles',
       required: true,
-    })
-  }
-
-  if (event.contact.status === 'missing') {
-    questions.push({
-      id: 'q-contact',
-      label: 'Contact email or phone for the event?',
-      hint: 'Optional — shown on card footer',
-      type: 'text',
-      field: 'contact',
-      required: false,
-    })
-  }
-
-  if (event.website.status === 'missing') {
-    questions.push({
-      id: 'q-website',
-      label: 'Event website URL?',
-      hint: 'Used for QR code target (optional)',
-      type: 'text',
-      field: 'website',
-      required: false,
     })
   }
 

@@ -69,6 +69,7 @@ export function ClarifyPage() {
       if (!val || val === '__skipped__') continue
 
       if (q.field === 'name')      ctx.name      = { value: String(val), status: 'confirmed' }
+      if (q.field === 'category')  (ctx as any).category = { value: String(val), status: 'confirmed' }
       if (q.field === 'dateStart') ctx.dateStart  = { value: String(val), status: 'confirmed' }
       if (q.field === 'venue')     ctx.venue      = { value: String(val), status: 'confirmed' }
       if (q.field === 'tagline')   ctx.tagline    = { value: String(val), status: 'confirmed' }

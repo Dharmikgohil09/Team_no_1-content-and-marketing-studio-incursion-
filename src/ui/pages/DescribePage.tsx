@@ -2,7 +2,8 @@ import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProjectStore } from '../../store/projectStore'
 import { extractIntent } from '../../core/ai/intentExtractor'
-import { DEFAULT_ROLES } from '../../core/schema/Role'
+import { generateQuestions } from '../../core/ai/questionGenerator'
+import { DEFAULT_ROLES, getRoleOrDefault, type Role } from '../../core/schema/Role'
 
 const EXAMPLES = [
   'ID cards for our 24-hour hackathon on 18 October at SVNIT, with separate looks for participants, organizers and mentors',
@@ -42,20 +43,23 @@ export function DescribePage() {
       }).filter(([,v]) => v).map(([k,v]) => `${k}: ${v}`).join(' | ')}`)
 
       // Update store with parsed intent
+      const parsedRoles: Role[] = intent.roles.map((r: { id: string; label: string; count?: number }) => {
+        const found = DEFAULT_ROLES.find(d => d.id === r.id)
+        if (found) return { ...found, count: r.count }
+        const fallback = getRoleOrDefault(r.id)
+        return { ...fallback, label: r.label, count: r.count }
+      })
       useProjectStore.getState().setEventContext(intent.eventContext)
-      useProjectStore.getState().setRoles(
-        intent.roles.map((r: { id: string; label: string; count?: number }) => {
-          return DEFAULT_ROLES.find((d: any) => d.id === r.id) ?? {
-            id: r.id, label: r.label,
-            accentShape: 'band',
-            palette: { primary: '#1a35de', secondary: '#8eb8ff', accent: '#5f90ff', text: '#ffffff', pattern: 'solid' },
-            count: r.count,
-          }
-        })
-      )
+      useProjectStore.getState().setRoles(parsedRoles)
 
-      setWizardStep(1)
-      navigate('/studio/clarify')
+      const remainingQuestions = generateQuestions(intent.eventContext, parsedRoles)
+      if (remainingQuestions.length === 0) {
+        setWizardStep(2)
+        navigate('/studio/drafts')
+      } else {
+        setWizardStep(1)
+        navigate('/studio/clarify')
+      }
     } catch (err) {
       setError('Something went wrong. Please try again.')
     } finally {
