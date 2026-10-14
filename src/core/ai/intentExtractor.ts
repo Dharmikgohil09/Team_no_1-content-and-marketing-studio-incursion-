@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { EventContextSchema, type EventContext, makeEmptyEventContext } from '../schema/EventContext'
 import type { Role } from '../schema/Role'
 import { DEFAULT_ROLES } from '../schema/Role'
+import { extractCountFromDescription } from '../../utils/participantCount'
 
 /** What the intent extractor returns */
 export const IntentResultSchema = z.object({
@@ -202,17 +203,9 @@ export function parseIntentDeterministic(text: string): IntentResult {
   }
 
   // 7. Participant Count
-  const totalPartMatch =
-    text.match(/(?:approximately\s+|about\s+|total\s+)?(\d+)\s+(?:participants?|players?|attendees?|delegates?|people|persons?|candidates?|students?|members?|cards?|ids?|id\s*cards?|passes?)/i) ||
-    text.match(/(?:number\s+of\s+participants?|participant\s*count|total\s+participants?|number\s+of\s+people|participants?\s*count)\s*(?:is|=|:)?\s*(\d+)/i) ||
-    text.match(/(?:make|create|generate|for)\s+(\d+)\s+(?:people|participants?|ids?|cards?|passes?|persons?|attendees?)/i) ||
-    text.match(/\b(\d+)\s+(?:people|persons?|participants?|candidates?|students?)\b/i)
-
-  if (totalPartMatch) {
-    const num = parseInt(totalPartMatch[1], 10)
-    if (!isNaN(num) && num > 0) {
-      (ctx as any).participantCount = { value: num, status: 'provided' }
-    }
+  const count = extractCountFromDescription(text)
+  if (count && count > 0) {
+    (ctx as any).participantCount = { value: count, status: 'provided' }
   }
 
   // 8. Requested Fields (photo, team, role, id, qr)

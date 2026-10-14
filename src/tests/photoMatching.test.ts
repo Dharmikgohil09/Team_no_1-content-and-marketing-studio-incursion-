@@ -422,6 +422,19 @@ describe('Dynamic Photo Matching & Extraction Engine Tests', () => {
         },
       }
       expect(getExpectedParticipantCount(projE)).toBe(7)
+
+      // Case F: User's exact prompt phrase "humne 5 participants ka naam daala tha"
+      const { extractCountFromDescription } = await import('../utils/participantCount')
+      expect(extractCountFromDescription('humne 5 participants ka naam daala tha')).toBe(5)
+      expect(extractCountFromDescription('5 participants ka naam')).toBe(5)
+      expect(extractCountFromDescription('5 logo ke naam')).toBe(5)
+      expect(extractCountFromDescription('5 logo ka naam')).toBe(5)
+      expect(extractCountFromDescription('5 bando ka naam')).toBe(5)
+      expect(extractCountFromDescription('5 ka naam')).toBe(5)
+      expect(extractCountFromDescription('paanch participants')).toBe(5)
+      expect(extractCountFromDescription('panch logo')).toBe(5)
+      expect(extractCountFromDescription('Participants: Aarav, Rohan, Sneha, Priya, Amit')).toBe(5)
+      expect(extractCountFromDescription('1. Aarav\n2. Rohan\n3. Sneha\n4. Priya\n5. Amit')).toBe(5)
     })
 
     it('slices CSV data to top N participants when CSV contains more records than specified', () => {

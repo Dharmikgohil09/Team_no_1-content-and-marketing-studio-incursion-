@@ -4,6 +4,7 @@ import { useProjectStore } from '../../store/projectStore'
 import { extractIntent } from '../../core/ai/intentExtractor'
 import { generateQuestions } from '../../core/ai/questionGenerator'
 import { DEFAULT_ROLES, getRoleOrDefault, type Role } from '../../core/schema/Role'
+import { extractCountFromDescription } from '../../utils/participantCount'
 
 const EXAMPLES = [
   'ID cards for our 24-hour hackathon on 18 October at SVNIT, with separate looks for participants, organizers and mentors',
@@ -42,18 +43,36 @@ export function DescribePage() {
         roles:     intent.roles.map((r: { label: string }) => r.label).join(', '),
       }).filter(([,v]) => v).map(([k,v]) => `${k}: ${v}`).join(' | ')}`)
 
+      // Extract participant count directly from description text as well
+      const countFromDesc = extractCountFromDescription(text)
+      const pCount = countFromDesc || (intent.eventContext as any).participantCount?.value || intent.roles.find(r => r.id === 'participant' || r.id === 'player')?.count
+
+      if (pCount && pCount > 0) {
+        (intent.eventContext as any).participantCount = { value: pCount, status: 'provided' }
+      }
+
       // Update store with parsed intent
       const parsedRoles: Role[] = intent.roles.map((r: { id: string; label: string; count?: number }) => {
         const found = DEFAULT_ROLES.find(d => d.id === r.id)
-        const count = r.count ?? ((r.id === 'participant' || r.id === 'player') ? (intent.eventContext as any).participantCount?.value : undefined)
+        const count = r.count ?? ((r.id === 'participant' || r.id === 'player') ? pCount : undefined)
         if (found) return { ...found, count }
         const fallback = getRoleOrDefault(r.id)
         return { ...fallback, label: r.label, count }
       })
+
       // Ensure description is always preserved on eventContext for downstream theme matching
       intent.eventContext.description = { value: text, status: 'provided' }
       useProjectStore.getState().setEventContext(intent.eventContext)
       useProjectStore.getState().setRoles(parsedRoles)
+
+      try {
+        localStorage.setItem('cms_event_description', text)
+        if (pCount && pCount > 0) {
+          localStorage.setItem('cms_expected_participants', String(pCount))
+        }
+      } catch {}
+
+      useProjectStore.getState().saveProject().catch(() => {})
 
       const remainingQuestions = generateQuestions(intent.eventContext, parsedRoles)
       const hasBlockingQuestions = remainingQuestions.some(q => q.required)

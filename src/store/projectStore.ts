@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import { nanoid } from '../utils/nanoid'
 import type { DesignProject } from '../core/schema/DesignProject'
 import type { EventContext } from '../core/schema/EventContext'
@@ -44,7 +45,9 @@ interface ProjectState {
   saveVersion: (label: string) => void
 }
 
-export const useProjectStore = create<ProjectState>((set, get) => ({
+export const useProjectStore = create<ProjectState>()(
+  persist(
+    (set, get) => ({
   project: null,
   people:  [],
   instituteLogo: DEFAULT_SVNIT_LOGO,
@@ -278,4 +281,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }
     })
   },
-}))
+}),
+    {
+      name: 'cms_project_store',
+      partialize: (state) => ({
+        project: state.project,
+        people: state.people,
+        instituteLogo: state.instituteLogo,
+        clubLogo: state.clubLogo,
+        samplePhotoUrl: state.samplePhotoUrl,
+      }),
+    }
+  )
+)
+

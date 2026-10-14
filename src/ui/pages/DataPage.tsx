@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProjectStore } from '../../store/projectStore'
 import Papa from 'papaparse'
@@ -21,6 +21,12 @@ import {
   type MatchStatus,
 } from '../../core/matching/photoMatcher'
 import { PhotoPickerModal } from '../components/PhotoPickerModal'
+import {
+  extractCountFromDescription,
+  getExpectedParticipantCount,
+} from '../../utils/participantCount'
+
+export { extractCountFromDescription, getExpectedParticipantCount }
 
 const KNOWN_COLUMNS: Record<string, string[]> = {
   name:     ['name', 'full name', 'fullname', 'participant name', 'participant', 'student name', 'candidate name', 'first name', 'full_name', 'username', 'person name', 'attendee name', 'attendee', 'display name', 'member name', 'name of participant'],
@@ -31,51 +37,6 @@ const KNOWN_COLUMNS: Record<string, string[]> = {
   photoUrl: ['photo', 'photo url', 'image', 'picture', 'avatar', 'photo_url', 'image url', 'profile', 'photo_filename', 'filename', 'image_name'],
 }
 
-export function getExpectedParticipantCount(project: any): number | null {
-  if (!project) return null
-
-  // 1. Explicit participantCount in eventContext
-  const ctxVal = project.eventContext?.participantCount?.value
-  if (typeof ctxVal === 'number' && !isNaN(ctxVal) && ctxVal > 0) {
-    return ctxVal
-  }
-
-  // 2. Roles: participant / player count or sum of role counts
-  const participantRole = project.roles?.find((r: any) => r.id === 'participant' || r.id === 'player')
-  if (typeof participantRole?.count === 'number' && participantRole.count > 0) {
-    return participantRole.count
-  }
-
-  const roleSum = project.roles?.reduce((acc: number, r: any) => acc + (r.count || 0), 0)
-  if (typeof roleSum === 'number' && roleSum > 0) {
-    return roleSum
-  }
-
-  // 3. Fallback: Parse from description text or user messages in nlHistory
-  const descText = project.eventContext?.description?.value || ''
-  const nlText = Array.isArray(project.nlHistory)
-    ? project.nlHistory.filter((m: any) => m.role === 'user').map((m: any) => m.content).join(' ')
-    : ''
-  const combined = `${descText} ${nlText}`.trim()
-
-  if (combined) {
-    const match =
-      combined.match(/(?:approximately\s+|about\s+|total\s+)?(\d+)\s+(?:participants?|players?|attendees?|delegates?|people|persons?|candidates?|students?|members?|cards?|ids?|id\s*cards?|passes?)/i) ||
-      combined.match(/(?:number\s+of\s+participants?|participant\s*count|total\s+participants?|number\s+of\s+people|participants?\s*count)\s*(?:is|=|:)?\s*(\d+)/i) ||
-      combined.match(/(?:make|create|generate|for)\s+(\d+)\s+(?:people|participants?|ids?|cards?|passes?|persons?|attendees?)/i) ||
-      combined.match(/\b(\d+)\s+(?:people|persons?|participants?|candidates?|students?)\b/i)
-
-    if (match) {
-      const parsed = parseInt(match[1], 10)
-      if (!isNaN(parsed) && parsed > 0) {
-        return parsed
-      }
-    }
-  }
-
-  return null
-}
-
 export function DataPage() {
   const navigate      = useNavigate()
   const project       = useProjectStore(s => s.project)
@@ -84,6 +45,7 @@ export function DataPage() {
   const setWizardStep = useProjectStore(s => s.setWizardStep)
 
   const expectedParticipantCount = useMemo(() => getExpectedParticipantCount(project), [project])
+  const [targetCount, setTargetCount] = useState<number>(() => expectedParticipantCount || 5)
 
   // CSV & Data state
   const [isCsvDragging, setIsCsvDragging] = useState(false)
@@ -94,9 +56,35 @@ export function DataPage() {
   const [rawColumns, setRawColumns]       = useState<string[]>([])
   const [allParsedRows, setAllParsedRows] = useState<Record<string, string>[]>([])
   const [rawRows, setRawRows]             = useState<Record<string, string>[]>([])
-  const [sliceMode, setSliceMode]         = useState<'top_expected' | 'all'>('top_expected')
   const [rowStatuses, setRowStatuses]     = useState<PersonRowStatus[]>([])
   const [csvError, setCsvError]           = useState('')
+
+  // Sync targetCount when expectedParticipantCount is detected
+  useEffect(() => {
+    if (expectedParticipantCount && expectedParticipantCount > 0) {
+      setTargetCount(expectedParticipantCount)
+      if (allParsedRows.length > expectedParticipantCount) {
+        setRawRows(allParsedRows.slice(0, expectedParticipantCount))
+      }
+    }
+  }, [expectedParticipantCount, allParsedRows.length])
+
+  // If people already exist in store and no CSV parsed yet in current view, load and adapt to expectedParticipantCount
+  useEffect(() => {
+    if (people.length > 0 && allParsedRows.length === 0 && rawRows.length === 0) {
+      const rows = people.map(p => ({
+        id: p.id,
+        name: p.name,
+        role: p.role,
+        email: p.email || '',
+        team: p.team || '',
+        photoUrl: p.photoUrl || '',
+        ...(p.extra || {}),
+      }))
+      const cols = ['name', 'id', 'role', 'team', 'email']
+      processImportedRows(rows, cols)
+    }
+  }, [people.length])
 
   // Uploaded images & matching state
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
@@ -151,27 +139,27 @@ export function DataPage() {
     setConfirmedSuccess(false)
     setAllParsedRows(data)
 
-    const expectedCount = expectedParticipantCount
-    if (expectedCount && data.length > expectedCount) {
-      setSliceMode('top_expected')
-      setRawRows(data.slice(0, expectedCount))
+    const countToUse = expectedParticipantCount || targetCount || 5
+    if (data.length > countToUse) {
+      setTargetCount(countToUse)
+      setRawRows(data.slice(0, countToUse))
     } else {
-      setSliceMode('all')
+      setTargetCount(data.length)
       setRawRows(data)
     }
   }
 
-  function handleToggleSliceMode(mode: 'top_expected' | 'all') {
-    setSliceMode(mode)
-    let activeData = allParsedRows
-    if (mode === 'top_expected' && expectedParticipantCount && allParsedRows.length > expectedParticipantCount) {
-      activeData = allParsedRows.slice(0, expectedParticipantCount)
-    }
-    setRawRows(activeData)
-    setPreviewIdx(0)
-    setConfirmedSuccess(false)
-    if (uploadedImages.length > 0) {
-      runPhotoMatching(activeData, uploadedImages)
+  function handleTargetCountChange(newCount: number) {
+    const valid = Math.max(1, Math.min(newCount, allParsedRows.length || 1000))
+    setTargetCount(valid)
+    if (allParsedRows.length > 0) {
+      const sliced = allParsedRows.slice(0, valid)
+      setRawRows(sliced)
+      setPreviewIdx(0)
+      setConfirmedSuccess(false)
+      if (uploadedImages.length > 0) {
+        runPhotoMatching(sliced, uploadedImages)
+      }
     }
   }
 
@@ -521,9 +509,9 @@ export function DataPage() {
               </h2>
               {rawRows.length > 0 && (
                 <div className="flex items-center gap-2">
-                  {expectedParticipantCount && allParsedRows.length > expectedParticipantCount && sliceMode === 'top_expected' ? (
+                  {allParsedRows.length > rawRows.length ? (
                     <span className="badge-blue text-xs font-mono">
-                      {rawRows.length} of {allParsedRows.length} records selected (Top {expectedParticipantCount})
+                      {rawRows.length} of {allParsedRows.length} records selected (Top {targetCount})
                     </span>
                   ) : (
                     <span className="badge-blue text-xs font-mono">{rawRows.length} records parsed</span>
@@ -531,6 +519,60 @@ export function DataPage() {
                 </div>
               )}
             </div>
+
+            {/* Target Participants Control Bar */}
+            {allParsedRows.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-surface-800/80 border border-white/5 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">👥</span>
+                  <div>
+                    <span className="text-xs font-semibold text-white">Participants to Import:</span>
+                    <span className="text-[11px] text-slate-400 block">
+                      {expectedParticipantCount
+                        ? `Based on description (${expectedParticipantCount} participants specified)`
+                        : `Target count (${targetCount} participants)`}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-300 font-medium">Count:</span>
+                  <input
+                    id="target-participant-count-input"
+                    type="number"
+                    min={1}
+                    max={allParsedRows.length || 1000}
+                    value={targetCount}
+                    onChange={e => {
+                      const val = parseInt(e.target.value, 10)
+                      if (!isNaN(val) && val > 0) {
+                        handleTargetCountChange(val)
+                      }
+                    }}
+                    className="input text-xs w-16 py-1 px-2 font-mono text-center font-bold text-white bg-surface-900 border border-acm-500/40 rounded-lg"
+                  />
+                  <span className="text-xs text-slate-400">of {allParsedRows.length}</span>
+                  {allParsedRows.length > targetCount && (
+                    <button
+                      type="button"
+                      onClick={() => handleTargetCountChange(allParsedRows.length)}
+                      className="btn-secondary text-[11px] py-1 px-2.5 text-slate-300 hover:text-white"
+                    >
+                      Use All ({allParsedRows.length})
+                    </button>
+                  )}
+                  {targetCount !== (expectedParticipantCount || 5) && (
+                    <button
+                      type="button"
+                      onClick={() => handleTargetCountChange(expectedParticipantCount || 5)}
+                      className="btn-secondary text-[11px] py-1 px-2.5 text-acm-300 hover:text-white"
+                    >
+                      Reset ({expectedParticipantCount || 5})
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* CSV Drop Zone */}
             <div
@@ -555,7 +597,7 @@ export function DataPage() {
             </div>
 
             {/* CSV Data Larger Than Participant IDs Notice Banner */}
-            {expectedParticipantCount && allParsedRows.length > expectedParticipantCount && (
+            {allParsedRows.length > targetCount && (
               <div
                 id="csv-size-warning-banner"
                 className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs mb-4 space-y-2.5 animate-fade-in"
@@ -567,7 +609,7 @@ export function DataPage() {
                       CSV data is larger than participant IDs
                     </p>
                     <p className="text-amber-200/90 leading-relaxed text-xs">
-                      Your event description specified <strong className="text-white font-semibold">{expectedParticipantCount}</strong> participants, but the uploaded CSV contains <strong className="text-white font-semibold">{allParsedRows.length}</strong> records. Considering the top <strong className="text-white font-semibold">{expectedParticipantCount}</strong> participants from the CSV.
+                      Your event description specified <strong className="text-white font-semibold">{targetCount}</strong> participants, but the uploaded CSV contains <strong className="text-white font-semibold">{allParsedRows.length}</strong> records. Considering the top <strong className="text-white font-semibold">{targetCount}</strong> participants from the CSV.
                     </p>
                   </div>
                 </div>
@@ -576,27 +618,19 @@ export function DataPage() {
                   <button
                     type="button"
                     id="slice-top-btn"
-                    onClick={() => handleToggleSliceMode('top_expected')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                      sliceMode === 'top_expected'
-                        ? 'bg-amber-400 text-slate-950 shadow-sm'
-                        : 'bg-white/5 text-amber-200 hover:bg-white/10'
-                    }`}
+                    onClick={() => handleTargetCountChange(expectedParticipantCount || 5)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-400 text-slate-950 shadow-sm"
                   >
-                    ✓ Consider Top {expectedParticipantCount} Only ({sliceMode === 'top_expected' ? 'Active' : 'Switch'})
+                    ✓ Top {targetCount} Only (Active)
                   </button>
 
                   <button
                     type="button"
                     id="slice-all-btn"
-                    onClick={() => handleToggleSliceMode('all')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                      sliceMode === 'all'
-                        ? 'bg-amber-400 text-slate-950 shadow-sm'
-                        : 'bg-white/5 text-amber-200 hover:bg-white/10'
-                    }`}
+                    onClick={() => handleTargetCountChange(allParsedRows.length)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 text-amber-200 hover:bg-white/10"
                   >
-                    Import All {allParsedRows.length} Records ({sliceMode === 'all' ? 'Active' : 'Switch'})
+                    Import All {allParsedRows.length} Records
                   </button>
                 </div>
               </div>
