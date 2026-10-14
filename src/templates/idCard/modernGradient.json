@@ -1,4 +1,4 @@
-﻿{
+{
   "id": "modern-gradient",
   "name": "Creative Tech Pass",
   "designType": "idCard",
@@ -112,16 +112,16 @@
     {
       "type": "text",
       "id": "event-name-header",
-      "anchor": { "x": 12, "y": 3.5, "w": 30, "h": 5 },
+      "anchor": { "x": 11, "y": 3.0, "w": 32, "h": 6.5 },
       "content": "{{event.name.value}}",
-      "fontFamily": "Space Grotesk",
-      "fontSize": 4.8,
-      "fontWeight": "700",
+      "fontFamily": "Outfit",
+      "fontSize": 6.0,
+      "fontWeight": "800",
       "color": "#ffffff",
       "align": "center",
       "verticalAlign": "middle",
       "maxLines": 1,
-      "minFontSize": 3.5
+      "minFontSize": 4.5
     },
     {
       "type": "text",

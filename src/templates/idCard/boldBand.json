@@ -1,4 +1,4 @@
-﻿{
+{
   "id": "bold-band",
   "name": "Modern Minimal Badge",
   "designType": "idCard",
@@ -88,16 +88,16 @@
     {
       "type": "text",
       "id": "event-name-header",
-      "anchor": { "x": 13, "y": 10.2, "w": 28, "h": 5 },
+      "anchor": { "x": 11, "y": 9.0, "w": 32, "h": 6.5 },
       "content": "{{event.name.value}}",
-      "fontFamily": "Space Grotesk",
-      "fontSize": 4.6,
-      "fontWeight": "700",
+      "fontFamily": "Outfit",
+      "fontSize": 6.0,
+      "fontWeight": "800",
       "color": "#0f172a",
       "align": "center",
       "verticalAlign": "middle",
       "maxLines": 1,
-      "minFontSize": 3.5
+      "minFontSize": 4.5
     },
     {
       "type": "text",

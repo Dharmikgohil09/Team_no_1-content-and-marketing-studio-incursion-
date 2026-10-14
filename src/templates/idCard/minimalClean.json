@@ -1,4 +1,4 @@
-﻿{
+{
   "id": "minimal-clean",
   "name": "Editorial Asymmetric Pass",
   "designType": "idCard",
@@ -65,14 +65,14 @@
       "id": "header-category",
       "anchor": { "x": 12.5, "y": 6.2, "w": 29, "h": 3.5 },
       "content": "{{event.name.value}}",
-      "fontFamily": "Space Grotesk",
-      "fontSize": 3.5,
-      "fontWeight": "700",
+      "fontFamily": "Outfit",
+      "fontSize": 4.8,
+      "fontWeight": "800",
       "color": "#94a3b8",
       "align": "center",
       "verticalAlign": "middle",
       "maxLines": 1,
-      "minFontSize": 2.5
+      "minFontSize": 3.6
     },
     {
       "type": "text",

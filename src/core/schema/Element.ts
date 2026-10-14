@@ -23,7 +23,7 @@ export const TextElementSchema = z.object({
   content:        z.string(),   // may contain {{bindings}}
   fontFamily:     z.string().default('Inter'),
   fontSize:       z.number(),   // pt
-  fontWeight:     z.enum(['300','400','500','600','700']).default('400'),
+  fontWeight:     z.enum(['300','400','500','600','700','800','900']).default('400'),
   color:          z.string(),   // hex
   align:          z.enum(['left','center','right']).default('left'),
   verticalAlign:  z.enum(['top','middle','bottom']).default('top'),

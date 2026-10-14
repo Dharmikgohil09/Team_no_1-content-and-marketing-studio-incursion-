@@ -224,6 +224,11 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
     }
   }
 
+  // Title-case raw lowercase event names for professional look
+  if ((el.id.includes('event-name') || el.id.includes('title') || el.id.includes('header-category')) && content && content === content.toLowerCase()) {
+    content = content.replace(/\b\w/g, l => l.toUpperCase())
+  }
+
   // Auto-fit
   const fit = autoFitText({
     text:        content || '—',
@@ -260,7 +265,7 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
   return `<text
     id="${el.id}"
     x="${xPos}" y="${startY}"
-    font-family="${el.fontFamily}, 'Space Grotesk', 'Inter', sans-serif"
+    font-family="${el.fontFamily}, 'Outfit', 'Space Grotesk', 'Inter', sans-serif"
     font-size="${fontSizeMm}"
     font-weight="${fontWeight}"
     fill="${color}"
