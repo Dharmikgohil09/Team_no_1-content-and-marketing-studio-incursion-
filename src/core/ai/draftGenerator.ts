@@ -68,8 +68,26 @@ export function attachArtworkToDraft(
     opacity: 0.35,
   }
 
+  const OPAQUE_BG_IDS = new Set(['header-bg', 'lower-bg', 'tech-hero-bg', 'tech-lower-bg', 'bg-obsidian'])
+
   const updateElementList = (elements: Element[]): Element[] => {
-    const filtered = elements.filter(e => e.id !== 'bg-artwork' && e.id !== 'bg-contrast-overlay')
+    const filtered = elements.filter(e => {
+      if (e.id === 'bg-artwork' || e.id === 'bg-contrast-overlay') return false
+      // Filter out opaque background shapes so bg-artwork is not hidden beneath them
+      if (OPAQUE_BG_IDS.has(e.id)) return false
+      // Filter out generic silhouettes that would clash with the AI-generated artwork
+      if (
+        e.id?.startsWith('music-singer') ||
+        e.id?.startsWith('music-crowd') ||
+        e.id?.startsWith('sports-runner') ||
+        e.id?.startsWith('cultural-dancer') ||
+        e.id?.startsWith('startup-pitcher') ||
+        e.id?.startsWith('investor-crowd')
+      ) {
+        return false
+      }
+      return true
+    })
     return [bgArtworkElement, bgOverlayElement, ...filtered]
   }
 

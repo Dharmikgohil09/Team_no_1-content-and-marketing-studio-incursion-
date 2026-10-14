@@ -21,7 +21,7 @@ function getGenAI() {
 }
 
 async function generateWithGemini(genAI: GoogleGenerativeAI, prompt: string): Promise<string> {
-  const models = ['gemini-3-flash-preview', 'gemini-3.1-pro-preview', 'gemini-2.5-flash']
+  const models = ['gemini-3-flash-preview', 'gemini-3.8-flash', 'gemini-3.1-pro-preview']
   let lastErr: any = null
   for (const m of models) {
     try {
@@ -281,6 +281,52 @@ function generateEventSpecificFallbackArtwork(options: {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
 }
 
+// ─── Gemini Dynamic Vector SVG Artwork Generation ────────────────────────
+// When raster image model quota is exceeded (e.g. Free Tier limit: 0),
+// use Gemini to dynamically generate custom event-specific SVG artwork on the fly
+async function generateAiSvgArtworkWithGemini(
+  genAI: GoogleGenerativeAI,
+  options: {
+    prompt?: string
+    eventName?: string
+    eventDescription?: string
+    category?: string
+    primaryColor?: string
+    accentColor?: string
+    backgroundColor?: string
+  }
+): Promise<string | null> {
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
+    const prompt = `
+You are a senior identity & visual designer creating vector background artwork for an event ID card.
+Event Name: "${options.eventName || 'Event'}"
+Event Details: "${options.eventDescription || options.prompt || ''}"
+Category & Concept: "${options.category || ''}" - ${options.prompt || ''}
+Color Palette: Primary ${options.primaryColor || '#6366f1'}, Accent ${options.accentColor || '#ec4899'}, Base Background ${options.backgroundColor || '#090d16'}
+
+CRITICAL DESIGN SPECIFICATIONS:
+1. Root element MUST be: <svg viewBox="0 0 54 85.6" width="54mm" height="85.6mm" xmlns="http://www.w3.org/2000/svg">
+2. Create an atmospheric, deeply inspired visual background that communicates the exact nature of this event.
+   - For traditional Indian cultural festivals (e.g. Garba/Navratri): use intricate Bandhani/Patola geometric arcs, festive diya/lantern glows, ornamental floral star mandalas, and rich warm jewel tones.
+   - For modern urban dance / music battles: use dynamic stage light searchlights, neon lasers, soundwave frequency grids, and deep urban club contrasts.
+   - For sports tournaments: use athletic speed vectors, turf/court texture gradients, and stadium light flares.
+   - For hackathons/robotics/tech: use precision engineering gridlines, circuit nodes, and cybernetic telemetry rays.
+3. Keep the center area (around y: 20 to 50) and lower credential area clean/darker with subtle gradients so attendee photos and typography remain 100% readable.
+4. Absolutely NO text, NO typography, NO letters, NO words, NO logos.
+5. Return ONLY the raw valid <svg>...</svg> code. Absolutely NO markdown backticks, NO markdown tags, NO preamble.
+`
+    const res = await model.generateContent(prompt)
+    const text = res.response.text().trim().replace(/```xml?\n?/g, '').replace(/```svg?\n?/g, '').replace(/```/g, '').trim()
+    if (text.startsWith('<svg') && text.endsWith('</svg>')) {
+      return `data:image/svg+xml;utf8,${encodeURIComponent(text)}`
+    }
+  } catch (err: any) {
+    console.warn('AI SVG background generation error:', err.message?.slice(0, 100))
+  }
+  return null
+}
+
 // ─── Image generation endpoint ───────────────────────────────────────────
 
 const artworkCache = new Map<string, { imageUrl: string; isGenerated: boolean; prompt: string }>()
@@ -323,10 +369,10 @@ app.post('/api/image/generate-background', async (req, res) => {
       })
     }
 
-    // Try Google Generative AI image models if key is present
+    // 1. Try Google Generative AI raster image models if key is present
     if (process.env.GEMINI_API_KEY && prompt) {
+      const genAI = getGenAI()
       try {
-        const genAI = getGenAI()
         const fullArtworkPrompt = `Cinematic vertical event ID card background artwork for "${eventName || 'Event'}". ${prompt}. High quality, rich lighting, detailed atmosphere and realistic textures, vertical portrait composition (3:4 aspect ratio). Completely clean negative space in the center for photo badge overlay. Absolutely NO text, NO typography, NO watermark, NO letters, NO numbers.`
         const result = await generateImageWithGemini(genAI, fullArtworkPrompt)
         const imageUrl = `data:${result.mimeType};base64,${result.data}`
@@ -339,11 +385,36 @@ app.post('/api/image/generate-background', async (req, res) => {
           promptUsed: fullArtworkPrompt,
         })
       } catch (imgErr: any) {
-        console.warn('Gemini image model request failed (likely quota or key):', imgErr.message?.slice(0, 120))
+        console.warn('Gemini raster image model quota exceeded or unavailable:', imgErr.message?.slice(0, 120))
+      }
+
+      // 2. Dynamic AI Vector SVG Generation: Use Gemini to generate custom artwork for this exact event description
+      try {
+        const aiSvgUrl = await generateAiSvgArtworkWithGemini(genAI, {
+          prompt,
+          eventName,
+          eventDescription,
+          category,
+          primaryColor,
+          accentColor,
+          backgroundColor,
+        })
+        if (aiSvgUrl) {
+          artworkCache.set(cacheKey, { imageUrl: aiSvgUrl, isGenerated: true, prompt: prompt || '' })
+          return res.json({
+            success: true,
+            imageUrl: aiSvgUrl,
+            isGenerated: true,
+            model: 'gemini-3-flash-preview (AI Vector Artwork)',
+            promptUsed: prompt || '',
+          })
+        }
+      } catch (svgErr: any) {
+        console.warn('AI vector artwork generation failed:', svgErr.message?.slice(0, 100))
       }
     }
 
-    // Fallback: Event-specific generative artwork derived from the AI concept
+    // 3. Fallback: Event-specific generative artwork derived from the AI concept
     const fallbackUrl = generateEventSpecificFallbackArtwork({
       eventName,
       eventDescription,
@@ -360,7 +431,7 @@ app.post('/api/image/generate-background', async (req, res) => {
       imageUrl: fallbackUrl,
       isGenerated: false,
       isFallback: true,
-      message: 'Gemini image generation model quota reached (or not configured). Using event-specific generative background artwork fallback.',
+      message: 'Gemini image generation model quota reached. Using event-specific generative background artwork fallback.',
       promptUsed: prompt || '',
     })
   } catch (err: any) {
