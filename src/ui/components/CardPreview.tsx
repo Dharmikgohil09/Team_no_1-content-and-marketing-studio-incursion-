@@ -40,13 +40,14 @@ export function CardPreview({
 }: CardPreviewProps) {
   const eventCtx = useMemo(() => {
     const base = event ?? makeEmptyEventContext()
+    const evtName = base.name?.value || ''
     return {
       ...base,
-      name: { value: base.name?.value || 'INCURSION 2026', status: base.name?.status || 'provided' },
-      venue: { value: base.venue?.value || 'SVNIT, Surat', status: base.venue?.status || 'provided' },
-      dateStart: { value: base.dateStart?.value || '20-22 March 2026', status: base.dateStart?.status || 'provided' },
-      organizer: { value: base.organizer?.value || 'ACM NIT Surat', status: base.organizer?.status || 'provided' },
-      tagline: { value: base.tagline?.value || 'Flagship Tech Hackathon', status: base.tagline?.status || 'provided' },
+      name: { value: evtName || 'EVENT PASS', status: base.name?.status || (evtName ? 'provided' : 'missing') },
+      venue: { value: base.venue?.value || (evtName ? `${evtName} Arena` : 'Main Venue'), status: base.venue?.status || (base.venue?.value ? 'provided' : 'missing') },
+      dateStart: { value: base.dateStart?.value || '2026', status: base.dateStart?.status || (base.dateStart?.value ? 'provided' : 'missing') },
+      organizer: { value: base.organizer?.value || (evtName ? `${evtName} Team` : 'Organizing Committee'), status: base.organizer?.status || (base.organizer?.value ? 'provided' : 'missing') },
+      tagline: { value: base.tagline?.value || 'Official Pass', status: base.tagline?.status || (base.tagline?.value ? 'provided' : 'missing') },
     }
   }, [event])
 

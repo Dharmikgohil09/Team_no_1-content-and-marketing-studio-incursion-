@@ -73,11 +73,11 @@ export function parseIntentDeterministic(text: string): IntentResult {
   // - "Garba event", "Garba fest", "Garba night"
   // - Quoted strings "Garba"
   const namePatterns: RegExp[] = [
-    // 1. Explicit name assignment keywords: "name as X", "name is X", "named as X", "event name as X", "event name: X", "event name X", "naam X"
-    /(?:event\s+name\s*(?:is|as|=|:)?|name\s*(?:is|as|=|:)|named\s*(?:as|is)?|called|titled|naam\s*(?:hai|is|=|:)?)\s+["']?([^"',.\n]+?)["']?(?:\s+(?:\d+\s+(?:participants?|attendees?|players?|organizers?|mentors?|volunteers?|people|members?|delegates?|\-?\s*hours?|\-?\s*days?)|and\b|for\b|with\b|at\b|on\b|in\b|having\b|make\b|need\b|create\b|cards?\b|passes?\b|badges?\b|participants?\b|organizers?\b|mentors?\b|volunteers?\b|judges?\b|speakers?\b|happening\b|scheduled\b|taking\s+place)|$|\.|\,)/i,
+    // 1. Explicit name assignment keywords: "name of event X", "name of the event X", "name as X", "name is X", "named as X", "event name as X", "event name: X", "event name X", "naam X"
+    /(?:name\s+of\s+(?:the\s+)?event\s*(?:is|as|=|:)?|event\s+name\s*(?:is|as|=|:)?|name\s*(?:is|as|=|:)|named\s*(?:as|is)?|called|titled|naam\s*(?:hai|is|=|:)?)\s+["']?([^"',.\n]+?)["']?(?:\s+(?:\d+\s+(?:participants?|attendees?|players?|organizers?|mentors?|volunteers?|people|members?|delegates?|\-?\s*hours?|\-?\s*days?)|so\s+make|and\b|for\b|with\b|at\b|on\b|in\b|having\b|make\b|need\b|create\b|cards?\b|passes?\b|badges?\b|participants?\b|organizers?\b|mentors?\b|volunteers?\b|judges?\b|speakers?\b|happening\b|scheduled\b|taking\s+place)|$|\.|\,)/i,
 
     // 2. "event is [cultural/sports/etc.] [name as/called/named] X"
-    /(?:the\s+)?event\s+is\s+(?:cultural|technical|sports|music|dance|business|academic|gaming)?\s*(?:named|called|as|is|name\s+as)?\s+["']?([^"',.\n]+?)["']?(?:\s+(?:\d+\s+(?:participants?|attendees?|players?|organizers?|mentors?|volunteers?|people|members?|delegates?|\-?\s*hours?|\-?\s*days?)|and\b|for\b|with\b|at\b|on\b|in\b|having\b|make\b|need\b|create\b|cards?\b|passes?\b|badges?\b|participants?\b|organizers?\b)|$|\.|\,)/i,
+    /(?:the\s+)?event\s+is\s+(?:cultural|technical|sports|music|dance|business|academic|gaming)?\s*(?:named|called|as|is|name\s+as)?\s+["']?([^"',.\n]+?)["']?(?:\s+(?:\d+\s+(?:participants?|attendees?|players?|organizers?|mentors?|volunteers?|people|members?|delegates?|\-?\s*hours?|\-?\s*days?)|so\s+make|and\b|for\b|with\b|at\b|on\b|in\b|having\b|make\b|need\b|create\b|cards?\b|passes?\b|badges?\b|participants?\b|organizers?\b)|$|\.|\,)/i,
 
     // 3. "hackathon/tournament/event called/named/name as X"
     /(?:hackathon|tournament|conference|event|workshop|competition|concert|pitch|expo|fest|festival)\s+(?:called|named|name\s+as|as)\s+["']?([^"',.\n]+?)["']?(?:\s+(?:\d+\s+(?:participants?|attendees?|players?|organizers?|mentors?|volunteers?|people|members?|delegates?|\-?\s*hours?|\-?\s*days?)|at\b|on\b|for\b|with\b|in\b|having\b|happening\b|scheduled\b|taking\s+place)|$|\.|\,)/i,
@@ -99,7 +99,11 @@ export function parseIntentDeterministic(text: string): IntentResult {
       if (/\b(?:an?|the|our|college|this|my|annual)\b/i.test(rawCandidate)) {
         continue
       }
-      let candidate = rawCandidate.replace(/\s+(?:happening|taking\s+place|scheduled|make\s+cards?|cards?).*$/i, '').trim()
+      let candidate = rawCandidate.replace(/\s+(?:happening|taking\s+place|scheduled|so\s+make\s+cards?|make\s+cards?|cards?).*$/i, '').trim()
+      // Reject pronouns and generic roles so "cards for them" never makes "Them" the event name!
+      if (/^(?:them|him|her|me|us|you|it|they|everyone|everybody|someone|somebody|anyone|all|both|students?|participants?|organizers?|people|staff|volunteers?|members?|attendees?|delegates?)$/i.test(candidate)) {
+        continue
+      }
       if (candidate.length >= 2 && !/^(event|college|school|university|campus|annual|this|my|cards?|badges?|passes?|cultural|technical|sports|music|dance)$/i.test(candidate)) {
         const cleanName = (!/[a-z]/.test(candidate) || !/[A-Z]/.test(candidate))
           ? candidate.replace(/\b\w/g, l => l.toUpperCase())
@@ -110,9 +114,9 @@ export function parseIntentDeterministic(text: string): IntentResult {
     }
   }
 
-  // Fallback: check known festival, competition, and event titles in text
+  // Fallback: check known festival, drama, competition, and event titles in text
   if (ctx.name.status === 'missing') {
-    const knownEventMatch = text.match(/\b(garba(?:\s+(?:night|utsav|dandiya|mahotsav|fest|20\d\d))?|dandiya|navratri|diwali\s*mela|spardha|incursion|techfest|codestorm|hacknit|battlebots?|shark\s*(?:tank|mank)|startup\s*pitch|raag|raga|tarang)\b/i)
+    const knownEventMatch = text.match(/\b(nukkad\s*natak|natak|street\s*play|garba(?:\s+(?:night|utsav|dandiya|mahotsav|fest|20\d\d))?|dandiya|navratri|diwali\s*mela|spardha|incursion|techfest|codestorm|hacknit|battlebots?|shark\s*(?:tank|mank)|startup\s*pitch|raag|raga|tarang)\b/i)
     if (knownEventMatch) {
       ctx.name = { value: knownEventMatch[1].replace(/\b\w/g, l => l.toUpperCase()), status: 'provided' }
     }
@@ -132,7 +136,7 @@ export function parseIntentDeterministic(text: string): IntentResult {
     category = 'hackathon'
   } else if (/(?:robotics?|robots?|bots?|battlebots?|mechatronics)/i.test(text)) {
     category = 'robotics'
-  } else if (/(?:cultural|garba|dandiya|navratri|diwali|fest|festival|dance|arts?|celebration|drama|theatre)/i.test(text)) {
+  } else if (/(?:cultural|nukkad\s*natak|natak|street\s*play|skit|drama|theatre|garba|dandiya|navratri|diwali|fest|festival|dance|arts?|celebration)/i.test(text)) {
     category = 'cultural'
   } else if (/(?:conference|summit|symposium|keynote|business|seminar)/i.test(text)) {
     category = 'conference'
@@ -167,15 +171,28 @@ export function parseIntentDeterministic(text: string): IntentResult {
     }
   }
 
-  // 5. Venue — look for "at VENUE" or "in VENUE" patterns or SVNIT
+  // 5. Venue — look for "at VENUE" or "in VENUE" patterns (reject relative clauses like "in which...", "in that...")
   const venueMatch = text.match(/\b(?:at|in)\s+([A-Z0-9][A-Za-z0-9,.\s]+?)(?:\s+with|\s+on|\s+for|$|\.|\,)/i)
-  if (venueMatch && !/^(?:the|our|an?)\s*(?:event|college|campus)$/i.test(venueMatch[1].trim())) {
-    ctx.venue = { value: venueMatch[1].trim(), status: 'provided' }
+  if (venueMatch) {
+    const rawVenue = venueMatch[1].trim()
+    if (!/^(?:which|that|this|order|case|my|the|our|an?)\b/i.test(rawVenue) &&
+        !/\b(?:participants?|attendees?|organizers?|cards?|make\s+id)\b/i.test(rawVenue) &&
+        rawVenue.length <= 40) {
+      ctx.venue = { value: rawVenue, status: 'provided' }
+    }
   } else if (/svnit|nit\s*surat/i.test(text)) {
     ctx.venue = { value: 'SVNIT Surat', status: 'provided' }
   }
 
-  // 6. Roles + counts
+  // 6. Organizer — only if explicitly mentioned (e.g. "by ACM", "organized by DSC", etc.)
+  const orgMatch = text.match(/\b(?:organized\s+by|hosted\s+by|conducted\s+by|organizer\s*(?:is|=|:)?)\s+([A-Z0-9][A-Za-z0-9\s-]{2,30}?)(?:\s+(?:at|on|for|with)|$|\.|\,)/i)
+  if (orgMatch && !/^(?:our|the|a|an)\s+(?:college|team|committee)$/i.test(orgMatch[1].trim())) {
+    ctx.organizer = { value: orgMatch[1].trim(), status: 'provided' }
+  } else if (/\bacm\b/i.test(text)) {
+    ctx.organizer = { value: 'ACM NIT Surat', status: 'provided' }
+  }
+
+  // 7. Roles + counts
   for (const { pattern, id, label } of ROLE_KEYWORDS) {
     if (pattern.test(text)) {
       const countMatch = text.match(new RegExp(`(?:approximately\\s+|about\\s+)?(\\d+)\\s+${label.toLowerCase()}s?|${label.toLowerCase()}s?\\s*(?:count\s*)?[:=]?\\s*(\\d+)`, 'i'))

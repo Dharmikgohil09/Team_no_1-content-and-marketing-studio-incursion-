@@ -317,11 +317,11 @@ export function DataPage() {
                   person={previewPerson}
                   event={{
                     ...project?.eventContext,
-                    name: { value: project?.eventContext?.name?.value || 'INCURSION 2026', status: 'provided' },
-                    venue: { value: project?.eventContext?.venue?.value || 'SVNIT, Surat', status: 'provided' },
-                    dateStart: { value: project?.eventContext?.dateStart?.value || '20-22 March 2026', status: 'provided' },
-                    organizer: { value: project?.eventContext?.organizer?.value || 'ACM NIT Surat', status: 'provided' },
-                    tagline: { value: project?.eventContext?.tagline?.value || 'Flagship Tech Hackathon', status: 'provided' },
+                    name: { value: project?.eventContext?.name?.value || 'EVENT PASS', status: project?.eventContext?.name?.status || 'provided' },
+                    venue: { value: project?.eventContext?.venue?.value || '', status: project?.eventContext?.venue?.status || 'missing' },
+                    dateStart: { value: project?.eventContext?.dateStart?.value || '', status: project?.eventContext?.dateStart?.status || 'missing' },
+                    organizer: { value: project?.eventContext?.organizer?.value || '', status: project?.eventContext?.organizer?.status || 'missing' },
+                    tagline: { value: project?.eventContext?.tagline?.value || '', status: project?.eventContext?.tagline?.status || 'missing' },
                   } as any}
                   brandKit={brandKit}
                 />

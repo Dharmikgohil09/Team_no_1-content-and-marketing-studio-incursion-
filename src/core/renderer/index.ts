@@ -194,11 +194,11 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
   if (!content || !content.trim() || content.trim() === '—' || content.trim() === '·' || content.trim() === '[No Name]') {
     const id = el.id.toLowerCase()
     if (id.includes('event-name') || id.includes('title')) {
-      content = ctx.event?.name?.value || 'INCURSION 2026'
+      content = ctx.event?.name?.value || 'EVENT PASS'
     } else if (id.includes('venue') || id.includes('date')) {
-      const v = ctx.event?.venue?.value || 'SVNIT, Surat'
-      const d = ctx.event?.dateStart?.value || '20-22 March 2026'
-      content = `${v} · ${d}`
+      const v = ctx.event?.venue?.value
+      const d = ctx.event?.dateStart?.value
+      content = v && d ? `${v} · ${d}` : (v || d || 'OFFICIAL EVENT')
     } else if (id.includes('person-name') || id === 'name') {
       content = ctx.person?.name && ctx.person.name !== '[No Name]' ? ctx.person.name : 'Participant Name'
     } else if (id.includes('role-label') || id === 'role') {
@@ -206,7 +206,9 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
     } else if (id.includes('person-detail') || id.includes('team')) {
       content = ctx.person?.team || 'Team Alpha'
     } else if (id.includes('org') || id.includes('branding') || id.includes('acm-label')) {
-      content = 'ACM NIT SURAT · SVNIT SURAT'
+      content = ctx.event?.organizer?.value
+        ? `${ctx.event.organizer.value.toUpperCase()}${ctx.event?.venue?.value ? ` · ${ctx.event.venue.value.toUpperCase()}` : ''}`
+        : (ctx.event?.name?.value ? `${ctx.event.name.value.toUpperCase()} · OFFICIAL PASS` : 'OFFICIAL EVENT PASS')
     } else if (id.includes('category') || id.includes('badge-type')) {
       content = 'OFFICIAL PASS'
     }

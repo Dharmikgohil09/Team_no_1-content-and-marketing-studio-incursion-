@@ -363,7 +363,7 @@ function buildModernMinimalFront(
       type: 'text',
       id: 'event-venue-date',
       anchor: { x: 2, y: 71.6, w: 50, h: 3.5 },
-      content: `${event.venue?.value || 'SVNIT, Surat'} · ${event.dateStart?.value || '2026'}` + (category === 'music' ? ' · LIVE CONCERT' : category === 'business' ? ' · PITCH SUMMIT' : ''),
+      content: `${event.venue?.value ? `${event.venue.value} · ` : ''}${event.dateStart?.value || '2026'}` + (category === 'music' ? ' · LIVE CONCERT' : category === 'business' ? ' · PITCH SUMMIT' : ''),
       fontFamily: 'Inter',
       fontSize: 3.1,
       fontWeight: '400',
@@ -378,7 +378,7 @@ function buildModernMinimalFront(
       type: 'qr',
       id: 'person-qr',
       anchor: { x: 23, y: 75.6, w: 8, h: 8 },
-      urlPattern: `https://acm.svnit.ac.in/verify/{{person.id}}`,
+      urlPattern: event.website?.value ? `${event.website.value.replace(/\/$/, '')}/verify/{{person.id}}` : `https://verify.eventpass.live/{{person.id}}`,
       fgColor: '#ffffff',
       bgColor: 'transparent',
       errorCorrection: 'M',
@@ -388,7 +388,9 @@ function buildModernMinimalFront(
       type: 'text',
       id: 'footer-branding',
       anchor: { x: 2, y: 84.4, w: 50, h: 2.4 },
-      content: category === 'music' ? 'LIVE CONCERT ARENA · SVNIT SURAT' : category === 'business' ? 'STARTUP PITCH SUMMIT · SVNIT' : 'ACM NIT SURAT · SVNIT SURAT',
+      content: event.organizer?.value
+        ? `${event.organizer.value.toUpperCase()}${event.venue?.value ? ` · ${event.venue.value.toUpperCase()}` : ''}`
+        : (category === 'music' ? 'LIVE CONCERT ARENA' : category === 'business' ? 'STARTUP PITCH SUMMIT' : category === 'cultural' ? 'CULTURAL FESTIVAL · OFFICIAL PASS' : category === 'sports' ? 'ATHLETIC CHAMPIONSHIP PASS' : (event.name?.value ? `${event.name.value.toUpperCase()} · OFFICIAL PASS` : 'OFFICIAL EVENT PASS')),
       fontFamily: 'Space Grotesk',
       fontSize: 2.2,
       fontWeight: '600',
@@ -700,21 +702,23 @@ function buildCreativeTechFront(
     },
   ]
 
-  const orgSubtitle = category === 'music'
-    ? 'LIVE CONCERT ARENA · SVNIT'
+  const orgSubtitle = event.organizer?.value
+    ? event.organizer.value.toUpperCase()
+    : category === 'music'
+    ? 'LIVE CONCERT ARENA'
     : category === 'business'
-    ? 'STARTUP PITCH SUMMIT · SVNIT'
+    ? 'STARTUP PITCH SUMMIT'
     : category === 'gaming'
-    ? 'ESPORTS CHAMPIONSHIP · SVNIT'
+    ? 'ESPORTS CHAMPIONSHIP'
     : category === 'sports'
-    ? 'SPORTS COUNCIL · SVNIT'
+    ? 'SPORTS COUNCIL'
     : category === 'cultural'
-    ? 'CULTURAL FESTIVAL · SVNIT'
+    ? 'CULTURAL FESTIVAL'
     : category === 'robotics'
-    ? 'ROBOTICS LAB · NIT SURAT'
+    ? 'ROBOTICS ARENA'
     : category === 'conference'
-    ? 'EXECUTIVE SUMMIT · ACM & SVNIT'
-    : (event.organizer?.value || 'ACM NIT SURAT')
+    ? 'EXECUTIVE SUMMIT'
+    : (event.name?.value ? `${event.name.value.toUpperCase()} TEAM` : 'OFFICIAL PASS')
 
   const roleBadgeLabel = category === 'music'
     ? (isSpeaker ? 'HEADLINE ARTIST' : isOrganizer ? 'CONCERT DIRECTOR' : isJudge ? 'JURY' : role.label.toUpperCase())
@@ -736,21 +740,23 @@ function buildCreativeTechFront(
     ? (isPlayer ? 'Squad: {{person.team}}' : 'Tournament Official')
     : isOrganizer ? 'Core Organizing Team' : isJudge ? 'Judge & Panelist' : isMentor ? 'Mentor & Coach' : isVolunteer ? 'Operations Support' : '{{person.team}}'
 
-  const footerText = category === 'music'
-    ? 'OFFICIAL CONCERT TOUR PASS · SVNIT SURAT'
+  const footerText = event.organizer?.value
+    ? `VERIFIED CREDENTIAL · ${event.organizer.value.toUpperCase()}`
+    : category === 'music'
+    ? 'OFFICIAL CONCERT TOUR PASS'
     : category === 'business'
-    ? 'VERIFIED PITCH CREDENTIAL · SVNIT SURAT'
+    ? 'VERIFIED PITCH CREDENTIAL'
     : category === 'gaming'
-    ? 'ESPORTS ROSTER BADGE · SVNIT SURAT'
+    ? 'ESPORTS ROSTER BADGE'
     : category === 'sports'
-    ? 'OFFICIAL ATHLETIC PASS · SVNIT SURAT'
+    ? 'OFFICIAL ATHLETIC PASS'
     : category === 'cultural'
-    ? 'FESTIVAL ACCREDITATION · SVNIT SURAT'
+    ? 'FESTIVAL ACCREDITATION'
     : category === 'robotics'
-    ? 'TELEMETRY CREDENTIAL · SVNIT SURAT'
+    ? 'TELEMETRY CREDENTIAL'
     : category === 'conference'
-    ? 'CONFERENCE DELEGATE · ACM NIT SURAT'
-    : 'VERIFIED CREDENTIAL · ACM SVNIT SURAT'
+    ? 'CONFERENCE DELEGATE PASS'
+    : (event.name?.value ? `VERIFIED CREDENTIAL · ${event.name.value.toUpperCase()}` : 'VERIFIED EVENT CREDENTIAL')
 
   const elements: Element[] = [
     // 1. Top Hero Background (y: 0 to 48)
@@ -931,7 +937,7 @@ function buildCreativeTechFront(
       type: 'text',
       id: 'event-venue-date',
       anchor: { x: 2, y: 59, w: 50, h: 3.5 },
-      content: `${event.venue?.value || 'SVNIT, Surat'} · ${event.dateStart?.value || '2026'}` + (category === 'music' ? ' · LIVE CONCERT' : category === 'business' ? ' · PITCH SUMMIT' : ''),
+      content: `${event.venue?.value ? `${event.venue.value} · ` : ''}${event.dateStart?.value || '2026'}` + (category === 'music' ? ' · LIVE CONCERT' : category === 'business' ? ' · PITCH SUMMIT' : ''),
       fontFamily: 'Inter',
       fontSize: 3.2,
       fontWeight: '400',
@@ -946,7 +952,7 @@ function buildCreativeTechFront(
       type: 'qr',
       id: 'person-qr',
       anchor: { x: 23, y: 63.5, w: 8, h: 8 },
-      urlPattern: `https://acm.svnit.ac.in/verify/{{person.id}}`,
+      urlPattern: event.website?.value ? `${event.website.value.replace(/\/$/, '')}/verify/{{person.id}}` : `https://verify.eventpass.live/{{person.id}}`,
       fgColor: pal.d2BarcodeFg,
       bgColor: 'transparent',
       errorCorrection: 'M',
@@ -1019,7 +1025,7 @@ function buildPremiumEditorialFront(
     ? 'DELEGATE PASS'
     : category === 'workshop'
     ? 'COHORT PASS'
-    : 'ACM PASS'
+    : (event.organizer?.value ? `${event.organizer.value.toUpperCase().slice(0, 10)} PASS` : (event.name?.value ? `${event.name.value.toUpperCase().slice(0, 10)} PASS` : 'EVENT PASS'))
 
   const serialText = category === 'music'
     ? 'TOUR-{{person.id}}'
@@ -1154,7 +1160,7 @@ function buildPremiumEditorialFront(
       type: 'qr',
       id: 'block-qr',
       anchor: { x: 38.5, y: 44.5, w: 9.5, h: 9.5 },
-      urlPattern: `https://acm.svnit.ac.in/verify/{{person.id}}`,
+      urlPattern: event.website?.value ? `${event.website.value.replace(/\/$/, '')}/verify/{{person.id}}` : `https://verify.eventpass.live/{{person.id}}`,
       fgColor: isJudge ? '#0f172a' : '#ffffff',
       bgColor: 'transparent',
       errorCorrection: 'M',
@@ -1260,7 +1266,7 @@ function buildPremiumEditorialFront(
       type: 'text',
       id: 'website-url',
       anchor: { x: 22, y: 77.5, w: 28, h: 4 },
-      content: event.website?.value || 'acm.svnit.ac.in',
+      content: event.website?.value || (event.organizer?.value ? `${event.organizer.value.toLowerCase().replace(/[^a-z0-9]/g, '')}.org` : 'eventpass.live'),
       fontFamily: 'Space Grotesk',
       fontSize: 3.2,
       fontWeight: '500',
@@ -1310,10 +1316,10 @@ function buildCardBackElements(
     ? '1. Technical badge required for pit-lane entry and arena safety zone access.'
     : category === 'conference'
     ? '1. Delegate pass grants entry to keynote auditoriums and executive sessions.'
-    : '1. Badge must be visibly worn at all times within SVNIT campus and hackathon venues.'
+    : `1. Badge must be visibly worn at all times within ${event.venue?.value || (event.name?.value ? `${event.name.value} venue` : 'event premises')}.`
 
   const rule2 = category === 'music'
-    ? '2. Identification pass is strictly non-transferable and remains property of SVNIT.'
+    ? '2. Identification pass is strictly non-transferable and remains property of event organizers.'
     : category === 'business'
     ? '2. Identification pass is strictly non-transferable and verified at investor gates.'
     : category === 'gaming'
@@ -1321,12 +1327,12 @@ function buildCardBackElements(
     : category === 'sports'
     ? '2. Unauthorized badge transfer leads to immediate team disqualification.'
     : category === 'cultural'
-    ? '2. This identification pass is strictly non-transferable and remains property of SVNIT.'
+    ? '2. This identification pass is strictly non-transferable and remains property of event organizers.'
     : category === 'robotics'
     ? '2. All arena safety protocols must be followed by team marshals.'
     : category === 'conference'
     ? '2. Badge must be displayed at all times within conference halls.'
-    : '2. This identification pass is strictly non-transferable and remains property of ACM NIT Surat.'
+    : `2. This identification pass is strictly non-transferable and remains property of ${event.organizer?.value || (event.name?.value ? `${event.name.value} Committee` : 'the event organizers')}.`
 
   const rule3 = category === 'music'
     ? '3. Scan QR code at backstage security and technical soundboard checkpoints.'
@@ -1467,7 +1473,7 @@ function buildCardBackElements(
       type: 'qr',
       id: 'back-large-qr',
       anchor: { x: 19, y: 46, w: 16, h: 16 },
-      urlPattern: `https://acm.svnit.ac.in/verify/{{person.id}}`,
+      urlPattern: event.website?.value ? `${event.website.value.replace(/\/$/, '')}/verify/{{person.id}}` : `https://verify.eventpass.live/{{person.id}}`,
       fgColor: isDark ? '#ffffff' : '#0f172a',
       bgColor: 'transparent',
       errorCorrection: 'M',
@@ -1506,7 +1512,7 @@ function buildCardBackElements(
       type: 'text',
       id: 'back-emergency-val',
       anchor: { x: 4, y: 70.8, w: 46, h: 3.5 },
-      content: event.contact?.value || 'helpdesk@svnit.ac.in · +91 261 2227334',
+      content: event.contact?.value || (event.organizer?.value ? `contact@${event.organizer.value.toLowerCase().replace(/[^a-z0-9]/g, '')}.org` : 'helpdesk@eventpass.live'),
       fontFamily: 'Inter',
       fontSize: 2.5,
       fontWeight: '500',
@@ -1531,7 +1537,7 @@ function buildCardBackElements(
       type: 'text',
       id: 'back-copyright',
       anchor: { x: 2, y: 83, w: 50, h: 2.2 },
-      content: '© SVNIT Surat · ACM NIT Surat Chapter',
+      content: `© ${new Date().getFullYear()} ${event.organizer?.value || (event.name?.value ? `${event.name.value} Organizing Team` : 'Event Organizing Committee')}`,
       fontFamily: 'Inter',
       fontSize: 1.9,
       fontWeight: '400',

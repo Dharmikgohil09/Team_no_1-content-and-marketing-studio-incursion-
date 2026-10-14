@@ -43,7 +43,7 @@ export function makeEmptyEventContext(): EventContext {
     dateEnd:          {},
     duration:         {},
     venue:            {},
-    organizer:        { value: 'ACM NIT Surat', status: 'provided' },
+    organizer:        {},
     participantCount: {},
     requestedFields:  {},
     hasPhotos:        {},

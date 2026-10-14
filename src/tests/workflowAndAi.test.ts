@@ -606,4 +606,48 @@ describe('Workflow & AI Improvements — Tests 1 to 7', () => {
       expect(questionIds).toContain('q-venue')
     })
   })
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // TEST 11: Nukkad Natak Prompt (No hardcoded ACM/SVNIT, no 'Them' name, no clause venue)
+  // ───────────────────────────────────────────────────────────────────────────
+  describe('Test 11: Nukkad Natak natural language prompt', () => {
+    const input = 'i has to organize nukkad natak in which 20 participant 3 organizer name of event nukkad natak so make id card for them'
+
+    it('extracts Nukkad Natak as event name without setting name=Them or venue=which 20 participant or organizer=ACM', () => {
+      const result = parseIntentDeterministic(input)
+
+      // 1. Name must be Nukkad Natak, NOT 'Them'
+      expect(result.eventContext.name.value).toBe('Nukkad Natak')
+      expect(result.eventContext.name.status).toBe('provided')
+
+      // 2. Category must be cultural
+      expect((result.eventContext as any).category?.value).toBe('cultural')
+
+      // 3. Organizer must NOT be hardcoded to ACM NIT Surat
+      expect(result.eventContext.organizer?.status).toBe('missing')
+      expect(result.eventContext.organizer?.value).toBeUndefined()
+
+      // 4. Venue must NOT match "which 20 participant..."
+      expect(result.eventContext.venue?.status).toBe('missing')
+      expect(result.eventContext.venue?.value).toBeUndefined()
+
+      // 5. Roles: 20 participants, 3 organizers
+      const roleMap = new Map(result.roles.map(r => [r.id, r]))
+      expect(roleMap.get('participant')?.count).toBe(20)
+      expect(roleMap.get('organizer')?.count).toBe(3)
+
+      // 6. Card generation should not include hardcoded ACM NIT SURAT or SVNIT
+      const drafts = generateDraftsDeterministic(result.eventContext, result.roles.map(r => getRoleOrDefault(r.id)))
+      expect(drafts).toHaveLength(3)
+
+      for (const draft of drafts) {
+        const textElements = draft.elements.filter(e => e.type === 'text') as any[]
+        for (const el of textElements) {
+          expect(el.content).not.toContain('ACM NIT SURAT')
+          expect(el.content).not.toContain('SVNIT SURAT')
+        }
+      }
+    })
+  })
 })
+
