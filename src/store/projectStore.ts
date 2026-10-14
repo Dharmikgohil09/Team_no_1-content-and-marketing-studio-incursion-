@@ -9,7 +9,7 @@ import { makeEmptyEventContext } from '../core/schema/EventContext'
 import { DEFAULT_ROLES } from '../core/schema/Role'
 import { DEFAULT_SVNIT_LOGO, DEFAULT_ACM_LOGO } from '../brandKits/defaultLogos'
 import { updateBrandKitLogo } from '../brandKits/loader'
-import { saveProject, loadProject } from '../db/dexie'
+import { saveProject, loadProject, savePersonPhotos, getPersonPhotos } from '../db/dexie'
 
 interface ProjectState {
   // Current project
@@ -59,6 +59,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       updatedAt:   new Date().toISOString(),
       eventContext: makeEmptyEventContext(),
       roles:       DEFAULT_ROLES,
+      people:      [],
       drafts:      [],
       brandKitId:  'acm-nit-surat',
       wizardStep:  0,
@@ -71,15 +72,33 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   async loadProject(id) {
     const stored = await loadProject(id)
-    if (stored) set({ project: stored })
+    if (stored) {
+      const storedPeople = stored.people || []
+      const photoMap = await getPersonPhotos(id)
+      const peopleWithPhotos = storedPeople.map(p => ({
+        ...p,
+        photoUrl: p.photoUrl || photoMap[p.id] || '',
+      }))
+      set({ project: stored, people: peopleWithPhotos })
+    }
   },
 
   async saveProject() {
-    const { project } = get()
+    const { project, people } = get()
     if (!project) return
-    const updated = { ...project, updatedAt: new Date().toISOString() }
+    const updated = { ...project, people, updatedAt: new Date().toISOString() }
     set({ project: updated })
     await saveProject(updated)
+    const photosToSave = people
+      .filter(p => p.photoUrl && p.photoUrl.startsWith('data:'))
+      .map(p => ({
+        personId: p.id,
+        dataUrl: p.photoUrl!,
+        filename: `${p.id}.jpg`,
+      }))
+    if (photosToSave.length > 0) {
+      await savePersonPhotos(project.id, photosToSave)
+    }
   },
 
   setEventContext(ctx) {
@@ -124,7 +143,24 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   setPeople(people) {
-    set({ people })
+    set(s => ({
+      people,
+      project: s.project ? { ...s.project, people } : s.project,
+    }))
+    const { project } = get()
+    if (project) {
+      const photosToSave = people
+        .filter(p => p.photoUrl && p.photoUrl.startsWith('data:'))
+        .map(p => ({
+          personId: p.id,
+          dataUrl: p.photoUrl!,
+          filename: `${p.id}.jpg`,
+        }))
+      if (photosToSave.length > 0) {
+        savePersonPhotos(project.id, photosToSave).catch(() => {})
+      }
+      saveProject({ ...project, people, updatedAt: new Date().toISOString() }).catch(() => {})
+    }
   },
 
   setSamplePhotoUrl(url: string) {

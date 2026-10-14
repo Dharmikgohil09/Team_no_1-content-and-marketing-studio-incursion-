@@ -6,18 +6,73 @@ export interface StoredProject extends DesignProject {
   _updatedAt: number  // timestamp for sorting
 }
 
+export interface StoredAsset {
+  id: string          // composite `${projectId}:${personId}`
+  projectId: string
+  personId?: string
+  filename: string
+  mimeType: string
+  dataUrl: string
+  updatedAt: number
+}
+
 class StudioDB extends Dexie {
   projects!: Table<StoredProject, string>
+  assets!: Table<StoredAsset, string>
 
   constructor() {
     super('ContentMarketingStudio')
     this.version(1).stores({
       projects: 'id, _updatedAt, name, designType',
     })
+    this.version(2).stores({
+      projects: 'id, _updatedAt, name, designType',
+      assets: 'id, projectId, personId, filename, updatedAt',
+    })
   }
 }
 
 export const db = new StudioDB()
+
+export async function savePersonPhotos(
+  projectId: string,
+  photos: { personId: string; dataUrl: string; filename: string; mimeType?: string }[]
+): Promise<void> {
+  const timestamp = Date.now()
+  const stored: StoredAsset[] = photos.map(p => ({
+    id: `${projectId}:${p.personId}`,
+    projectId,
+    personId: p.personId,
+    filename: p.filename,
+    mimeType: p.mimeType || 'image/jpeg',
+    dataUrl: p.dataUrl,
+    updatedAt: timestamp,
+  }))
+  if (stored.length > 0) {
+    await db.assets.bulkPut(stored)
+  }
+}
+
+export async function getPersonPhotos(projectId: string): Promise<Record<string, string>> {
+  try {
+    const records = await db.assets.where('projectId').equals(projectId).toArray()
+    const map: Record<string, string> = {}
+    for (const r of records) {
+      if (r.personId && r.dataUrl) {
+        map[r.personId] = r.dataUrl
+      }
+    }
+    return map
+  } catch {
+    return {}
+  }
+}
+
+export async function clearProjectPhotos(projectId: string): Promise<void> {
+  try {
+    await db.assets.where('projectId').equals(projectId).delete()
+  } catch {}
+}
 
 export async function saveProject(project: DesignProject): Promise<void> {
   const timestamp = Date.now()

@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { EventContextSchema } from './EventContext'
 import { RoleSchema } from './Role'
 import { CardTemplateSchema } from './CardTemplate'
+import { PersonSchema } from './Person'
 
 export const DesignProjectSchema = z.object({
   id:           z.string(),
@@ -12,6 +13,7 @@ export const DesignProjectSchema = z.object({
   
   eventContext: EventContextSchema,
   roles:        z.array(RoleSchema),
+  people:       z.array(PersonSchema).default([]),
   
   /** The template being edited (after draft selection) */
   activeTemplate: CardTemplateSchema.optional(),

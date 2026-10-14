@@ -22,6 +22,7 @@
     "express": "^4.21.2",
     "jsbarcode": "^3.11.6",
     "jspdf": "^2.5.2",
+    "jszip": "^3.10.2",
     "papaparse": "^5.4.1",
     "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
@@ -36,6 +37,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "@types/jszip": "^3.4.0",
     "@types/node": "^22.0.0",
     "@types/papaparse": "^5.3.14",
     "@types/qrcode": "^1.5.5",
