@@ -420,7 +420,7 @@ describe('Workflow & AI Improvements — Tests 1 to 7', () => {
       const [d1, d2, d3] = drafts
 
       // Verify names and tags
-      expect(d1.name).toContain('Concert Acoustic')
+      expect(d1.name).toContain('Live Concert Arena')
       expect(d1.tags).toContain('music')
       expect(d1.tags).toContain('concert')
 
@@ -428,38 +428,46 @@ describe('Workflow & AI Improvements — Tests 1 to 7', () => {
       expect(d2.tags).toContain('neon')
       expect(d2.tags).toContain('equalizer')
 
-      expect(d3.name).toContain('VIP Backstage Pass')
+      expect(d3.name).toContain('VIP Backstage')
       expect(d3.tags).toContain('backstage')
 
-      // Draft 1 must have stage spotlights, acoustic ripple ring, musical notes, and 16 equalizer bars
+      // Draft 1 must have stage spotlights, singer silhouette, cheering audience crowd, acoustic ripple ring, musical notes, and equalizer bars
       const d1HasSpotlights = d1.elements.some(e => e.id === 'music-spotlight-left' || e.id === 'music-spotlight-right')
+      const d1HasSinger = d1.elements.some(e => e.id === 'music-singer-silhouette')
+      const d1HasCrowd = d1.elements.some(e => e.id === 'music-crowd-silhouette')
       const d1HasAcousticRing = d1.elements.some(e => e.id === 'music-acoustic-ring')
       const d1HasMusicalNotes = d1.elements.some(e => e.id === 'music-note-left' || e.id === 'music-note-right')
       const d1HasEqBars = d1.elements.some(e => e.id?.startsWith('music-eq-bar-'))
 
       expect(d1HasSpotlights).toBe(true)
+      expect(d1HasSinger).toBe(true)
+      expect(d1HasCrowd).toBe(true)
       expect(d1HasAcousticRing).toBe(true)
       expect(d1HasMusicalNotes).toBe(true)
       expect(d1HasEqBars).toBe(true)
 
-      // Draft 2 must have crossing stage lasers, vinyl grooves, floating notes, and sonic equalizer
+      // Draft 2 must have crossing stage lasers, vinyl grooves, floating notes, sonic equalizer, and crowd silhouette
       const d2HasLasers = d2.elements.some(e => e.id === 'music-laser-1' || e.id === 'music-laser-2')
       const d2HasVinylGrooves = d2.elements.some(e => e.id === 'music-groove-1')
       const d2HasNotes = d2.elements.some(e => e.id === 'music-note-crest-1' || e.id === 'music-note-crest-2')
       const d2HasEqBars = d2.elements.some(e => e.id?.startsWith('music-crest-eq-'))
+      const d2HasCrowd = d2.elements.some(e => e.id === 'music-crowd-silhouette-d2')
 
       expect(d2HasLasers).toBe(true)
       expect(d2HasVinylGrooves).toBe(true)
       expect(d2HasNotes).toBe(true)
       expect(d2HasEqBars).toBe(true)
+      expect(d2HasCrowd).toBe(true)
 
-      // Draft 3 must have stage spotlight, watermark note, and vertical frequency spectrum bars
+      // Draft 3 must have stage spotlight, singer watermark, cheering crowd, and vertical frequency spectrum bars
       const d3HasSpotlight = d3.elements.some(e => e.id === 'editorial-music-spotlight')
-      const d3HasWatermarkNote = d3.elements.some(e => e.id === 'editorial-music-watermark')
+      const d3HasSinger = d3.elements.some(e => e.id === 'editorial-music-singer-watermark')
+      const d3HasCrowd = d3.elements.some(e => e.id === 'editorial-music-crowd')
       const d3HasFreqBars = d3.elements.some(e => e.id?.startsWith('editorial-freq-bar-'))
 
       expect(d3HasSpotlight).toBe(true)
-      expect(d3HasWatermarkNote).toBe(true)
+      expect(d3HasSinger).toBe(true)
+      expect(d3HasCrowd).toBe(true)
       expect(d3HasFreqBars).toBe(true)
     })
 
@@ -513,6 +521,52 @@ describe('Workflow & AI Improvements — Tests 1 to 7', () => {
       expect(svgBack).toContain('TERMS &amp; EVENT GUIDELINES')
       expect(svgBack).toContain('soundboard')
       expect(svgBack).not.toMatch(/[=" ]NaN[" ]/)
+    })
+
+    it('understands "shark mank" or startup pitch and generates venture themed visuals in all 3 drafts', () => {
+      const bizInput = 'shark mank event for college startup pitches on 25 October at SVNIT Surat with 100 founders, investors, and jury'
+      const result = parseIntentDeterministic(bizInput)
+      const roles = result.roles.map(r => getRoleOrDefault(r.id))
+      const drafts = generateDraftsDeterministic(result.eventContext, roles)
+
+      expect(drafts).toHaveLength(3)
+      const [d1, d2, d3] = drafts
+
+      // Verify business tags
+      expect(d1.tags).toContain('pitch')
+      expect(d1.tags).toContain('shark-tank')
+
+      // Draft 1 has presenter, growth curve, and audience
+      expect(d1.elements.some(e => e.id === 'biz-presenter-silhouette')).toBe(true)
+      expect(d1.elements.some(e => e.id === 'biz-growth-curve')).toBe(true)
+      expect(d1.elements.some(e => e.id === 'biz-crowd-silhouette')).toBe(true)
+
+      // Draft 2 has summit rays and presenter watermark
+      expect(d2.elements.some(e => e.id === 'biz-laser-1')).toBe(true)
+      expect(d2.elements.some(e => e.id === 'biz-presenter-d2')).toBe(true)
+
+      // Draft 3 has executive spotlight and presenter watermark
+      expect(d3.elements.some(e => e.id === 'editorial-biz-spotlight')).toBe(true)
+      expect(d3.elements.some(e => e.id === 'editorial-biz-presenter-watermark')).toBe(true)
+
+      // Render Draft 1 front
+      const sampleFounder = {
+        id: 'FND-001',
+        name: 'Priya Mehta',
+        role: 'founder',
+        team: 'BioTech Innovations',
+      }
+      const { svg } = renderCard({
+        template: d1,
+        person: sampleFounder as any,
+        role: getRoleOrDefault('founder'),
+        event: result.eventContext,
+        face: 'front',
+      })
+      expect(svg).toContain('Priya Mehta')
+      expect(svg).toContain('biz-presenter-silhouette')
+      expect(svg).toContain('biz-growth-curve')
+      expect(svg).not.toMatch(/[=" ]NaN[" ]/)
     })
   })
 })

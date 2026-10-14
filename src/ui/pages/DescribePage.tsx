@@ -49,6 +49,8 @@ export function DescribePage() {
         const fallback = getRoleOrDefault(r.id)
         return { ...fallback, label: r.label, count: r.count }
       })
+      // Ensure description is always preserved on eventContext for downstream theme matching
+      intent.eventContext.description = { value: text, status: 'provided' }
       useProjectStore.getState().setEventContext(intent.eventContext)
       useProjectStore.getState().setRoles(parsedRoles)
 

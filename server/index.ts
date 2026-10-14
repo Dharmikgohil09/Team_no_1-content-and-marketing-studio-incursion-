@@ -21,7 +21,7 @@ function getGenAI() {
 }
 
 async function generateWithGemini(genAI: GoogleGenerativeAI, prompt: string): Promise<string> {
-  const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
+  const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.5-flash']
   let lastErr: any = null
   for (const m of models) {
     try {
@@ -58,6 +58,9 @@ CRITICAL RULES:
    - "robotics" for robotics, battlebots, hardware competitions
    - "conference" for business conferences, summits, symposiums
    - "cultural" for arts, music, dance festivals, cultural celebrations
+   - "music" for concerts, singing competitions, musical fests, band shows
+   - "business" for startup pitch competitions, shark tank events, investor syndicates
+   - "gaming" for esports tournaments, gaming LANs, game dev contests
    - "workshop" for hands-on bootcamps, masterclasses, technical seminars
    - "general" if not specifically categorized.
 
@@ -65,7 +68,7 @@ Return ONLY a valid JSON object matching this exact shape (no markdown, no backt
 {
   "eventContext": {
     "name":             { "value": "string or null", "status": "provided or missing" },
-    "category":         { "value": "sports|hackathon|robotics|conference|cultural|music|workshop|general", "status": "provided or missing" },
+    "category":         { "value": "music|business|sports|hackathon|robotics|conference|cultural|gaming|workshop|general", "status": "provided or missing" },
     "description":      { "value": "string or null", "status": "provided or missing" },
     "tagline":          { "value": "string or null", "status": "provided or missing" },
     "dateStart":        { "value": "string or null", "status": "provided or missing" },
@@ -82,7 +85,7 @@ Return ONLY a valid JSON object matching this exact shape (no markdown, no backt
     "contact":          { "value": null, "status": "missing" }
   },
   "roles": [
-    { "id": "participant|organizer|mentor|volunteer|judge|speaker|player|referee|artist|vocalist|custom", "label": "string", "count": null }
+    { "id": "participant|organizer|mentor|volunteer|judge|speaker|player|referee|artist|vocalist|founder|investor|gamer|custom", "label": "string", "count": null }
   ],
   "designType": "idCard",
   "confidence": 0.0 to 1.0
@@ -116,38 +119,40 @@ Event: ${JSON.stringify(event)}
 Roles: ${JSON.stringify(roles)}
 
 Create 3 distinct design concepts that genuinely match the event category and theme:
-- If MUSIC / CONCERT / SINGING: use live concert stage ambiance, audio equalizer waveforms, spotlight beams, glowing neon gradients (magenta/violet/cyan), musical note motifs.
-- If SPORTS: use athletic motion, dynamic jersey/stadium accents, energetic palettes (e.g. navy/gold, emerald/volt, crimson/white).
-- If HACKATHON: use modern technology, cyber/electric accents, clean tech geometry.
-- If ROBOTICS: use engineering caliper lines, technical precision, cyan/amber/slate.
-- If CULTURAL / ARTS: use celebratory artistic flair, festive gradients, vibrant expression.
+- If MUSIC / CONCERT / SINGING: use live concert stage ambiance, audio equalizer waveforms, spotlight beams, glowing neon gradients (magenta/violet/cyan), musical note motifs, stage singer silhouette and cheering audience crowds.
+- If BUSINESS / STARTUP / PITCH / SHARK TANK: use venture growth charts, executive spotlight, founder/pitch presenter silhouette, investor audience watermark, deep obsidian navy and amber gold accents.
+- If GAMING / ESPORTS: use futuristic esports arena, laser grids, battlestations, cyber violet and neon cyan.
+- If SPORTS: use athletic motion, dynamic jersey/stadium accents, sprinting runner athlete, spectator crowd silhouettes.
+- If HACKATHON: use modern technology, matrix cascades, coder workspaces, electric blue/cyan accents.
+- If ROBOTICS: use industrial robotic arms, engineering caliper lines, technical precision, cyan/amber/slate.
+- If CULTURAL / ARTS / DANCE: use celebratory artistic flair, festive drapery arcs, leaping dancers, vibrant expression.
 - If CONFERENCE / SEMINAR: use executive prestige, editorial typography, subtle institutional pinstripes.
 
 Return ONLY a valid JSON object matching this exact shape (no markdown, no backticks):
 {
-  "category": "sports|hackathon|robotics|conference|cultural|music|workshop|general",
+  "category": "music|business|sports|hackathon|robotics|cultural|conference|gaming|workshop|general",
   "visualDirection": "Brief description of the visual identity",
   "drafts": [
     {
       "id": "modern-minimal",
-      "name": "Modern Minimal",
+      "name": "Creative Event-Specific Title",
+      "description": "Specific 1-2 sentence description explaining the visual elements chosen for this event",
       "primaryColor": "#hex",
-      "accentColor": "#hex",
-      "motif": "sports-stripes|tech-circuits|concert-soundwaves|clean-minimal|engineering-grid|celebratory-arcs"
+      "accentColor": "#hex"
     },
     {
-      "id": "bold-dynamic",
-      "name": "Bold Dynamic",
+      "id": "creative-tech",
+      "name": "Creative Event-Specific Title",
+      "description": "Specific 1-2 sentence description explaining the visual elements chosen for this event",
       "primaryColor": "#hex",
-      "accentColor": "#hex",
-      "motif": "sports-stripes|tech-circuits|clean-minimal|engineering-grid|celebratory-arcs"
+      "accentColor": "#hex"
     },
     {
       "id": "premium-editorial",
-      "name": "Premium Editorial",
+      "name": "Creative Event-Specific Title",
+      "description": "Specific 1-2 sentence description explaining the visual elements chosen for this event",
       "primaryColor": "#hex",
-      "accentColor": "#hex",
-      "motif": "sports-stripes|tech-circuits|clean-minimal|engineering-grid|celebratory-arcs"
+      "accentColor": "#hex"
     }
   ]
 }

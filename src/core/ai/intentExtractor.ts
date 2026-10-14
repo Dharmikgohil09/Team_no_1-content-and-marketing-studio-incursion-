@@ -33,8 +33,11 @@ const MONTH_MAP: Record<string, string> = {
 
 const ROLE_KEYWORDS: Array<{ pattern: RegExp; id: string; label: string }> = [
   { pattern: /artists?|singers?|vocalists?|musicians?|performers?/i, id: 'artist', label: 'Artist' },
-  { pattern: /players?/i,       id: 'player',      label: 'Player' },
+  { pattern: /players?|athletes?|runners?|swimmers?/i, id: 'player', label: 'Player' },
   { pattern: /referees?|umpires?/i, id: 'referee', label: 'Referee' },
+  { pattern: /founders?|entrepreneurs?|pitchers?/i, id: 'founder', label: 'Founder' },
+  { pattern: /investors?|sharks?|venture\s*capitalists?|vc/i, id: 'investor', label: 'Investor' },
+  { pattern: /gamers?|esports\s*players?/i, id: 'gamer', label: 'Gamer' },
   { pattern: /participants?/i,  id: 'participant', label: 'Participant' },
   { pattern: /organiz(?:er|or)s?/i, id: 'organizer', label: 'Organizer' },
   { pattern: /mentors?/i,       id: 'mentor',      label: 'Mentor' },
@@ -59,10 +62,13 @@ export function parseIntentDeterministic(text: string): IntentResult {
   const ctx: EventContext = makeEmptyEventContext()
   const detectedRoles: Array<{ id: string; label: string; count?: number }> = []
 
+  // Always retain raw description text for downstream category & theme detection
+  ;(ctx as any).description = { value: text, status: 'provided' }
+
   // 1. Event Name: look for "called X", "named X", "titled X", "cards for X at/on", or quoted names
   const namePatterns = [
     /(?:called|named|titled)\s+["']?([^"',.\n]+?)["']?(?:\s+(?:at|on|for|with|in|happening|scheduled|taking\s+place)|$|\.|\,)/i,
-    /(?:hackathon|tournament|conference|event|workshop|competition|concert)\s+(?:called|named)\s+["']?([^"',.\n]+?)["']?(?:\s+(?:at|on|for|with|in|happening|scheduled|taking\s+place)|$|\.|\,)/i,
+    /(?:hackathon|tournament|conference|event|workshop|competition|concert|pitch|expo)\s+(?:called|named)\s+["']?([^"',.\n]+?)["']?(?:\s+(?:at|on|for|with|in|happening|scheduled|taking\s+place)|$|\.|\,)/i,
     /(?:cards|passes|badges)\s+for\s+(?:an?\s+|the\s+)?([A-Z0-9][A-Za-z0-9\s-]{2,40}?)(?:\s+(?:at|on|in|with|happening)|$|\.|\,)/i,
     /["']([^"'\n]{3,40})["']/,
   ]
@@ -75,10 +81,22 @@ export function parseIntentDeterministic(text: string): IntentResult {
     }
   }
 
+  // If no specific name pattern matched, try title case extraction or fallback to first words
+  if (ctx.name.status === 'missing') {
+    const sharkMatch = text.match(/\b(shark\s*(?:tank|mank)|startup\s*pitch|incursion|techfest|battlebots?)\b/i)
+    if (sharkMatch) {
+      ctx.name = { value: sharkMatch[1].replace(/\b\w/g, l => l.toUpperCase()), status: 'provided' }
+    }
+  }
+
   // 2. Event Category
   let category = 'general'
   if (/(?:music|concert|singing|song|band|raag|raga|musical|vocal|melody|rhythm|audio|orchestra|gig|acoustic|live\s*stage|dj|soundfest|sangeet)/i.test(text)) {
     category = 'music'
+  } else if (/(?:shark\s*(?:tank|mank)|pitch|startup|venture|investor|angel|funding|founder|entrepreneur)/i.test(text)) {
+    category = 'business'
+  } else if (/(?:gaming|esports|lan\s*party|game\s*dev|gamer)/i.test(text)) {
+    category = 'gaming'
   } else if (/(?:sports?|tournament|football|cricket|basketball|badminton|athletics?|championship|league|match|referee|players?)/i.test(text)) {
     category = 'sports'
   } else if (/(?:hackathon|coding|codefest|hacknit|datathon|programming)/i.test(text)) {
@@ -92,7 +110,7 @@ export function parseIntentDeterministic(text: string): IntentResult {
   } else if (/(?:workshop|bootcamp|masterclass|training)/i.test(text)) {
     category = 'workshop'
   }
-  (ctx as any).category = { value: category, status: category !== 'general' ? 'provided' : 'missing' }
+  ;(ctx as any).category = { value: category, status: category !== 'general' ? 'provided' : 'missing' }
 
   // 3. Duration
   for (const { pattern, unit } of DURATION_PATTERNS) {

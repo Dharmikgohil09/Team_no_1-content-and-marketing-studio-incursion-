@@ -5,22 +5,31 @@ import type { Element } from '../schema/Element'
 import { getRoleOrDefault, DEFAULT_ROLES } from '../schema/Role'
 import { DEFAULT_SVNIT_LOGO, DEFAULT_ACM_LOGO } from '../../brandKits/defaultLogos'
 
-export type EventCategory = 'sports' | 'hackathon' | 'robotics' | 'conference' | 'cultural' | 'music' | 'workshop' | 'general'
+import {
+  type EventCategory,
+  THEME_COLOR_PALETTES,
+  buildThemeElementsDraft1,
+  buildThemeElementsDraft2,
+  buildThemeElementsDraft3,
+} from './themeVisuals'
+export type { EventCategory }
 
 export function detectEventCategory(event: EventContext): EventCategory {
   const catObj = (event as any).category
   if (catObj && catObj.status !== 'missing' && catObj.value) {
     const explicit = String(catObj.value).toLowerCase()
-    if (['sports', 'hackathon', 'robotics', 'conference', 'cultural', 'music', 'workshop'].includes(explicit)) {
+    if (['sports', 'hackathon', 'robotics', 'conference', 'cultural', 'music', 'workshop', 'business', 'gaming'].includes(explicit)) {
       return explicit as EventCategory
     }
   }
   const text = `${event.name?.value || ''} ${(event as any).description?.value || ''} ${(event as any).themeHint?.value || ''}`.toLowerCase()
   if (/(?:music|concert|singing|song|band|raag|raga|musical|vocal|melody|rhythm|audio|orchestra|gig|acoustic|live\s*stage|dj|soundfest|sangeet)/i.test(text)) return 'music'
+  if (/(?:shark\s*(?:tank|mank)|pitch|startup|venture|investor|angel|funding|founder|entrepreneur)/i.test(text)) return 'business'
+  if (/(?:gaming|esports|lan\s*party|game\s*dev|gamer)/i.test(text)) return 'gaming'
   if (/(?:sports?|tournament|football|cricket|basketball|badminton|athletics?|championship|league|match|referee|players?)/i.test(text)) return 'sports'
   if (/(?:robotics?|robots?|robos?|bots?|battlebots?|mechatronics)/i.test(text)) return 'robotics'
   if (/(?:cultural|fest|festival|dance|arts?|celebration|drama|theatre)/i.test(text)) return 'cultural'
-  if (/(?:conference|summit|symposium|keynote|business|seminar)/i.test(text)) return 'conference'
+  if (/(?:conference|summit|symposium|keynote|seminar)/i.test(text)) return 'conference'
   if (/(?:workshop|bootcamp|masterclass|training)/i.test(text)) return 'workshop'
   if (/(?:hackathon|coding|codefest|hacknit|datathon|programming)/i.test(text)) return 'hackathon'
   return 'general'
@@ -64,46 +73,27 @@ function buildModernMinimalFront(
   const roleId = role.id.toLowerCase()
   const isOrganizer = roleId === 'organizer'
   const isJudge = roleId === 'judge' || roleId === 'referee'
-  const isSpeaker = roleId === 'speaker'
+  const isSpeaker = roleId === 'speaker' || roleId === 'founder'
   const isVolunteer = roleId === 'volunteer'
-  const isMentor = roleId === 'mentor'
-  const isPlayer = roleId === 'player'
+  const isMentor = roleId === 'mentor' || roleId === 'investor'
+  const isPlayer = roleId === 'player' || roleId === 'artist' || roleId === 'gamer'
 
-  // Refined palette mapping
-  const lowerBg = category === 'music'
-    ? (isOrganizer ? '#140526' : isJudge ? '#1f0d38' : '#080112')
-    : category === 'sports'
-    ? (isOrganizer ? '#0f172a' : isJudge ? '#1e293b' : '#0a192f')
-    : isOrganizer
-    ? '#090b10'
-    : isJudge
-    ? '#0f172a'
-    : isMentor
-    ? '#14132b'
-    : isVolunteer
-    ? '#064e3b'
-    : isSpeaker
-    ? '#2b0b18'
-    : '#091128'
+  const pal = THEME_COLOR_PALETTES[category] || THEME_COLOR_PALETTES.general
+  const isDarkCategory = ['music', 'business', 'sports', 'cultural', 'robotics', 'gaming'].includes(category)
 
-  const accentColor = category === 'music'
-    ? (isOrganizer ? '#f59e0b' : isJudge ? '#e2e8f0' : isSpeaker ? '#ec4899' : '#d946ef')
-    : category === 'sports'
-    ? (isOrganizer ? '#f59e0b' : isJudge ? '#e2e8f0' : '#38bdf8')
-    : isOrganizer
-    ? '#f59e0b'
-    : isJudge
-    ? '#e2e8f0'
-    : isMentor
-    ? '#14b8a6'
-    : isVolunteer
-    ? '#f59e0b'
-    : isSpeaker
-    ? '#fbbf24'
-    : '#38bdf8'
+  const headerBg = isDarkCategory ? pal.d1HeaderBg : (isOrganizer ? '#f8fafc' : pal.d1HeaderBg)
+  const headerTextColor = isDarkCategory ? pal.d1HeaderTextColor : '#0f172a'
+  const badgeTypeColor = pal.d1BadgeColor
+  const lowerBg = pal.d1LowerBg
+  const accentColor = pal.d1Accent
+  const ringStroke = isOrganizer ? '#f59e0b' : isJudge ? '#e2e8f0' : pal.d1RingStroke
 
   const badgeTypeLabel = category === 'music'
     ? (isSpeaker ? 'HEADLINE VOCALIST' : isOrganizer ? 'CONCERT DIRECTOR' : isJudge ? 'MUSIC EVALUATOR' : isVolunteer ? 'STAGE & SOUND CREW' : 'LIVE CONCERT PASS')
+    : category === 'business'
+    ? (isSpeaker ? 'STARTUP FOUNDER' : isMentor ? 'VENTURE INVESTOR' : isJudge ? 'ANGEL JURY' : isOrganizer ? 'SUMMIT DIRECTOR' : 'VENTURE PASS')
+    : category === 'gaming'
+    ? (isPlayer ? 'PRO ROSTER GAMER' : isJudge ? 'HEAD REFEREE' : isOrganizer ? 'TOURNAMENT ORGANIZER' : 'ARENA GAMING PASS')
     : category === 'sports'
     ? (isJudge ? 'OFFICIAL MATCH REFEREE' : isOrganizer ? 'TOURNAMENT DIRECTOR' : isMentor ? 'TEAM COACH' : isPlayer ? 'ATHLETIC ROSTER PASS' : 'ATHLETIC PASS')
     : category === 'robotics'
@@ -126,109 +116,16 @@ function buildModernMinimalFront(
     ? 'MENTOR & ADVISOR'
     : 'PARTICIPANT PASS'
 
-  const ringStroke = isOrganizer ? '#f59e0b' : isJudge ? '#e2e8f0' : category === 'music' ? '#ec4899' : '#ffffff'
-
-  const musicModernMinimalMotifs: Element[] = category === 'music' ? [
-    // 1. Stage Spotlight Left
-    {
-      type: 'shape',
-      id: 'music-spotlight-left',
-      anchor: { x: 0, y: 0, w: 25, h: 42 },
-      shape: 'polygon',
-      points: '0,0 6,0 25,42 0,42',
-      fill: '#ec4899',
-      stroke: 'transparent',
-      strokeWidth: 0,
-      cornerRadius: 0,
-      opacity: 0.12,
-    },
-    // 2. Stage Spotlight Right
-    {
-      type: 'shape',
-      id: 'music-spotlight-right',
-      anchor: { x: 29, y: 0, w: 25, h: 42 },
-      shape: 'polygon',
-      points: '19,0 25,0 25,42 0,42',
-      fill: '#8b5cf6',
-      stroke: 'transparent',
-      strokeWidth: 0,
-      cornerRadius: 0,
-      opacity: 0.12,
-    },
-    // 3. Acoustic Soundwave Reverberation Ring around avatar
-    {
-      type: 'shape',
-      id: 'music-acoustic-ring',
-      anchor: { x: 12, y: 22, w: 30, h: 30 },
-      shape: 'circle',
-      fill: 'transparent',
-      stroke: '#ec4899',
-      strokeWidth: 0.5,
-      cornerRadius: 15,
-      opacity: 0.35,
-    },
-    // 4. Floating Eighth Note Left ♪
-    {
-      type: 'shape',
-      id: 'music-note-left',
-      anchor: { x: 4, y: 24, w: 7, h: 9 },
-      shape: 'path',
-      d: 'M 0.5 7 C 0.5 5.8 2 5 3.5 5.2 L 3.5 1.5 C 3.5 1 3.8 0.5 4.5 0.5 C 5.5 0.5 6.5 1.2 7 2.2 C 6.5 2.8 5.5 3 4.7 2.6 L 4.7 6.8 C 4.5 7.9 3.2 8.8 1.8 8.8 C 0.8 8.8 0.5 8 0.5 7 Z',
-      fill: '#f472b6',
-      stroke: 'transparent',
-      strokeWidth: 0,
-      cornerRadius: 0,
-      opacity: 0.5,
-    },
-    // 5. Floating Beamed Double Note Right ♫
-    {
-      type: 'shape',
-      id: 'music-note-right',
-      anchor: { x: 43, y: 24, w: 8, h: 9 },
-      shape: 'path',
-      d: 'M 0.5 7.2 C 0.5 6 1.8 5.2 3 5.4 L 3 1.8 L 8 0.6 L 8 5 C 6.8 4.8 5.5 5.6 5.5 6.8 C 5.5 7.8 6.6 8.5 7.8 8.4 C 8.7 8.3 9.2 7.6 9.2 6.5 L 9.2 0 L 2 1.2 L 2 5.8 C 1 5.6 0.5 6.3 0.5 7.2 Z',
-      fill: '#a78bfa',
-      stroke: 'transparent',
-      strokeWidth: 0,
-      cornerRadius: 0,
-      opacity: 0.5,
-    },
-    // 6. Dynamic Audio Equalizer Waveform Bars across the lower background
-    ...[3.2, 5.5, 8.4, 11.2, 6.5, 9.8, 13.5, 8.2, 12.0, 7.5, 10.2, 5.0, 8.8, 11.5, 6.2, 3.8].map((h, i) => ({
-      type: 'shape' as const,
-      id: `music-eq-bar-${i}`,
-      anchor: { x: 3.5 + i * 3.0, y: 84 - h, w: 1.8, h },
-      shape: 'rect' as const,
-      fill: '#ec4899',
-      stroke: 'transparent',
-      strokeWidth: 0,
-      cornerRadius: 0.8,
-      opacity: 0.28,
-    })),
-  ] : [
-    // Subtle Monogram Wireframe Lines in background (Ref 1 texture)
-    {
-      type: 'shape' as const,
-      id: 'bg-wireframe',
-      anchor: { x: 0, y: 64, w: 54, h: 21 },
-      shape: 'polygon' as const,
-      points: '0,21 12,0 24,21 36,0 48,21 54,10',
-      fill: 'transparent',
-      stroke: role.palette.primary,
-      strokeWidth: 0.35,
-      cornerRadius: 0,
-      opacity: 0.22,
-    },
-  ]
+  const themeMotifs = buildThemeElementsDraft1(category, pal)
 
   const elements: Element[] = [
-    // 1. Top Header Section (Dark electric purple for music, white for standard)
+    // 1. Top Header Section
     {
       type: 'shape',
       id: 'header-bg',
       anchor: { x: 0, y: 0, w: 54, h: 38 },
       shape: 'rect',
-      fill: category === 'music' ? '#15062a' : isOrganizer ? '#f8fafc' : '#ffffff',
+      fill: headerBg,
       stroke: 'transparent',
       strokeWidth: 0,
       cornerRadius: 0,
@@ -240,8 +137,8 @@ function buildModernMinimalFront(
       id: 'lanyard-slot',
       anchor: { x: 22, y: 2.2, w: 10, h: 2.6 },
       shape: 'rect',
-      fill: category === 'music' ? '#271046' : '#e2e8f0',
-      stroke: category === 'music' ? '#431d75' : '#cbd5e1',
+      fill: isDarkCategory ? '#1e293b' : '#e2e8f0',
+      stroke: isDarkCategory ? '#334155' : '#cbd5e1',
       strokeWidth: 0.35,
       cornerRadius: 1.3,
       opacity: 1,
@@ -279,7 +176,7 @@ function buildModernMinimalFront(
       fontFamily: 'Space Grotesk',
       fontSize: 2.7,
       fontWeight: '700',
-      color: category === 'music' ? '#f472b6' : isOrganizer ? '#b45309' : '#64748b',
+      color: badgeTypeColor,
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -290,11 +187,11 @@ function buildModernMinimalFront(
       type: 'text',
       id: 'event-name-header',
       anchor: { x: 13, y: 10.2, w: 28, h: 5 },
-      content: event.name?.value || 'InCursion Hackathon',
+      content: event.name?.value || 'Event Name',
       fontFamily: 'Space Grotesk',
       fontSize: 4.6,
       fontWeight: '700',
-      color: category === 'music' ? '#ffffff' : '#0f172a',
+      color: headerTextColor,
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -309,7 +206,7 @@ function buildModernMinimalFront(
       fontFamily: 'Inter',
       fontSize: 2.7,
       fontWeight: '500',
-      color: category === 'music' ? '#c084fc' : '#94a3b8',
+      color: isDarkCategory ? '#94a3b8' : '#64748b',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -352,8 +249,8 @@ function buildModernMinimalFront(
       cornerRadius: 0,
       opacity: 0.9,
     },
-    // 10. Category Motifs (Music equalizers & notes or wireframe)
-    ...musicModernMinimalMotifs,
+    // 10. Thematic Background Scene Motifs (Concert crowd & singer, pitch curve, stadium runner, etc.)
+    ...themeMotifs,
     // 11. Circular Photo Ring Border (intersecting split cleanly)
     {
       type: 'shape',
@@ -436,7 +333,11 @@ function buildModernMinimalFront(
           ? 'Audio & Stage Crew'
           : isMentor
           ? 'Musical Director & Mentor'
-          : 'Arena Pass Holder')
+          : 'Live Arena Pass Holder')
+        : category === 'business'
+        ? (isSpeaker ? 'Founder & Pitch Presenter' : isMentor ? 'Venture Capital & Angel Investor' : isJudge ? 'Syndicate Evaluation Jury' : isOrganizer ? 'Pitch Summit Director' : '{{person.team}}')
+        : category === 'gaming'
+        ? (isPlayer ? 'Esports Pro Player · {{person.team}}' : isJudge ? 'Official Tournament Marshal' : isOrganizer ? 'Arena Director' : '{{person.team}}')
         : isOrganizer
         ? 'Executive Organizing Committee'
         : isJudge
@@ -451,7 +352,7 @@ function buildModernMinimalFront(
       fontFamily: 'Inter',
       fontSize: 3.6,
       fontWeight: '500',
-      color: category === 'music' ? '#e2e8f0' : '#94a3b8',
+      color: '#cbd5e1',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -462,11 +363,11 @@ function buildModernMinimalFront(
       type: 'text',
       id: 'event-venue-date',
       anchor: { x: 2, y: 71.6, w: 50, h: 3.5 },
-      content: `${event.venue?.value || 'SVNIT, Surat'} · ${event.dateStart?.value || '2026'}` + (category === 'music' ? ' · LIVE CONCERT' : ''),
+      content: `${event.venue?.value || 'SVNIT, Surat'} · ${event.dateStart?.value || '2026'}` + (category === 'music' ? ' · LIVE CONCERT' : category === 'business' ? ' · PITCH SUMMIT' : ''),
       fontFamily: 'Inter',
       fontSize: 3.1,
       fontWeight: '400',
-      color: category === 'music' ? '#cbd5e1' : '#64748b',
+      color: '#94a3b8',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -487,11 +388,11 @@ function buildModernMinimalFront(
       type: 'text',
       id: 'footer-branding',
       anchor: { x: 2, y: 84.4, w: 50, h: 2.4 },
-      content: category === 'music' ? 'LIVE CONCERT ARENA · SVNIT SURAT' : 'ACM NIT SURAT · SVNIT SURAT',
+      content: category === 'music' ? 'LIVE CONCERT ARENA · SVNIT SURAT' : category === 'business' ? 'STARTUP PITCH SUMMIT · SVNIT' : 'ACM NIT SURAT · SVNIT SURAT',
       fontFamily: 'Space Grotesk',
       fontSize: 2.2,
       fontWeight: '600',
-      color: category === 'music' ? '#a855f7' : '#64748b',
+      color: pal.d1Accent,
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -515,44 +416,16 @@ function buildCreativeTechFront(
   const roleId = role.id.toLowerCase()
   const isOrganizer = roleId === 'organizer'
   const isJudge = roleId === 'judge' || roleId === 'referee'
-  const isSpeaker = roleId === 'speaker'
+  const isSpeaker = roleId === 'speaker' || roleId === 'founder'
   const isVolunteer = roleId === 'volunteer'
-  const isMentor = roleId === 'mentor'
-  const isPlayer = roleId === 'player'
+  const isMentor = roleId === 'mentor' || roleId === 'investor'
+  const isPlayer = roleId === 'player' || roleId === 'artist' || roleId === 'gamer'
 
-  const techBg = category === 'music'
-    ? (isOrganizer ? '#140526' : isJudge ? '#1f0d38' : '#0e0322')
-    : category === 'sports'
-    ? (isOrganizer ? '#0f172a' : isJudge ? '#1e293b' : '#081426')
-    : category === 'cultural'
-    ? (isOrganizer ? '#1a0b2e' : '#1e052d')
-    : category === 'robotics'
-    ? (isOrganizer ? '#090d16' : '#0a101d')
-    : category === 'conference'
-    ? (isOrganizer ? '#0a0d14' : '#0f172a')
-    : isOrganizer
-    ? '#0d1117'
-    : isJudge
-    ? '#0f172a'
-    : isMentor
-    ? '#1c0d3f'
-    : isVolunteer
-    ? '#063f30'
-    : isSpeaker
-    ? '#260a18'
-    : '#160d38'
-
-  const accentColor = category === 'music'
-    ? (isOrganizer ? '#fbbf24' : '#d946ef')
-    : category === 'sports'
-    ? (isOrganizer ? '#f59e0b' : isJudge ? '#e2e8f0' : '#38bdf8')
-    : category === 'cultural'
-    ? (isOrganizer ? '#fbbf24' : '#ec4899')
-    : category === 'robotics'
-    ? (isOrganizer ? '#f59e0b' : '#06b6d4')
-    : category === 'conference'
-    ? (isOrganizer ? '#f59e0b' : '#d97706')
-    : role.palette.accent || '#8b5cf6'
+  const pal = THEME_COLOR_PALETTES[category] || THEME_COLOR_PALETTES.general
+  const techBg = pal.d2HeroBg
+  const lowerBg = pal.d2LowerBg
+  const accentColor = role.palette?.accent || pal.d2Accent
+  const themeMotifs = buildThemeElementsDraft2(category, pal)
 
   // Dynamic category-based motifs
   const categoryMotifs: Element[] = category === 'music' ? [
@@ -829,6 +702,10 @@ function buildCreativeTechFront(
 
   const orgSubtitle = category === 'music'
     ? 'LIVE CONCERT ARENA · SVNIT'
+    : category === 'business'
+    ? 'STARTUP PITCH SUMMIT · SVNIT'
+    : category === 'gaming'
+    ? 'ESPORTS CHAMPIONSHIP · SVNIT'
     : category === 'sports'
     ? 'SPORTS COUNCIL · SVNIT'
     : category === 'cultural'
@@ -837,22 +714,34 @@ function buildCreativeTechFront(
     ? 'ROBOTICS LAB · NIT SURAT'
     : category === 'conference'
     ? 'EXECUTIVE SUMMIT · ACM & SVNIT'
-    : 'ACM NIT SURAT'
+    : (event.organizer?.value || 'ACM NIT SURAT')
 
-  const roleBadgeLabel = category === 'sports'
+  const roleBadgeLabel = category === 'music'
+    ? (isSpeaker ? 'HEADLINE ARTIST' : isOrganizer ? 'CONCERT DIRECTOR' : isJudge ? 'JURY' : role.label.toUpperCase())
+    : category === 'business'
+    ? (isSpeaker ? 'STARTUP FOUNDER' : isMentor ? 'ANGEL INVESTOR' : isJudge ? 'PITCH JURY' : role.label.toUpperCase())
+    : category === 'gaming'
+    ? (isPlayer ? 'PRO GAMER' : isJudge ? 'REFEREE' : role.label.toUpperCase())
+    : category === 'sports'
     ? (isPlayer ? 'ATHLETE' : isJudge ? 'REFEREE' : isOrganizer ? 'DIRECTOR' : role.label.toUpperCase())
-    : category === 'music'
-    ? (isSpeaker ? 'VOCALIST' : isOrganizer ? 'PRODUCER' : isJudge ? 'JURY' : role.label.toUpperCase())
     : role.label.toUpperCase()
 
   const personDetailText = category === 'sports'
     ? (isOrganizer ? 'Tournament Operations' : isJudge ? 'Match Official Panel' : isMentor ? 'Coaching Staff' : isPlayer ? 'Squad: {{person.team}}' : '{{person.team}}')
     : category === 'music'
-    ? (isOrganizer ? 'Concert Production Team' : isJudge ? 'Jury & Music Board' : isMentor ? 'Musical Director' : isSpeaker ? 'Headline Vocalist & Artist' : '{{person.team}}')
+    ? (isOrganizer ? 'Concert Production Team' : isJudge ? 'Jury & Music Board' : isMentor ? 'Musical Director' : isSpeaker ? 'Headline Vocalist & Artist' : 'Live Arena Pass')
+    : category === 'business'
+    ? (isSpeaker ? 'Founding Team · {{person.team}}' : isMentor ? 'Venture Capital Partner' : '{{person.team}}')
+    : category === 'gaming'
+    ? (isPlayer ? 'Squad: {{person.team}}' : 'Tournament Official')
     : isOrganizer ? 'Core Organizing Team' : isJudge ? 'Judge & Panelist' : isMentor ? 'Mentor & Coach' : isVolunteer ? 'Operations Support' : '{{person.team}}'
 
   const footerText = category === 'music'
     ? 'OFFICIAL CONCERT TOUR PASS · SVNIT SURAT'
+    : category === 'business'
+    ? 'VERIFIED PITCH CREDENTIAL · SVNIT SURAT'
+    : category === 'gaming'
+    ? 'ESPORTS ROSTER BADGE · SVNIT SURAT'
     : category === 'sports'
     ? 'OFFICIAL ATHLETIC PASS · SVNIT SURAT'
     : category === 'cultural'
@@ -876,8 +765,8 @@ function buildCreativeTechFront(
       cornerRadius: 0,
       opacity: 1,
     },
-    // 2. Category-specific visual motifs
-    ...categoryMotifs,
+    // 2. Thematic Scene Motifs (Concert lasers, grooves, notes, chevrons, calipers, or hexagons)
+    ...themeMotifs,
     // 3. Official ACM Logo (Top Left — ACM NIT Surat convention)
     {
       type: 'image',
@@ -956,13 +845,13 @@ function buildCreativeTechFront(
       initialsColor: '#ffffff',
       initialsBg: role.palette.primary,
     },
-    // 8. Lower Zone (Dark midnight for music, crisp white for standard)
+    // 8. Lower Zone
     {
       type: 'shape',
       id: 'info-zone-bg',
       anchor: { x: 0, y: 47, w: 54, h: 38.6 },
       shape: 'rect',
-      fill: category === 'music' ? '#120526' : '#f8fafc',
+      fill: lowerBg,
       stroke: 'transparent',
       strokeWidth: 0,
       cornerRadius: 0,
@@ -975,7 +864,7 @@ function buildCreativeTechFront(
       anchor: { x: 0, y: 41, w: 54, h: 9 },
       shape: 'polygon',
       points: '0,9 27,0 54,9 54,9 0,9',
-      fill: category === 'music' ? '#120526' : '#f8fafc',
+      fill: lowerBg,
       stroke: 'transparent',
       strokeWidth: 0,
       cornerRadius: 0,
@@ -1016,7 +905,7 @@ function buildCreativeTechFront(
       fontFamily: 'Space Grotesk',
       fontSize: 8,
       fontWeight: '700',
-      color: category === 'music' ? '#ffffff' : '#0f172a',
+      color: pal.d2NameColor,
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -1031,7 +920,7 @@ function buildCreativeTechFront(
       fontFamily: 'Inter',
       fontSize: 3.9,
       fontWeight: '600',
-      color: category === 'music' ? '#c084fc' : '#334155',
+      color: pal.d2TeamColor,
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -1042,11 +931,11 @@ function buildCreativeTechFront(
       type: 'text',
       id: 'event-venue-date',
       anchor: { x: 2, y: 59, w: 50, h: 3.5 },
-      content: `${event.venue?.value || 'SVNIT, Surat'} · ${event.dateStart?.value || '2026'}` + (category === 'music' ? ' · LIVE CONCERT' : ''),
+      content: `${event.venue?.value || 'SVNIT, Surat'} · ${event.dateStart?.value || '2026'}` + (category === 'music' ? ' · LIVE CONCERT' : category === 'business' ? ' · PITCH SUMMIT' : ''),
       fontFamily: 'Inter',
       fontSize: 3.2,
       fontWeight: '400',
-      color: category === 'music' ? '#cbd5e1' : '#64748b',
+      color: '#94a3b8',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -1058,8 +947,8 @@ function buildCreativeTechFront(
       id: 'person-qr',
       anchor: { x: 23, y: 63.5, w: 8, h: 8 },
       urlPattern: `https://acm.svnit.ac.in/verify/{{person.id}}`,
-      fgColor: category === 'music' ? '#ffffff' : techBg,
-      bgColor: category === 'music' ? '#1f0d3d' : '#f1f5f9',
+      fgColor: pal.d2BarcodeFg,
+      bgColor: 'transparent',
       errorCorrection: 'M',
     },
     // 15. Vector Barcode Strip
@@ -1069,8 +958,8 @@ function buildCreativeTechFront(
       anchor: { x: 7, y: 73, w: 40, h: 8 },
       valueBinding: '{{person.id}}',
       format: 'CODE128',
-      fgColor: category === 'music' ? '#ffffff' : '#0f172a',
-      bgColor: category === 'music' ? '#120526' : '#f8fafc',
+      fgColor: pal.d2BarcodeFg,
+      bgColor: pal.d2BarcodeBg,
     },
     // 16. Footer Validity Micro-Text
     {
@@ -1081,7 +970,7 @@ function buildCreativeTechFront(
       fontFamily: 'Space Grotesk',
       fontSize: 2.2,
       fontWeight: '600',
-      color: category === 'music' ? '#a855f7' : '#94a3b8',
+      color: accentColor,
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -1105,47 +994,21 @@ function buildPremiumEditorialFront(
   const roleId = role.id.toLowerCase()
   const isOrganizer = roleId === 'organizer'
   const isJudge = roleId === 'judge' || roleId === 'referee'
-  const isSpeaker = roleId === 'speaker'
+  const isSpeaker = roleId === 'speaker' || roleId === 'founder'
   const isVolunteer = roleId === 'volunteer'
-  const isMentor = roleId === 'mentor'
-  const isPlayer = roleId === 'player'
+  const isMentor = roleId === 'mentor' || roleId === 'investor'
+  const isPlayer = roleId === 'player' || roleId === 'artist' || roleId === 'gamer'
 
-  const obsidianBg = category === 'music'
-    ? '#070110'
-    : category === 'sports'
-    ? '#080e1a'
-    : category === 'cultural'
-    ? '#150720'
-    : category === 'robotics'
-    ? '#070b12'
-    : category === 'conference'
-    ? '#0a0d14'
-    : '#090a10'
-
-  const accentColor = category === 'music'
-    ? (isOrganizer ? '#fbbf24' : isSpeaker ? '#f43f5e' : '#d946ef')
-    : category === 'sports'
-    ? (isOrganizer ? '#f59e0b' : isJudge ? '#e2e8f0' : isPlayer ? '#dc2626' : '#2563eb')
-    : category === 'cultural'
-    ? (isOrganizer ? '#fbbf24' : '#d946ef')
-    : category === 'robotics'
-    ? (isOrganizer ? '#f59e0b' : '#06b6d4')
-    : category === 'conference'
-    ? (isOrganizer ? '#f59e0b' : '#d97706')
-    : isOrganizer
-    ? '#f59e0b'
-    : isJudge
-    ? '#e2e8f0'
-    : isSpeaker
-    ? '#be123c'
-    : isVolunteer
-    ? '#059669'
-    : isMentor
-    ? '#7c3aed'
-    : '#2563eb'
+  const pal = THEME_COLOR_PALETTES[category] || THEME_COLOR_PALETTES.general
+  const obsidianBg = pal.d3ObsidianBg
+  const accentColor = pal.d3Accent
 
   const headerCategoryText = category === 'music'
-    ? 'BACKSTAGE VIP'
+    ? 'CONCERT VIP'
+    : category === 'business'
+    ? 'VENTURE VIP'
+    : category === 'gaming'
+    ? 'PRO ROSTER'
     : category === 'sports'
     ? 'ATHLETIC PASS'
     : category === 'cultural'
@@ -1160,6 +1023,10 @@ function buildPremiumEditorialFront(
 
   const serialText = category === 'music'
     ? 'TOUR-{{person.id}}'
+    : category === 'business'
+    ? 'PITCH-{{person.id}}'
+    : category === 'gaming'
+    ? 'ROSTER-{{person.id}}'
     : category === 'sports'
     ? 'ROSTER-{{person.id}}'
     : category === 'robotics'
@@ -1167,7 +1034,11 @@ function buildPremiumEditorialFront(
     : 'ID-{{person.id}}'
 
   const personDetailContent = category === 'music'
-    ? (isOrganizer ? 'Tour & Stage Director' : isJudge ? 'Jury & Soundboard Board' : isSpeaker ? 'Headline Artist & Vocalist' : 'Arena VIP Guest')
+    ? (isOrganizer ? 'Tour & Stage Director' : isJudge ? 'Jury & Soundboard Board' : isSpeaker ? 'Headline Artist & Vocalist' : 'Arena VIP Pass')
+    : category === 'business'
+    ? (isSpeaker ? 'Founder & Pitch Presenter' : isMentor ? 'Angel & VC Syndicate' : '{{person.team}}')
+    : category === 'gaming'
+    ? (isPlayer ? 'Squad: {{person.team}}' : 'Tournament Official')
     : category === 'sports'
     ? (isOrganizer ? 'Tournament Executive' : isJudge ? 'Certified Match Official' : isMentor ? 'Tactical Coaching Staff' : isPlayer ? 'Squad: {{person.team}}' : '{{person.team}}')
     : isOrganizer
@@ -1182,7 +1053,8 @@ function buildPremiumEditorialFront(
     ? 'Technical Advisory'
     : '{{person.team}}'
 
-  const roleTextHighlight = isOrganizer ? '#f59e0b' : isJudge ? '#f8fafc' : role.palette.accent || accentColor
+  const roleTextHighlight = isOrganizer ? '#f59e0b' : isJudge ? '#f8fafc' : pal.d3RoleHighlight
+  const themeMotifs = buildThemeElementsDraft3(category, pal)
 
   const elements: Element[] = [
     // 1. Matte Obsidian Full Background
@@ -1197,46 +1069,8 @@ function buildPremiumEditorialFront(
       cornerRadius: 0,
       opacity: 1,
     },
-    // Music-specific spotlight, watermark note, and frequency spectrum
-    ...(category === 'music' ? [
-      {
-        type: 'shape' as const,
-        id: 'editorial-music-spotlight',
-        anchor: { x: 0, y: 0, w: 36, h: 52 },
-        shape: 'polygon' as const,
-        points: '0,0 12,0 36,52 0,52',
-        fill: '#ec4899',
-        stroke: 'transparent',
-        strokeWidth: 0,
-        cornerRadius: 0,
-        opacity: 0.12,
-      },
-      // Floating Watermark Musical Note in lower background
-      {
-        type: 'shape' as const,
-        id: 'editorial-music-watermark',
-        anchor: { x: 34, y: 64, w: 16, h: 18 },
-        shape: 'path' as const,
-        d: 'M 0.5 7.2 C 0.5 6 1.8 5.2 3 5.4 L 3 1.8 L 8 0.6 L 8 5 C 6.8 4.8 5.5 5.6 5.5 6.8 C 5.5 7.8 6.6 8.5 7.8 8.4 C 8.7 8.3 9.2 7.6 9.2 6.5 L 9.2 0 L 2 1.2 L 2 5.8 C 1 5.6 0.5 6.3 0.5 7.2 Z',
-        fill: '#d946ef',
-        stroke: 'transparent',
-        strokeWidth: 0,
-        cornerRadius: 0,
-        opacity: 0.22,
-      },
-      // Vertical audio frequency spectrum equalizer bars flanking the photo frame
-      ...[4.5, 9.2, 14.0, 7.5].map((h, i) => ({
-        type: 'shape' as const,
-        id: `editorial-freq-bar-${i}`,
-        anchor: { x: 31.5 + i * 1.1, y: 49 - h, w: 0.65, h },
-        shape: 'rect' as const,
-        fill: '#ec4899',
-        stroke: 'transparent',
-        strokeWidth: 0,
-        cornerRadius: 0.3,
-        opacity: 0.45,
-      })),
-    ] : []),
+    // Thematic background art: spotlights, singer watermark, audience crowd, growth curves, runners
+    ...themeMotifs,
     // 2. Lanyard Slot Hole (Ref 3 clasp cut)
     {
       type: 'shape',
@@ -1452,17 +1286,22 @@ function buildCardBackElements(
   style: 'modern-minimal' | 'creative-tech' | 'premium-editorial',
   category: EventCategory = 'general'
 ): Element[] {
-  const isDark = style !== 'modern-minimal' || category === 'music'
+  const isDark = style !== 'modern-minimal' || ['music', 'business', 'gaming', 'sports', 'cultural', 'robotics'].includes(category)
+  const pal = THEME_COLOR_PALETTES[category] || THEME_COLOR_PALETTES.general
   const bgFill = style === 'creative-tech'
-    ? (category === 'music' ? '#0e0322' : category === 'sports' ? '#081426' : category === 'cultural' ? '#1e052d' : category === 'robotics' ? '#0a101d' : '#170b38')
+    ? pal.d2HeroBg
     : style === 'premium-editorial'
-    ? (category === 'music' ? '#070110' : category === 'sports' ? '#080e1a' : category === 'cultural' ? '#150720' : category === 'robotics' ? '#070b12' : '#090a10')
-    : (category === 'music' ? '#120424' : '#ffffff')
+    ? pal.d3ObsidianBg
+    : (isDark ? pal.d1LowerBg : '#ffffff')
   const textColor = isDark ? '#ffffff' : '#0f172a'
   const subtextColor = isDark ? '#94a3b8' : '#64748b'
 
   const rule1 = category === 'music'
     ? '1. Pass grants admission to concert arena, stage pit, and soundboard areas.'
+    : category === 'business'
+    ? '1. Pass grants admission to pitch arenas, executive syndicate rooms, and networking lounges.'
+    : category === 'gaming'
+    ? '1. Pass grants access to tournament battlestations, practice LAN rooms, and main stage.'
     : category === 'sports'
     ? '1. Pass must be visibly worn at all times by roster athletes and officials in the arena.'
     : category === 'cultural'
@@ -1475,6 +1314,10 @@ function buildCardBackElements(
 
   const rule2 = category === 'music'
     ? '2. Identification pass is strictly non-transferable and remains property of SVNIT.'
+    : category === 'business'
+    ? '2. Identification pass is strictly non-transferable and verified at investor gates.'
+    : category === 'gaming'
+    ? '2. Identification pass is strictly non-transferable and required for roster verification.'
     : category === 'sports'
     ? '2. Unauthorized badge transfer leads to immediate team disqualification.'
     : category === 'cultural'
@@ -1487,6 +1330,10 @@ function buildCardBackElements(
 
   const rule3 = category === 'music'
     ? '3. Scan QR code at backstage security and technical soundboard checkpoints.'
+    : category === 'business'
+    ? '3. Scan QR code at pitch stage entrance and VIP investor roundtables.'
+    : category === 'gaming'
+    ? '3. Scan QR code at tournament referee desks and bracket check-in stations.'
     : category === 'sports'
     ? '3. Scan QR code at field entry checkpoints for roster validation.'
     : category === 'cultural'
@@ -1763,15 +1610,37 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d3Desc: 'Deep velvet festival pass with asymmetric artist portrait framing, vibrant accent block, and stage accreditation.',
     d3Tags: ['cultural', 'artisan', 'editorial', 'artist-pass', 'vip'],
   },
+  business: {
+    d1Name: n => `Venture Pitch — ${n}`,
+    d1Desc: 'Executive startup pitch badge with pitch presenter silhouette, venture growth trajectory, and investor audience watermark.',
+    d1Tags: ['business', 'pitch', 'shark-tank', 'startup', 'investor', 'executive'],
+    d2Name: n => `Venture Capital Pass — ${n}`,
+    d2Desc: 'High-stakes founder & investor credential with summit rays, growth metrics, chevron apex, and executive barcode.',
+    d2Tags: ['business', 'venture', 'founder', 'investor', 'growth', 'barcode'],
+    d3Name: n => `Angel Syndicate VIP — ${n}`,
+    d3Desc: 'Premium obsidian executive pass with asymmetric portrait framing, champagne gold accent bar, and venture verification.',
+    d3Tags: ['business', 'syndicate', 'angel', 'executive', 'editorial', 'vip'],
+  },
+  gaming: {
+    d1Name: n => `Esports Arena — ${n}`,
+    d1Desc: 'High-energy esports tournament badge with cyber neon split, gamer battlestation silhouette, arena lasers, and audience crowd.',
+    d1Tags: ['gaming', 'esports', 'tournament', 'cyber', 'arena', 'gamer'],
+    d2Name: n => `Cyber Battlestation — ${n}`,
+    d2Desc: 'Futuristic gaming credential with laser matrix grid, halo avatar framing, battlestation watermark, and gamer barcode.',
+    d2Tags: ['gaming', 'battlestation', 'neon', 'cyber', 'barcode'],
+    d3Name: n => `Pro Roster VIP — ${n}`,
+    d3Desc: 'Matte obsidian esports pass with asymmetric gamer portrait framing, electric violet accent bar, and tournament accreditation.',
+    d3Tags: ['gaming', 'pro-roster', 'editorial', 'obsidian', 'tournament'],
+  },
   music: {
-    d1Name: n => `Concert Acoustic — ${n}`,
-    d1Desc: 'Atmospheric live concert badge with sweeping stage spotlights, dynamic audio equalizer bars, acoustic soundwave ripples, and musical notation.',
-    d1Tags: ['music', 'concert', 'acoustic', 'soundwave', 'spotlight', 'live'],
+    d1Name: n => `Live Concert Arena — ${n}`,
+    d1Desc: 'Live concert stage pass with stage singer silhouette, cheering audience crowd, sweeping spotlights, and dynamic audio equalizer waveforms.',
+    d1Tags: ['music', 'concert', 'singer', 'crowd', 'spotlight', 'live'],
     d2Name: n => `Neon Soundwave — ${n}`,
-    d2Desc: 'High-energy musical identity pass with dual stage lasers, concentric vinyl sound grooves, floating musical notes, and sonic equalizer visualizer.',
+    d2Desc: 'High-voltage musical identity pass with dual stage lasers, concentric vinyl grooves, floating notes, and cheering audience silhouette.',
     d2Tags: ['music', 'concert', 'neon', 'soundwave', 'equalizer', 'lasers'],
-    d3Name: n => `VIP Backstage Pass — ${n}`,
-    d3Desc: 'Exclusive backstage laminate tour badge with matte obsidian stage depth, radiant VIP accent block, and scannable arena credentials.',
+    d3Name: n => `VIP Backstage Laminate — ${n}`,
+    d3Desc: 'Exclusive backstage tour laminate with matte obsidian stage depth, singer silhouette watermark, radiant accent block, and arena crowd horizon.',
     d3Tags: ['music', 'vip', 'backstage', 'tour-pass', 'editorial', 'concert'],
   },
   workshop: {
@@ -1820,12 +1689,23 @@ export function generateDraftsDeterministic(
   const eventName = event.name?.value || 'Event Name'
 
   const category: EventCategory = (
-    (llmSuggestions?.category && ['sports', 'hackathon', 'robotics', 'conference', 'cultural', 'music', 'workshop', 'general'].includes(llmSuggestions.category))
+    (llmSuggestions?.category && ['music', 'business', 'sports', 'hackathon', 'robotics', 'cultural', 'conference', 'gaming', 'workshop', 'general'].includes(llmSuggestions.category))
       ? llmSuggestions.category
       : detectEventCategory(event)
   )
 
   const meta = CATEGORY_METADATA[category] || CATEGORY_METADATA.general
+
+  // Dynamic LLM proposal overrides if provided
+  const llmD1 = Array.isArray(llmSuggestions?.drafts)
+    ? llmSuggestions.drafts.find((d: any) => d.id === 'modern-minimal') || llmSuggestions.drafts[0]
+    : null
+  const llmD2 = Array.isArray(llmSuggestions?.drafts)
+    ? llmSuggestions.drafts.find((d: any) => d.id === 'creative-tech' || d.id === 'bold-dynamic') || llmSuggestions.drafts[1]
+    : null
+  const llmD3 = Array.isArray(llmSuggestions?.drafts)
+    ? llmSuggestions.drafts.find((d: any) => d.id === 'premium-editorial') || llmSuggestions.drafts[2]
+    : null
 
   // Build role elements for each draft family
   const draft1RoleFront: Record<string, Element[]> = {}
@@ -1854,9 +1734,9 @@ export function generateDraftsDeterministic(
   // Draft 1: Modern Minimal (Dual-Tone Vertical)
   const draft1: CardTemplate = {
     id: 'modern-minimal',
-    name: meta.d1Name(eventName),
+    name: llmD1?.name ? `${llmD1.name} — ${eventName}` : meta.d1Name(eventName),
     designType: 'idCard',
-    description: meta.d1Desc,
+    description: llmD1?.description || meta.d1Desc,
     version: 5,
     size: {
       name: 'CR80 (Standard ID 54x86mm)',
@@ -1878,9 +1758,9 @@ export function generateDraftsDeterministic(
   // Draft 2: Creative Dynamic (Chevron Banner & Visual Motifs)
   const draft2: CardTemplate = {
     id: 'creative-tech',
-    name: meta.d2Name(eventName),
+    name: llmD2?.name ? `${llmD2.name} — ${eventName}` : meta.d2Name(eventName),
     designType: 'idCard',
-    description: meta.d2Desc,
+    description: llmD2?.description || meta.d2Desc,
     version: 5,
     size: {
       name: 'CR80 (Standard ID 54x86mm)',
@@ -1902,9 +1782,9 @@ export function generateDraftsDeterministic(
   // Draft 3: Premium Editorial (Matte Obsidian & Accent Block)
   const draft3: CardTemplate = {
     id: 'premium-editorial',
-    name: meta.d3Name(eventName),
+    name: llmD3?.name ? `${llmD3.name} — ${eventName}` : meta.d3Name(eventName),
     designType: 'idCard',
-    description: meta.d3Desc,
+    description: llmD3?.description || meta.d3Desc,
     version: 5,
     size: {
       name: 'CR80 (Standard ID 54x86mm)',

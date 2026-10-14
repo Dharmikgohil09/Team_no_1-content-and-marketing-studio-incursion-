@@ -510,7 +510,7 @@ function DraftCard({
         <div className="mb-3 flex items-start justify-between gap-2">
           <div>
             <div className="text-[10px] font-mono text-acm-400 font-semibold uppercase tracking-wider mb-0.5">
-              Draft {index + 1} — {styleNames[index] || 'Style'}
+              Draft {index + 1} — {draft.tags?.[0]?.toUpperCase() || styleNames[index] || 'STYLE'}
             </div>
             <h3 className="font-display font-bold text-base text-white">
               {draft.name.split('—')[0]?.trim()}
@@ -528,9 +528,9 @@ function DraftCard({
           </div>
         </div>
 
-        {/* Reference Attribution Caption */}
+        {/* Dynamic Event-Specific Description */}
         <p className="text-[11px] text-slate-400 mb-3.5 italic leading-tight">
-          {inspirationLabels[index] || draft.description}
+          {draft.description}
         </p>
 
         {/* Card Preview Container */}
