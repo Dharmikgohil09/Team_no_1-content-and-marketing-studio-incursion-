@@ -382,7 +382,7 @@ describe('Dynamic Photo Matching & Extraction Engine Tests', () => {
   describe('Participant count from description and CSV slicing behavior', () => {
     // Import helper dynamically
     it('extracts expected participant count from eventContext or description', async () => {
-      const { getExpectedParticipantCount } = await import('../ui/pages/DataPage')
+      const { getExpectedParticipantCount } = await import('../utils/participantCount')
 
       // Case A: Explicit participantCount in eventContext
       const projA = {

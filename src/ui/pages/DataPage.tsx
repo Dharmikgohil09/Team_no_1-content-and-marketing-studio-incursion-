@@ -26,8 +26,6 @@ import {
   getExpectedParticipantCount,
 } from '../../utils/participantCount'
 
-export { extractCountFromDescription, getExpectedParticipantCount }
-
 const KNOWN_COLUMNS: Record<string, string[]> = {
   name:     ['name', 'full name', 'fullname', 'participant name', 'participant', 'student name', 'candidate name', 'first name', 'full_name', 'username', 'person name', 'attendee name', 'attendee', 'display name', 'member name', 'name of participant'],
   id:       ['id', 'participant id', 'uid', 'student id', 'roll no', 'registration no', 'reg no', 'ticket id', 'badge id', 'barcode', 'emp id', 'code'],
