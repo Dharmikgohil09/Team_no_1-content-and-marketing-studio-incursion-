@@ -202,9 +202,17 @@ export function parseIntentDeterministic(text: string): IntentResult {
   }
 
   // 7. Participant Count
-  const totalPartMatch = text.match(/(?:approximately\s+|about\s+)?(\d+)\s+(?:participants?|players?|attendees?|delegates?)/i)
+  const totalPartMatch =
+    text.match(/(?:approximately\s+|about\s+|total\s+)?(\d+)\s+(?:participants?|players?|attendees?|delegates?|people|persons?|candidates?|students?|members?|cards?|ids?|id\s*cards?|passes?)/i) ||
+    text.match(/(?:number\s+of\s+participants?|participant\s*count|total\s+participants?|number\s+of\s+people|participants?\s*count)\s*(?:is|=|:)?\s*(\d+)/i) ||
+    text.match(/(?:make|create|generate|for)\s+(\d+)\s+(?:people|participants?|ids?|cards?|passes?|persons?|attendees?)/i) ||
+    text.match(/\b(\d+)\s+(?:people|persons?|participants?|candidates?|students?)\b/i)
+
   if (totalPartMatch) {
-    (ctx as any).participantCount = { value: parseInt(totalPartMatch[1]), status: 'provided' }
+    const num = parseInt(totalPartMatch[1], 10)
+    if (!isNaN(num) && num > 0) {
+      (ctx as any).participantCount = { value: num, status: 'provided' }
+    }
   }
 
   // 8. Requested Fields (photo, team, role, id, qr)
@@ -234,9 +242,9 @@ export function parseIntentDeterministic(text: string): IntentResult {
   // Default to participant if no roles detected
   if (detectedRoles.length === 0) {
     if (category === 'sports') {
-      detectedRoles.push({ id: 'player', label: 'Player' })
+      detectedRoles.push({ id: 'player', label: 'Player', count: (ctx as any).participantCount?.value })
     } else {
-      detectedRoles.push({ id: 'participant', label: 'Participant' })
+      detectedRoles.push({ id: 'participant', label: 'Participant', count: (ctx as any).participantCount?.value })
     }
   }
 
@@ -276,6 +284,9 @@ export async function extractIntent(text: string): Promise<IntentResult> {
     }
     if (deterministic.eventContext.dateStart?.status === 'provided' && (!parsed.eventContext.dateStart?.value || parsed.eventContext.dateStart.status === 'missing')) {
       parsed.eventContext.dateStart = deterministic.eventContext.dateStart
+    }
+    if ((deterministic.eventContext as any).participantCount?.status === 'provided' && (!(parsed.eventContext as any).participantCount?.value || (parsed.eventContext as any).participantCount?.status === 'missing')) {
+      (parsed.eventContext as any).participantCount = (deterministic.eventContext as any).participantCount
     }
     // Merge roles and role counts
     for (const dRole of deterministic.roles) {

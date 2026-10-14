@@ -45,9 +45,10 @@ export function DescribePage() {
       // Update store with parsed intent
       const parsedRoles: Role[] = intent.roles.map((r: { id: string; label: string; count?: number }) => {
         const found = DEFAULT_ROLES.find(d => d.id === r.id)
-        if (found) return { ...found, count: r.count }
+        const count = r.count ?? ((r.id === 'participant' || r.id === 'player') ? (intent.eventContext as any).participantCount?.value : undefined)
+        if (found) return { ...found, count }
         const fallback = getRoleOrDefault(r.id)
-        return { ...fallback, label: r.label, count: r.count }
+        return { ...fallback, label: r.label, count }
       })
       // Ensure description is always preserved on eventContext for downstream theme matching
       intent.eventContext.description = { value: text, status: 'provided' }

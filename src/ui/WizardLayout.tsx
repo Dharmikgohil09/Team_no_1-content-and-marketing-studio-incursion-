@@ -42,7 +42,7 @@ export function WizardLayout() {
             {STEPS.map((s, idx) => {
               const isActive   = idx === currentIdx
               const isComplete = idx < currentIdx
-              const isReachable = idx <= step
+              const isReachable = idx <= Math.max(step, currentIdx + 1)
 
               return (
                 <div key={s.id} className="flex items-center gap-1 shrink-0">

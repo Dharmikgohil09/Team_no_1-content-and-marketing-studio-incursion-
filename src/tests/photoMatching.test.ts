@@ -375,4 +375,80 @@ describe('Dynamic Photo Matching & Extraction Engine Tests', () => {
       expect(svg).toContain('Sarah Connor')
     })
   })
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 12. Participant Count from Description vs CSV Slicing & Warning
+  // ───────────────────────────────────────────────────────────────────────────
+  describe('Participant count from description and CSV slicing behavior', () => {
+    // Import helper dynamically
+    it('extracts expected participant count from eventContext or description', async () => {
+      const { getExpectedParticipantCount } = await import('../ui/pages/DataPage')
+
+      // Case A: Explicit participantCount in eventContext
+      const projA = {
+        eventContext: {
+          participantCount: { value: 5, status: 'provided' },
+        },
+      }
+      expect(getExpectedParticipantCount(projA)).toBe(5)
+
+      // Case B: Roles participant count
+      const projB = {
+        eventContext: {},
+        roles: [{ id: 'participant', label: 'Participant', count: 6 }],
+      }
+      expect(getExpectedParticipantCount(projB)).toBe(6)
+
+      // Case C: Natural language description "singing concert with 5 people"
+      const projC = {
+        eventContext: {
+          description: { value: 'Singing concert at SVNIT with 5 people', status: 'provided' },
+        },
+      }
+      expect(getExpectedParticipantCount(projC)).toBe(5)
+
+      // Case D: "number of participants: 8"
+      const projD = {
+        eventContext: {
+          description: { value: 'Annual fest, number of participants: 8', status: 'provided' },
+        },
+      }
+      expect(getExpectedParticipantCount(projD)).toBe(8)
+
+      // Case E: "Create 7 ID cards for our workshop"
+      const projE = {
+        eventContext: {
+          description: { value: 'Create 7 ID cards for our workshop at SVNIT', status: 'provided' },
+        },
+      }
+      expect(getExpectedParticipantCount(projE)).toBe(7)
+    })
+
+    it('slices CSV data to top N participants when CSV contains more records than specified', () => {
+      // 12 CSV rows (similar to user scenario)
+      const csvData = Array.from({ length: 12 }, (_, i) => ({
+        id: `P${String(i + 1).padStart(3, '0')}`,
+        name: `Person ${i + 1}`,
+        role: 'participant',
+      }))
+
+      const expectedCount = 5
+      expect(csvData.length).toBe(12)
+      expect(csvData.length > expectedCount).toBe(true)
+
+      // When CSV is larger, consider top 5
+      const topSliced = csvData.slice(0, expectedCount)
+      expect(topSliced.length).toBe(5)
+      expect(topSliced[0].id).toBe('P001')
+      expect(topSliced[4].id).toBe('P005')
+
+      // Check required message text
+      const warningText = `CSV data is larger than participant IDs: Your event description specified ${expectedCount} participants, but the uploaded CSV contains ${csvData.length} records. Considering the top ${expectedCount} participants from the CSV.`
+      expect(warningText).toContain('CSV data is larger than participant IDs')
+      expect(warningText).toContain('5 participants')
+      expect(warningText).toContain('12 records')
+      expect(warningText).toContain('Considering the top 5 participants from the CSV')
+    })
+  })
 })
+

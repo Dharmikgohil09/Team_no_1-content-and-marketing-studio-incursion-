@@ -31,12 +31,59 @@ const KNOWN_COLUMNS: Record<string, string[]> = {
   photoUrl: ['photo', 'photo url', 'image', 'picture', 'avatar', 'photo_url', 'image url', 'profile', 'photo_filename', 'filename', 'image_name'],
 }
 
+export function getExpectedParticipantCount(project: any): number | null {
+  if (!project) return null
+
+  // 1. Explicit participantCount in eventContext
+  const ctxVal = project.eventContext?.participantCount?.value
+  if (typeof ctxVal === 'number' && !isNaN(ctxVal) && ctxVal > 0) {
+    return ctxVal
+  }
+
+  // 2. Roles: participant / player count or sum of role counts
+  const participantRole = project.roles?.find((r: any) => r.id === 'participant' || r.id === 'player')
+  if (typeof participantRole?.count === 'number' && participantRole.count > 0) {
+    return participantRole.count
+  }
+
+  const roleSum = project.roles?.reduce((acc: number, r: any) => acc + (r.count || 0), 0)
+  if (typeof roleSum === 'number' && roleSum > 0) {
+    return roleSum
+  }
+
+  // 3. Fallback: Parse from description text or user messages in nlHistory
+  const descText = project.eventContext?.description?.value || ''
+  const nlText = Array.isArray(project.nlHistory)
+    ? project.nlHistory.filter((m: any) => m.role === 'user').map((m: any) => m.content).join(' ')
+    : ''
+  const combined = `${descText} ${nlText}`.trim()
+
+  if (combined) {
+    const match =
+      combined.match(/(?:approximately\s+|about\s+|total\s+)?(\d+)\s+(?:participants?|players?|attendees?|delegates?|people|persons?|candidates?|students?|members?|cards?|ids?|id\s*cards?|passes?)/i) ||
+      combined.match(/(?:number\s+of\s+participants?|participant\s*count|total\s+participants?|number\s+of\s+people|participants?\s*count)\s*(?:is|=|:)?\s*(\d+)/i) ||
+      combined.match(/(?:make|create|generate|for)\s+(\d+)\s+(?:people|participants?|ids?|cards?|passes?|persons?|attendees?)/i) ||
+      combined.match(/\b(\d+)\s+(?:people|persons?|participants?|candidates?|students?)\b/i)
+
+    if (match) {
+      const parsed = parseInt(match[1], 10)
+      if (!isNaN(parsed) && parsed > 0) {
+        return parsed
+      }
+    }
+  }
+
+  return null
+}
+
 export function DataPage() {
   const navigate      = useNavigate()
   const project       = useProjectStore(s => s.project)
   const setPeople     = useProjectStore(s => s.setPeople)
   const people        = useProjectStore(s => s.people)
   const setWizardStep = useProjectStore(s => s.setWizardStep)
+
+  const expectedParticipantCount = useMemo(() => getExpectedParticipantCount(project), [project])
 
   // CSV & Data state
   const [isCsvDragging, setIsCsvDragging] = useState(false)
@@ -45,7 +92,9 @@ export function DataPage() {
   const [identifierCol, setIdentifierCol] = useState<string>('')
   const [filenameCol, setFilenameCol]     = useState<string>('')
   const [rawColumns, setRawColumns]       = useState<string[]>([])
+  const [allParsedRows, setAllParsedRows] = useState<Record<string, string>[]>([])
   const [rawRows, setRawRows]             = useState<Record<string, string>[]>([])
+  const [sliceMode, setSliceMode]         = useState<'top_expected' | 'all'>('top_expected')
   const [rowStatuses, setRowStatuses]     = useState<PersonRowStatus[]>([])
   const [csvError, setCsvError]           = useState('')
 
@@ -91,6 +140,41 @@ export function DataPage() {
     return { map, idCol, fnCol }
   }
 
+  function processImportedRows(data: Record<string, string>[], cols: string[]) {
+    const suggested = suggestMapping(cols)
+    setRawColumns(cols)
+    setColumnMap(suggested.map)
+    setIdentifierCol(suggested.idCol)
+    setFilenameCol(suggested.fnCol)
+    setCsvError('')
+    setMatchResult(null)
+    setConfirmedSuccess(false)
+    setAllParsedRows(data)
+
+    const expectedCount = expectedParticipantCount
+    if (expectedCount && data.length > expectedCount) {
+      setSliceMode('top_expected')
+      setRawRows(data.slice(0, expectedCount))
+    } else {
+      setSliceMode('all')
+      setRawRows(data)
+    }
+  }
+
+  function handleToggleSliceMode(mode: 'top_expected' | 'all') {
+    setSliceMode(mode)
+    let activeData = allParsedRows
+    if (mode === 'top_expected' && expectedParticipantCount && allParsedRows.length > expectedParticipantCount) {
+      activeData = allParsedRows.slice(0, expectedParticipantCount)
+    }
+    setRawRows(activeData)
+    setPreviewIdx(0)
+    setConfirmedSuccess(false)
+    if (uploadedImages.length > 0) {
+      runPhotoMatching(activeData, uploadedImages)
+    }
+  }
+
   function parseCSV(text: string) {
     const result = Papa.parse<Record<string, string>>(text, {
       header:         true,
@@ -102,15 +186,7 @@ export function DataPage() {
       return
     }
     const cols = result.meta.fields ?? []
-    const suggested = suggestMapping(cols)
-    setRawColumns(cols)
-    setRawRows(result.data)
-    setColumnMap(suggested.map)
-    setIdentifierCol(suggested.idCol)
-    setFilenameCol(suggested.fnCol)
-    setCsvError('')
-    setMatchResult(null)
-    setConfirmedSuccess(false)
+    processImportedRows(result.data, cols)
   }
 
   function handleCsvFile(file: File) {
@@ -125,15 +201,7 @@ export function DataPage() {
           const arr = Array.isArray(json) ? json : json.data ?? json.participants ?? []
           if (arr.length > 0) {
             const cols = Object.keys(arr[0])
-            const suggested = suggestMapping(cols)
-            setRawColumns(cols)
-            setRawRows(arr)
-            setColumnMap(suggested.map)
-            setIdentifierCol(suggested.idCol)
-            setFilenameCol(suggested.fnCol)
-            setCsvError('')
-            setMatchResult(null)
-            setConfirmedSuccess(false)
+            processImportedRows(arr, cols)
           }
         } catch {
           setCsvError('Invalid JSON file format')
@@ -224,7 +292,7 @@ export function DataPage() {
   }
 
   // ── Apply Mappings and Build Base Rows ────────────────────────────────────
-  function applyMapping() {
+  function applyMapping(andNavigateToExport = false) {
     const inverseMap: Record<string, string> = {}
     for (const [col, field] of Object.entries(columnMap)) {
       inverseMap[field] = col
@@ -256,25 +324,38 @@ export function DataPage() {
         }
       }
 
+      // Check if matchResult already has a photo for this row
+      const match = matchResult?.matches.find(m => m.rowIndex === idx)
+      const matchedPhotoUrl = match?.assignedImage?.dataUrl || row[inverseMap.photoUrl] || undefined
+
       const person: Person = {
         id,
         name:     name || 'Participant Name',
         role:     roles.some(r => r.id === role) ? role : 'participant',
         email:    row[inverseMap.email] ?? undefined,
         team:     row[inverseMap.team] ?? '',
-        photoUrl: row[inverseMap.photoUrl] ?? undefined,
+        photoUrl: matchedPhotoUrl,
         extra,
       }
 
       return { person, errors, warnings, rowIndex: idx }
     })
 
+    const confirmedPeople = statuses.map(s => s.person)
     setRowStatuses(statuses)
+    setPeople(confirmedPeople)
+    setWizardStep(5)
+    useProjectStore.getState().saveProject().catch(console.error)
     setCsvError('')
+    setConfirmedSuccess(true)
 
     // Automatically trigger photo matching if images are already uploaded
     if (uploadedImages.length > 0) {
       runPhotoMatching(rawRows, uploadedImages)
+    }
+
+    if (andNavigateToExport) {
+      navigate('/studio/export')
     }
   }
 
@@ -304,7 +385,7 @@ export function DataPage() {
 
   // ── Confirm Matches and Save to Store ─────────────────────────────────────
   function handleConfirmAssignments() {
-    if (rawRows.length === 0) return
+    if (rawRows.length === 0) return []
 
     const inverseMap: Record<string, string> = {}
     for (const [col, field] of Object.entries(columnMap)) {
@@ -342,7 +423,22 @@ export function DataPage() {
     })
 
     setPeople(confirmedPeople)
+    setWizardStep(5)
     setConfirmedSuccess(true)
+    useProjectStore.getState().saveProject().catch(console.error)
+    return confirmedPeople
+  }
+
+  function handleGoToExport() {
+    if (rawRows.length === 0 && people.length === 0) {
+      setCsvError('Please import participant data first before proceeding to export.')
+      return
+    }
+    if (rawRows.length > 0) {
+      handleConfirmAssignments()
+    }
+    setWizardStep(5)
+    navigate('/studio/export')
   }
 
   // ── Filtering & Counts ───────────────────────────────────────────────────
@@ -424,7 +520,15 @@ export function DataPage() {
                 <span>📊</span> 1. Import Participant CSV / JSON
               </h2>
               {rawRows.length > 0 && (
-                <span className="badge-blue text-xs font-mono">{rawRows.length} records parsed</span>
+                <div className="flex items-center gap-2">
+                  {expectedParticipantCount && allParsedRows.length > expectedParticipantCount && sliceMode === 'top_expected' ? (
+                    <span className="badge-blue text-xs font-mono">
+                      {rawRows.length} of {allParsedRows.length} records selected (Top {expectedParticipantCount})
+                    </span>
+                  ) : (
+                    <span className="badge-blue text-xs font-mono">{rawRows.length} records parsed</span>
+                  )}
+                </div>
               )}
             </div>
 
@@ -449,6 +553,54 @@ export function DataPage() {
               <p className="text-white font-medium text-sm mb-1">Drop any CSV or JSON file here</p>
               <p className="text-slate-500 text-xs">Supports Google Forms, Excel, or custom exports with arbitrary headers</p>
             </div>
+
+            {/* CSV Data Larger Than Participant IDs Notice Banner */}
+            {expectedParticipantCount && allParsedRows.length > expectedParticipantCount && (
+              <div
+                id="csv-size-warning-banner"
+                className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs mb-4 space-y-2.5 animate-fade-in"
+              >
+                <div className="flex items-start gap-2.5">
+                  <span className="text-base shrink-0">⚠️</span>
+                  <div className="space-y-1">
+                    <p className="font-semibold text-amber-100 text-sm">
+                      CSV data is larger than participant IDs
+                    </p>
+                    <p className="text-amber-200/90 leading-relaxed text-xs">
+                      Your event description specified <strong className="text-white font-semibold">{expectedParticipantCount}</strong> participants, but the uploaded CSV contains <strong className="text-white font-semibold">{allParsedRows.length}</strong> records. Considering the top <strong className="text-white font-semibold">{expectedParticipantCount}</strong> participants from the CSV.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-500/20">
+                  <button
+                    type="button"
+                    id="slice-top-btn"
+                    onClick={() => handleToggleSliceMode('top_expected')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      sliceMode === 'top_expected'
+                        ? 'bg-amber-400 text-slate-950 shadow-sm'
+                        : 'bg-white/5 text-amber-200 hover:bg-white/10'
+                    }`}
+                  >
+                    ✓ Consider Top {expectedParticipantCount} Only ({sliceMode === 'top_expected' ? 'Active' : 'Switch'})
+                  </button>
+
+                  <button
+                    type="button"
+                    id="slice-all-btn"
+                    onClick={() => handleToggleSliceMode('all')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      sliceMode === 'all'
+                        ? 'bg-amber-400 text-slate-950 shadow-sm'
+                        : 'bg-white/5 text-amber-200 hover:bg-white/10'
+                    }`}
+                  >
+                    Import All {allParsedRows.length} Records ({sliceMode === 'all' ? 'Active' : 'Switch'})
+                  </button>
+                </div>
+              </div>
+            )}
 
             {csvError && (
               <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs mb-4">
@@ -537,14 +689,44 @@ export function DataPage() {
                   ))}
                 </div>
 
-                <button
-                  id="apply-mapping-btn"
-                  onClick={applyMapping}
-                  className="btn-primary text-xs py-2.5 px-4 w-full shadow-glow-acm font-semibold flex items-center justify-center gap-2"
-                >
-                  <span>✓</span>
-                  <span>Apply Mapping & Parse ({rawRows.length} Participants)</span>
-                </button>
+                <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2">
+                  <button
+                    id="apply-mapping-btn"
+                    type="button"
+                    onClick={() => applyMapping(true)}
+                    className="btn-primary text-xs py-2.5 px-5 w-full sm:w-auto flex-1 shadow-glow-acm font-semibold flex items-center justify-center gap-2"
+                    title="Apply mapping and proceed directly to Export page"
+                  >
+                    <span>✓ Apply Mapping & Go to Export ({rawRows.length} Participants)</span>
+                    <span>→</span>
+                  </button>
+                  <button
+                    id="apply-only-btn"
+                    type="button"
+                    onClick={() => applyMapping(false)}
+                    className="btn-secondary text-xs py-2.5 px-4 w-full sm:w-auto font-medium text-slate-300 hover:text-white flex items-center justify-center gap-1.5"
+                    title="Apply mapping and stay on this page to match photos"
+                  >
+                    <span>Apply Mapping Only</span>
+                  </button>
+                </div>
+
+                {confirmedSuccess && (
+                  <div className="mt-3 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 text-xs flex items-center justify-between gap-3 animate-fade-in">
+                    <div className="flex items-center gap-2">
+                      <span className="text-emerald-400 font-bold">✓</span>
+                      <span>{rawRows.length} participants mapped and saved! Ready for export.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGoToExport}
+                      className="btn-primary text-xs py-1.5 px-3.5 shadow-glow-acm font-semibold shrink-0 flex items-center gap-1"
+                    >
+                      <span>Proceed to Export Page</span>
+                      <span>→</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -956,18 +1138,30 @@ export function DataPage() {
                       <span>✓</span> All photo assignments confirmed and persisted!
                     </span>
                   ) : (
-                    <span>Review assignments above, then click confirm to apply photos to participant cards.</span>
+                    <span>Review assignments above, then save or proceed directly to export.</span>
                   )}
                 </div>
 
-                <button
-                  id="confirm-assignments-btn"
-                  onClick={handleConfirmAssignments}
-                  className="btn-primary text-xs py-2.5 px-6 shadow-glow-acm font-semibold flex items-center gap-2"
-                >
-                  <span>✓</span>
-                  <span>Confirm & Save Assignments ({matchResult.counts.matched} Photos)</span>
-                </button>
+                <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                  <button
+                    id="confirm-assignments-btn"
+                    type="button"
+                    onClick={() => handleConfirmAssignments()}
+                    className="btn-secondary text-xs py-2 px-3.5 font-medium text-slate-300 hover:text-white flex items-center gap-1.5"
+                  >
+                    <span>✓</span>
+                    <span>Save Assignments Only</span>
+                  </button>
+                  <button
+                    id="confirm-and-export-btn"
+                    type="button"
+                    onClick={handleGoToExport}
+                    className="btn-primary text-xs py-2.5 px-6 shadow-glow-acm font-semibold flex items-center gap-2"
+                  >
+                    <span>Save & Proceed to Export</span>
+                    <span>→</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -976,6 +1170,22 @@ export function DataPage() {
 
         {/* ── RIGHT PANEL: Interactive Card Preview & Wizard Navigation ─────── */}
         <div className="space-y-4">
+          {/* Top Quick Navigation to Export */}
+          <div className="glass p-3.5 border border-acm-500/30 bg-acm-600/10 rounded-2xl shadow-glow-acm">
+            <button
+              id="data-next-btn-top"
+              type="button"
+              onClick={handleGoToExport}
+              className="btn-primary w-full py-2.5 shadow-glow-acm text-xs font-semibold flex items-center justify-center gap-2"
+            >
+              <span>Proceed to Export Page ({rawRows.length || people.length || 1} Cards)</span>
+              <span>→</span>
+            </button>
+            <p className="text-[10px] text-slate-400 text-center mt-1.5">
+              Instant batch export of all participant ID cards to PDF, SVG, or PNG
+            </p>
+          </div>
+
           {template ? (
             <div className="glass p-4 sticky top-20">
               <div className="flex items-center justify-between mb-3">
@@ -1038,14 +1248,8 @@ export function DataPage() {
           <div className="space-y-2">
             <button
               id="data-next-btn"
-              onClick={() => {
-                // If user hasn't explicitly clicked confirm but has parsed rows, confirm now
-                if (!confirmedSuccess && rawRows.length > 0) {
-                  handleConfirmAssignments()
-                }
-                setWizardStep(5)
-                navigate('/studio/export')
-              }}
+              type="button"
+              onClick={handleGoToExport}
               className="btn-primary w-full py-3 shadow-glow-acm text-sm font-semibold flex items-center justify-center gap-2"
             >
               <span>Go to Export</span>
