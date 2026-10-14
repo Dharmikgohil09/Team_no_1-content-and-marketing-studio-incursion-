@@ -163,6 +163,18 @@ function cropMarksSVG(w: number, h: number, bleed: number): string {
 interface CardBounds { w: number; h: number; bleed: number }
 
 function renderElement(el: Element, ctx: BindingContext, bounds: CardBounds, warnings: string[]): string {
+  // Suppress date and venue elements completely from ID cards
+  const elId = el.id.toLowerCase()
+  if (elId.includes('venue') || elId.includes('date')) {
+    return ''
+  }
+  if (el.type === 'text') {
+    const rawContent = (el as TextElement).content || ''
+    if (rawContent.includes('event.venue') || rawContent.includes('event.date')) {
+      return ''
+    }
+  }
+
   switch (el.type) {
     case 'text':    return renderText(el, ctx, warnings)
     case 'image':   return renderImage(el, ctx, warnings)
@@ -191,14 +203,12 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
   )
 
   // Contextual fallback for empty or placeholder content
-  if (!content || !content.trim() || content.trim() === '—' || content.trim() === '·' || content.trim() === '[No Name]') {
+  if (!content || !content.trim() || content.trim() === '—' || content.trim() === '·' || content.trim() === '-' || content.trim() === '[No Name]') {
     const id = el.id.toLowerCase()
     if (id.includes('event-name') || id.includes('title')) {
       content = ctx.event?.name?.value || 'EVENT PASS'
     } else if (id.includes('venue') || id.includes('date')) {
-      const v = ctx.event?.venue?.value
-      const d = ctx.event?.dateStart?.value
-      content = v && d ? `${v} · ${d}` : (v || d || 'OFFICIAL EVENT')
+      return ''
     } else if (id.includes('person-name') || id === 'name') {
       content = ctx.person?.name && ctx.person.name !== '[No Name]' ? ctx.person.name : 'Participant Name'
     } else if (id.includes('role-label') || id === 'role') {
@@ -207,7 +217,7 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
       content = ctx.person?.team || 'Team Alpha'
     } else if (id.includes('org') || id.includes('branding') || id.includes('acm-label')) {
       content = ctx.event?.organizer?.value
-        ? `${ctx.event.organizer.value.toUpperCase()}${ctx.event?.venue?.value ? ` · ${ctx.event.venue.value.toUpperCase()}` : ''}`
+        ? ctx.event.organizer.value.toUpperCase()
         : (ctx.event?.name?.value ? `${ctx.event.name.value.toUpperCase()} · OFFICIAL PASS` : 'OFFICIAL EVENT PASS')
     } else if (id.includes('category') || id.includes('badge-type')) {
       content = 'OFFICIAL PASS'

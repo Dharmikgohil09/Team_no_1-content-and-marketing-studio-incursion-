@@ -44,8 +44,8 @@ export function CardPreview({
     return {
       ...base,
       name: { value: evtName || 'EVENT PASS', status: base.name?.status || (evtName ? 'provided' : 'missing') },
-      venue: { value: base.venue?.value || (evtName ? `${evtName} Arena` : 'Main Venue'), status: base.venue?.status || (base.venue?.value ? 'provided' : 'missing') },
-      dateStart: { value: base.dateStart?.value || '2026', status: base.dateStart?.status || (base.dateStart?.value ? 'provided' : 'missing') },
+      venue: { value: base.venue?.value || '', status: base.venue?.status || 'missing' },
+      dateStart: { value: base.dateStart?.value || '', status: base.dateStart?.status || 'missing' },
       organizer: { value: base.organizer?.value || (evtName ? `${evtName} Team` : 'Organizing Committee'), status: base.organizer?.status || (base.organizer?.value ? 'provided' : 'missing') },
       tagline: { value: base.tagline?.value || 'Official Pass', status: base.tagline?.status || (base.tagline?.value ? 'provided' : 'missing') },
     }

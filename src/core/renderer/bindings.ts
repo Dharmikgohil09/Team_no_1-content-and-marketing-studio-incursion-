@@ -47,8 +47,8 @@ function resolvePath(path: string, ctx: BindingContext): unknown {
   if (obj === undefined || obj === null || obj === '' || obj === '[No Name]') {
     const trimmed = path.trim()
     if (trimmed.startsWith('event.name')) return ctx.event?.name?.value || 'EVENT PASS'
-    if (trimmed.startsWith('event.venue')) return ctx.event?.venue?.value || (ctx.event?.name?.value ? `${ctx.event.name.value} Arena` : 'Main Venue')
-    if (trimmed.startsWith('event.dateStart')) return ctx.event?.dateStart?.value || '2026'
+    if (trimmed.startsWith('event.venue')) return ''
+    if (trimmed.startsWith('event.dateStart')) return ''
     if (trimmed.startsWith('event.organizer')) return ctx.event?.organizer?.value || (ctx.event?.name?.value ? `${ctx.event.name.value} Organizing Committee` : 'Organizing Committee')
     if (trimmed.startsWith('event.tagline')) return ctx.event?.tagline?.value || 'Official Event'
     if (trimmed === 'person.name') return ctx.person?.name && ctx.person.name !== '[No Name]' ? ctx.person.name : 'Participant Name'

@@ -63,31 +63,6 @@ export function generateQuestions(event: EventContext, roles: Role[]): Question[
     })
   }
 
-  // 3. Date (Required if not provided)
-  const hasDate = event.dateStart?.status !== 'missing' && event.dateStart?.value && event.dateStart.value.trim() !== ''
-  if (!hasDate) {
-    questions.push({
-      id: 'q-date-start',
-      label: 'What date should appear on the card?',
-      hint: 'e.g. "18 October 2026" or "20-22 March 2026"',
-      type: 'text',
-      field: 'dateStart',
-      required: true,
-    })
-  }
-
-  // 4. Venue (Required if not provided)
-  const hasVenue = event.venue?.status !== 'missing' && event.venue?.value && event.venue.value.trim() !== ''
-  if (!hasVenue) {
-    questions.push({
-      id: 'q-venue',
-      label: 'Where is the event taking place (venue)?',
-      hint: 'e.g. "SVNIT Surat", "Main Auditorium"',
-      type: 'text',
-      field: 'venue',
-      required: true,
-    })
-  }
 
   // 5. Roles (Only if no roles were detected)
   if (!roles || roles.length === 0) {

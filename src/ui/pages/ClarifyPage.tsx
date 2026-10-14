@@ -94,9 +94,9 @@ export function ClarifyPage() {
   const answeredReq = requiredQs.filter(q => answers[q.id] && answers[q.id] !== '__skipped__').length
   const canContinue = answeredReq === requiredQs.length || requiredQs.length === 0
 
-  // Show already-known info as chips
+  // Show already-known info as chips (excluding date and venue)
   const knownFields = Object.entries(project.eventContext)
-    .filter(([, v]) => v.status === 'provided' && v.value)
+    .filter(([k, v]) => k !== 'dateStart' && k !== 'dateEnd' && k !== 'venue' && v.status === 'provided' && v.value)
     .map(([k, v]) => ({ key: k, value: String(v.value) }))
 
   return (

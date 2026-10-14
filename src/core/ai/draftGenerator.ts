@@ -524,26 +524,11 @@ function buildModernMinimalFront(
       maxLines: 1,
       minFontSize: 2.8,
     },
-    // 16. Event Venue & Date
-    {
-      type: 'text',
-      id: 'event-venue-date',
-      anchor: { x: 2, y: 71.6, w: 50, h: 3.5 },
-      content: `${event.venue?.value ? `${event.venue.value} · ` : ''}${event.dateStart?.value || '2026'}` + (category === 'music' ? ' · LIVE CONCERT' : category === 'business' ? ' · PITCH SUMMIT' : ''),
-      fontFamily: 'Inter',
-      fontSize: 3.1,
-      fontWeight: '400',
-      color: '#94a3b8',
-      align: 'center',
-      verticalAlign: 'middle',
-      maxLines: 1,
-      minFontSize: 2.5,
-    },
     // 17. Real Scannable Vector QR Code
     {
       type: 'qr',
       id: 'person-qr',
-      anchor: { x: 23, y: 75.6, w: 8, h: 8 },
+      anchor: { x: 23, y: 74, w: 8, h: 8 },
       urlPattern: event.website?.value ? `${event.website.value.replace(/\/$/, '')}/verify/{{person.id}}` : `https://verify.eventpass.live/{{person.id}}`,
       fgColor: '#ffffff',
       bgColor: 'transparent',
@@ -555,7 +540,7 @@ function buildModernMinimalFront(
       id: 'footer-branding',
       anchor: { x: 2, y: 84.4, w: 50, h: 2.4 },
       content: event.organizer?.value
-        ? `${event.organizer.value.toUpperCase()}${event.venue?.value ? ` · ${event.venue.value.toUpperCase()}` : ''}`
+        ? event.organizer.value.toUpperCase()
         : (category === 'music' ? 'LIVE CONCERT ARENA' : category === 'business' ? 'STARTUP PITCH SUMMIT' : category === 'cultural' ? 'CULTURAL FESTIVAL · OFFICIAL PASS' : category === 'sports' ? 'ATHLETIC CHAMPIONSHIP PASS' : (event.name?.value ? `${event.name.value.toUpperCase()} · OFFICIAL PASS` : 'OFFICIAL EVENT PASS')),
       fontFamily: 'Space Grotesk',
       fontSize: 2.2,
@@ -1098,21 +1083,6 @@ function buildCreativeTechFront(
       maxLines: 1,
       minFontSize: 2.8,
     },
-    // 13. Event Date & Venue
-    {
-      type: 'text',
-      id: 'event-venue-date',
-      anchor: { x: 2, y: 59, w: 50, h: 3.5 },
-      content: `${event.venue?.value ? `${event.venue.value} · ` : ''}${event.dateStart?.value || '2026'}` + (category === 'music' ? ' · LIVE CONCERT' : category === 'business' ? ' · PITCH SUMMIT' : ''),
-      fontFamily: 'Inter',
-      fontSize: 3.2,
-      fontWeight: '400',
-      color: '#94a3b8',
-      align: 'center',
-      verticalAlign: 'middle',
-      maxLines: 1,
-      minFontSize: 2.5,
-    },
     // 14. Real Vector QR Code
     {
       type: 'qr',
@@ -1482,7 +1452,7 @@ function buildCardBackElements(
     ? '1. Technical badge required for pit-lane entry and arena safety zone access.'
     : category === 'conference'
     ? '1. Delegate pass grants entry to keynote auditoriums and executive sessions.'
-    : `1. Badge must be visibly worn at all times within ${event.venue?.value || (event.name?.value ? `${event.name.value} venue` : 'event premises')}.`
+    : `1. Badge must be visibly worn at all times within ${event.name?.value ? `${event.name.value} premises` : 'event premises'}.`
 
   const rule2 = category === 'music'
     ? '2. Identification pass is strictly non-transferable and remains property of event organizers.'

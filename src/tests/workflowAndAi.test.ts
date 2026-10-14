@@ -217,8 +217,8 @@ describe('Workflow & AI Improvements — Tests 1 to 7', () => {
       const askedFields = questions.map(q => q.field)
       expect(askedFields).toContain('name')
       expect(askedFields).toContain('category')
-      expect(askedFields).toContain('dateStart')
-      expect(askedFields).toContain('venue')
+      expect(askedFields).not.toContain('dateStart')
+      expect(askedFields).not.toContain('venue')
 
       // Must not ask for optional fields like tagline, contact, or website
       expect(askedFields).not.toContain('tagline')
@@ -263,24 +263,17 @@ describe('Workflow & AI Improvements — Tests 1 to 7', () => {
       const ctx: EventContext = makeEmptyEventContext()
       const roles = [getRoleOrDefault('participant')]
 
-      // Initially name, date, venue are missing
+      // Initially name is missing (date and venue are not asked)
       const initialQuestions = generateQuestions(ctx, roles)
       expect(initialQuestions.some(q => q.field === 'name')).toBe(true)
-      expect(initialQuestions.some(q => q.field === 'dateStart')).toBe(true)
-      expect(initialQuestions.some(q => q.field === 'venue')).toBe(true)
+      expect(initialQuestions.some(q => q.field === 'dateStart')).toBe(false)
+      expect(initialQuestions.some(q => q.field === 'venue')).toBe(false)
 
       // User answers event name
       ctx.name = { value: 'InCursion Hackathon', status: 'confirmed' }
       const afterNameQuestions = generateQuestions(ctx, roles)
       expect(afterNameQuestions.some(q => q.field === 'name')).toBe(false) // Question resolved!
-      expect(afterNameQuestions.some(q => q.field === 'dateStart')).toBe(true) // Still needed
-
-      // User answers remaining questions
-      ctx.dateStart = { value: '2026-10-18', status: 'confirmed' }
-      ctx.venue = { value: 'SVNIT Surat', status: 'confirmed' }
-
-      const finalQuestions = generateQuestions(ctx, roles)
-      expect(finalQuestions).toHaveLength(0) // Ready to proceed to drafts!
+      expect(afterNameQuestions).toHaveLength(0) // Ready to proceed to drafts!
     })
   })
 
@@ -601,9 +594,10 @@ describe('Workflow & AI Improvements — Tests 1 to 7', () => {
       expect(questionIds).not.toContain('q-category')
       expect(questionIds).not.toContain('q-roles')
 
-      // 6. Only genuinely missing details (date, venue) are asked
-      expect(questionIds).toContain('q-date-start')
-      expect(questionIds).toContain('q-venue')
+      // 6. Date and venue are intentionally not asked
+      expect(questionIds).not.toContain('q-date-start')
+      expect(questionIds).not.toContain('q-venue')
+      expect(questionIds).toHaveLength(0)
     })
   })
 

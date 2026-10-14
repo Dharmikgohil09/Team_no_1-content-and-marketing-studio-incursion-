@@ -241,7 +241,6 @@ describe('Vector SVG Renderer', () => {
 
     expect(result.svg).toContain('Participant Name');
     expect(result.svg).toContain('INCURSION 2026');
-    expect(result.svg).toContain('SVNIT');
     // Ensure polygon transform does NOT have mm units
     expect(result.svg).not.toMatch(/transform="translate\([^)]+mm/);
     // Ensure logos are present
