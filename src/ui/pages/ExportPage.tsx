@@ -7,6 +7,7 @@ import { DEFAULT_ROLES } from '../../core/schema/Role'
 import { exportSvg, downloadSvg } from '../../core/export/svg'
 import { exportPdf, downloadPdf } from '../../core/export/pdf'
 import { exportPng, downloadPng } from '../../core/export/png'
+import { listTemplates } from '../../templates/registry'
 
 const SAMPLE_PERSON = {
   id: 'SAMPLE-001',
@@ -31,30 +32,31 @@ export function ExportPage() {
   const [done,         setDone]         = useState(false)
 
   const brandKit = getDefaultBrandKit()
-  const roles    = project?.roles ?? DEFAULT_ROLES
-  const template = project?.activeTemplate
+  const roles    = (project?.roles && project.roles.length > 0) ? project.roles : DEFAULT_ROLES
+  const template = project?.activeTemplate || project?.drafts?.[0] || listTemplates()[0]
+  const cardSize = template?.size || { name: 'CR80', widthMm: 54, heightMm: 85.6, bleedMm: 3, safeMarginMm: 3 }
   const samplePhotoUrl = useProjectStore(s => s.samplePhotoUrl)
 
   const exportPeople = (people.length > 0 ? people : [SAMPLE_PERSON]).map(p => ({
     ...p,
     photoUrl: p.photoUrl || samplePhotoUrl || '',
   }))
-  const previewRole  = roles.find(r => r.id === exportPeople[0]?.role) ?? roles[0]
+  const previewRole  = roles.find(r => r.id === exportPeople[0]?.role) ?? roles[0] ?? DEFAULT_ROLES[0]
 
   async function handleExport() {
-    if (!template || !project) return
+    if (!template) return
     setExporting(true)
     setDone(false)
 
     try {
-      const eventCtx = project.eventContext
-      const filename = `${(eventCtx.name.value ?? 'cards').replace(/\s+/g, '_')}`
+      const eventCtx = project?.eventContext ?? { name: { value: 'event_cards', status: 'provided' } }
+      const filename = `${((eventCtx.name as any)?.value ?? 'cards').replace(/\s+/g, '_')}`
 
       if (format === 'svg') {
         // Export first person as sample SVG
         const person = exportPeople[0]
-        const role   = roles.find(r => r.id === person.role) ?? roles[0]
-        const svg    = exportSvg({ template, role, person, event: eventCtx, brandKit, includeBleed, face: exportFace })
+        const role   = roles.find(r => r.id === person.role) ?? roles[0] ?? DEFAULT_ROLES[0]
+        const svg    = exportSvg({ template, role, person, event: eventCtx as any, brandKit, includeBleed, face: exportFace })
         downloadSvg(svg, `${filename}_${person.name.replace(/\s+/g, '_')}_${exportFace}.svg`)
 
       } else if (format === 'pdf') {
@@ -62,7 +64,7 @@ export function ExportPage() {
           template,
           roles,
           people: exportPeople,
-          event:  eventCtx,
+          event:  eventCtx as any,
           brandKit,
           includeBleed,
           dpi,
@@ -72,8 +74,8 @@ export function ExportPage() {
 
       } else if (format === 'png') {
         const person = exportPeople[0]
-        const role   = roles.find(r => r.id === person.role) ?? roles[0]
-        const blob   = await exportPng({ template, role, person, event: eventCtx, brandKit, dpi, includeBleed, face: exportFace })
+        const role   = roles.find(r => r.id === person.role) ?? roles[0] ?? DEFAULT_ROLES[0]
+        const blob   = await exportPng({ template, role, person, event: eventCtx as any, brandKit, dpi, includeBleed, face: exportFace })
         downloadPng(blob, `${filename}_${person.name.replace(/\s+/g, '_')}_${exportFace}_${dpi}dpi.png`)
       }
 
@@ -85,12 +87,11 @@ export function ExportPage() {
     }
   }
 
-
-  if (!project || !template) {
+  if (!template) {
     return (
       <div className="text-center py-20">
-        <p className="text-slate-400">No template to export. Complete the wizard first.</p>
-        <button onClick={() => navigate('/studio/drafts')} className="btn-primary mt-4">← Back</button>
+        <p className="text-slate-400">No template available to export. Complete the wizard first.</p>
+        <button onClick={() => navigate('/studio/drafts')} className="btn-primary mt-4">← Back to Drafts</button>
       </div>
     )
   }
@@ -166,7 +167,7 @@ export function ExportPage() {
               <label className="flex items-center justify-between cursor-pointer">
                 <div>
                   <span className="text-sm text-white font-medium">Include bleed area</span>
-                  <p className="text-xs text-slate-500 mt-0.5">Adds {template.size.bleedMm}mm bleed + crop marks</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Adds {cardSize.bleedMm}mm bleed + crop marks</p>
                 </div>
                 <input
                   type="checkbox"
@@ -192,19 +193,19 @@ export function ExportPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Card size</span>
-                <span className="text-white font-medium">{template.size.widthMm} × {template.size.heightMm} mm</span>
+                <span className="text-white font-medium">{cardSize.widthMm} × {cardSize.heightMm} mm</span>
               </div>
               {includeBleed && (
                 <div className="flex justify-between">
                   <span className="text-slate-500">With bleed</span>
-                  <span className="text-white font-medium">{template.size.widthMm + template.size.bleedMm * 2} × {template.size.heightMm + template.size.bleedMm * 2} mm</span>
+                  <span className="text-white font-medium">{cardSize.widthMm + cardSize.bleedMm * 2} × {cardSize.heightMm + cardSize.bleedMm * 2} mm</span>
                 </div>
               )}
               {format === 'png' && (
                 <div className="flex justify-between">
                   <span className="text-slate-500">Output pixels</span>
                   <span className="text-white font-medium">
-                    {Math.round((template.size.widthMm / 25.4) * dpi)} × {Math.round((template.size.heightMm / 25.4) * dpi)} px
+                    {Math.round((cardSize.widthMm / 25.4) * dpi)} × {Math.round((cardSize.heightMm / 25.4) * dpi)} px
                   </span>
                 </div>
               )}
@@ -268,7 +269,7 @@ export function ExportPage() {
                   template={template}
                   role={previewRole}
                   person={exportPeople[0]}
-                  event={project.eventContext}
+                  event={project?.eventContext}
                   brandKit={brandKit}
                   face={exportFace}
                   includeBleed={includeBleed}

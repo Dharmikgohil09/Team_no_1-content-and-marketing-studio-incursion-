@@ -279,69 +279,127 @@ export function DataPage() {
 
   // ── Apply Mappings and Build Base Rows ────────────────────────────────────
   function applyMapping(andNavigateToExport = false) {
-    const inverseMap: Record<string, string> = {}
-    for (const [col, field] of Object.entries(columnMap)) {
-      inverseMap[field] = col
-    }
+    try {
+      const inverseMap: Record<string, string> = {}
+      for (const [col, field] of Object.entries(columnMap)) {
+        inverseMap[field] = col
+      }
 
-    const nameCol = inverseMap.name
-    if (!nameCol) {
-      setCsvError('Please map at least one column to the "name" field.')
-      return
-    }
+      // Robust column resolution with fallbacks
+      const nameCol =
+        inverseMap.name ||
+        rawColumns.find(c => /^name$/i.test(c.trim())) ||
+        rawColumns.find(c => /name/i.test(c.trim())) ||
+        identifierCol ||
+        rawColumns[0] ||
+        'name'
 
-    const effectiveIdCol = identifierCol || inverseMap.id || ''
+      const effectiveIdCol =
+        identifierCol ||
+        inverseMap.id ||
+        rawColumns.find(c => /^(?:id|roll\s*no|uid|student\s*id)$/i.test(c.trim())) ||
+        nameCol ||
+        'id'
 
-    const statuses: PersonRowStatus[] = rawRows.map((row, idx) => {
-      const errors: string[] = []
-      const warnings: string[] = []
+      const targetRows = rawRows.length > 0 ? rawRows : allParsedRows
 
-      const name = (row[nameCol] ?? '').trim()
-      const role = (row[inverseMap.role] ?? 'participant').toLowerCase()
-      const id   = (effectiveIdCol ? row[effectiveIdCol] : (row[inverseMap.id] ?? '')) || nanoid(8)
-
-      if (!name) errors.push('Missing participant name')
-      if (!roles.some(r => r.id === role)) warnings.push(`Unknown role "${role}" — defaulting to participant`)
-
-      const extra: Record<string, string> = {}
-      for (const col of rawColumns) {
-        if (!Object.values(inverseMap).includes(col) && col !== effectiveIdCol) {
-          extra[col] = row[col] ?? ''
+      // Pre-compute photo match map if images were uploaded
+      let currentMatchMap = new Map<number, UploadedImage>()
+      if (matchResult?.matches && Array.isArray(matchResult.matches)) {
+        for (const m of matchResult.matches) {
+          if (m.assignedImage?.dataUrl) {
+            currentMatchMap.set(m.rowIndex, m.assignedImage)
+          }
         }
       }
 
-      // Check if matchResult already has a photo for this row
-      const match = matchResult?.matches.find(m => m.rowIndex === idx)
-      const matchedPhotoUrl = match?.assignedImage?.dataUrl || row[inverseMap.photoUrl] || undefined
-
-      const person: Person = {
-        id,
-        name:     name || 'Participant Name',
-        role:     roles.some(r => r.id === role) ? role : 'participant',
-        email:    row[inverseMap.email] ?? undefined,
-        team:     row[inverseMap.team] ?? '',
-        photoUrl: matchedPhotoUrl,
-        extra,
+      // If matches haven't been run yet but images are uploaded, run photo matcher now
+      if (currentMatchMap.size === 0 && uploadedImages.length > 0 && targetRows.length > 0) {
+        try {
+          const freshRes = matchPhotosToParticipants(targetRows, uploadedImages, {
+            identifierColumn: identifierCol || undefined,
+            filenameColumn: filenameCol || undefined,
+            matchingMethod,
+            allowDuplicateImageUsage: allowDuplicateImages,
+            fallbackToId: true,
+          })
+          setMatchResult(freshRes)
+          if (freshRes.matches) {
+            for (const m of freshRes.matches) {
+              if (m.assignedImage?.dataUrl) {
+                currentMatchMap.set(m.rowIndex, m.assignedImage)
+              }
+            }
+          }
+        } catch (matchErr) {
+          console.warn('Auto match execution notice:', matchErr)
+        }
       }
 
-      return { person, errors, warnings, rowIndex: idx }
-    })
+      const statuses: PersonRowStatus[] = targetRows.map((row, idx) => {
+        const errors: string[] = []
+        const warnings: string[] = []
 
-    const confirmedPeople = statuses.map(s => s.person)
-    setRowStatuses(statuses)
-    setPeople(confirmedPeople)
-    setWizardStep(5)
-    useProjectStore.getState().saveProject().catch(console.error)
-    setCsvError('')
-    setConfirmedSuccess(true)
+        const name = String(row[nameCol] ?? row['name'] ?? row['Name'] ?? `Participant ${idx + 1}`).trim()
+        const rawRole = String(row[inverseMap.role] ?? row['role'] ?? row['Role'] ?? 'participant').trim().toLowerCase()
+        const role = roles.some(r => r.id === rawRole) ? rawRole : 'participant'
+        const id = String((effectiveIdCol ? row[effectiveIdCol] : (row[inverseMap.id] ?? row['id'] ?? '')) || nanoid(8)).trim()
 
-    // Automatically trigger photo matching if images are already uploaded
-    if (uploadedImages.length > 0) {
-      runPhotoMatching(rawRows, uploadedImages)
-    }
+        if (!name) errors.push('Missing participant name')
 
-    if (andNavigateToExport) {
-      navigate('/studio/export')
+        const extra: Record<string, string> = {}
+        for (const col of rawColumns) {
+          if (!Object.values(inverseMap).includes(col) && col !== effectiveIdCol) {
+            extra[col] = String(row[col] ?? '')
+          }
+        }
+
+        // Matched photo from matching engine, or explicit photoUrl column in CSV, or sample
+        const matchedImage = currentMatchMap.get(idx)
+        const matchedPhotoUrl = matchedImage?.dataUrl || (inverseMap.photoUrl ? String(row[inverseMap.photoUrl] ?? '') : undefined)
+
+        const person: Person = {
+          id: id || `P-${idx + 1}`,
+          name: name || `Participant ${idx + 1}`,
+          role,
+          email: inverseMap.email && row[inverseMap.email] ? String(row[inverseMap.email]) : undefined,
+          team: inverseMap.team ? String(row[inverseMap.team] ?? '') : String(row['college'] ?? row['team'] ?? ''),
+          photoUrl: matchedPhotoUrl,
+          extra,
+        }
+
+        return { person, errors, warnings, rowIndex: idx }
+      })
+
+      const confirmedPeople = statuses.map(s => s.person)
+      setRowStatuses(statuses)
+      setPeople(confirmedPeople)
+      setWizardStep(5)
+      setCsvError('')
+      setConfirmedSuccess(true)
+
+      try {
+        useProjectStore.getState().saveProject().catch(console.error)
+      } catch {}
+
+      if (andNavigateToExport) {
+        setWizardStep(5)
+        try {
+          navigate('/studio/export')
+        } catch {
+          window.location.href = '/studio/export'
+        }
+      }
+    } catch (err: any) {
+      console.error('applyMapping error:', err)
+      if (andNavigateToExport) {
+        setWizardStep(5)
+        try {
+          navigate('/studio/export')
+        } catch {
+          window.location.href = '/studio/export'
+        }
+      }
     }
   }
 
@@ -371,60 +429,12 @@ export function DataPage() {
 
   // ── Confirm Matches and Save to Store ─────────────────────────────────────
   function handleConfirmAssignments() {
-    if (rawRows.length === 0) return []
-
-    const inverseMap: Record<string, string> = {}
-    for (const [col, field] of Object.entries(columnMap)) {
-      inverseMap[field] = col
-    }
-
-    const nameCol = inverseMap.name || 'name'
-    const effectiveIdCol = identifierCol || inverseMap.id || ''
-
-    const confirmedPeople: Person[] = rawRows.map((row, idx) => {
-      const name = (row[nameCol] ?? '').trim()
-      const role = (row[inverseMap.role] ?? 'participant').toLowerCase()
-      const id   = (effectiveIdCol ? row[effectiveIdCol] : (row[inverseMap.id] ?? '')) || nanoid(8)
-
-      // Look up matched photo from matchResult if available
-      const match = matchResult?.matches.find(m => m.rowIndex === idx)
-      const matchedPhotoUrl = match?.assignedImage?.dataUrl || row[inverseMap.photoUrl] || undefined
-
-      const extra: Record<string, string> = {}
-      for (const col of rawColumns) {
-        if (!Object.values(inverseMap).includes(col) && col !== effectiveIdCol) {
-          extra[col] = row[col] ?? ''
-        }
-      }
-
-      return {
-        id,
-        name:     name || 'Participant Name',
-        role:     roles.some(r => r.id === role) ? role : 'participant',
-        email:    row[inverseMap.email] ?? undefined,
-        team:     row[inverseMap.team] ?? '',
-        photoUrl: matchedPhotoUrl,
-        extra,
-      }
-    })
-
-    setPeople(confirmedPeople)
-    setWizardStep(5)
-    setConfirmedSuccess(true)
-    useProjectStore.getState().saveProject().catch(console.error)
-    return confirmedPeople
+    applyMapping(false)
+    return people
   }
 
   function handleGoToExport() {
-    if (rawRows.length === 0 && people.length === 0) {
-      setCsvError('Please import participant data first before proceeding to export.')
-      return
-    }
-    if (rawRows.length > 0) {
-      handleConfirmAssignments()
-    }
-    setWizardStep(5)
-    navigate('/studio/export')
+    applyMapping(true)
   }
 
   // ── Filtering & Counts ───────────────────────────────────────────────────
