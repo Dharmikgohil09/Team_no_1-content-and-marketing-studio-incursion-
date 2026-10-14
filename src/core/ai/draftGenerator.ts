@@ -36,14 +36,117 @@ export function detectEventCategory(event: EventContext): EventCategory {
 }
 
 /**
+ * Attach generated background artwork to a CardTemplate behind text and branding
+ */
+export function attachArtworkToDraft(
+  draft: CardTemplate,
+  imageUrl: string,
+  isGenerated: boolean,
+  prompt?: string
+): CardTemplate {
+  const bgArtworkElement: Element = {
+    type: 'image',
+    id: 'bg-artwork',
+    anchor: { x: 0, y: 0, w: 54, h: 85.6 },
+    src: imageUrl,
+    fit: 'cover',
+    cornerRadius: 0,
+    opacity: 0.88,
+    preserveAspectRatio: true,
+    isLogo: false,
+  }
+
+  const bgOverlayElement: Element = {
+    type: 'shape',
+    id: 'bg-contrast-overlay',
+    anchor: { x: 0, y: 0, w: 54, h: 85.6 },
+    shape: 'rect',
+    fill: '#080d1a',
+    stroke: 'transparent',
+    strokeWidth: 0,
+    cornerRadius: 0,
+    opacity: 0.35,
+  }
+
+  const updateElementList = (elements: Element[]): Element[] => {
+    const filtered = elements.filter(e => e.id !== 'bg-artwork' && e.id !== 'bg-contrast-overlay')
+    return [bgArtworkElement, bgOverlayElement, ...filtered]
+  }
+
+  const newElements = updateElementList(draft.elements)
+  const newRoleElements: Record<string, Element[]> = {}
+  if (draft.roleElements) {
+    for (const [roleId, rElements] of Object.entries(draft.roleElements)) {
+      newRoleElements[roleId] = updateElementList(rElements)
+    }
+  }
+
+  return {
+    ...draft,
+    elements: newElements,
+    roleElements: newRoleElements,
+    tokens: {
+      ...draft.tokens,
+      bgArtworkUrl: imageUrl,
+      isGeneratedArtwork: isGenerated ? 'true' : 'false',
+      artworkPrompt: prompt || draft.tokens?.artworkPrompt || '',
+    },
+  }
+}
+
+/**
+ * Regenerate background artwork for a specific draft
+ */
+export async function generateArtworkForDraft(
+  draft: CardTemplate,
+  event: EventContext,
+  customPrompt?: string,
+  forceRegenerate = true
+): Promise<CardTemplate> {
+  const eventName = event.name?.value || 'Event'
+  const eventDesc = (event as any).description?.value || ''
+  const prompt = customPrompt || draft.tokens?.artworkPrompt || `${eventName}: ${eventDesc}`
+
+  try {
+    const artRes = await fetch('/api/image/generate-background', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        eventName,
+        eventDescription: eventDesc,
+        primaryColor: draft.tokens?.primaryColor,
+        accentColor: draft.tokens?.accentColor,
+        backgroundColor: draft.tokens?.backgroundColor,
+        draftId: draft.id,
+        forceRegenerate,
+      }),
+      signal: AbortSignal.timeout(25000),
+    })
+
+    if (artRes.ok) {
+      const artData = await artRes.json()
+      if (artData.imageUrl) {
+        return attachArtworkToDraft(draft, artData.imageUrl, !!artData.isGenerated, prompt)
+      }
+    }
+  } catch (err) {
+    console.warn(`generateArtworkForDraft failed:`, err)
+  }
+  return draft
+}
+
+/**
  * Generate 3 distinct draft templates customized based on the user's event description,
  * missing questions answered, role definitions, and event category.
+ * Requests background artwork from backend image generation.
  */
 export async function generateDrafts(
   event: EventContext,
   roles: (Role | string)[],
   logos?: { instituteLogo?: string; clubLogo?: string }
 ): Promise<CardTemplate[]> {
+  let llmData: any = null
   try {
     const res = await fetch('/api/llm/generate-drafts', {
       method: 'POST',
@@ -51,14 +154,59 @@ export async function generateDrafts(
       body: JSON.stringify({ event, roles }),
       signal: AbortSignal.timeout(15000),
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data = await res.json() as any
-    if (Array.isArray(data) && data.length > 0) return data
-    return generateDraftsDeterministic(event, roles, logos, data)
-  } catch {
-    return generateDraftsDeterministic(event, roles, logos)
+    if (res.ok) {
+      llmData = await res.json()
+    }
+  } catch (err) {
+    console.warn('generate-drafts fetch failed:', err)
+  }
+
+  const drafts = generateDraftsDeterministic(event, roles, logos, llmData)
+
+  // Asynchronously generate and attach background artwork for all drafts via backend
+  try {
+    const eventName = event.name?.value || 'Event'
+    const eventDesc = (event as any).description?.value || ''
+    const category = llmData?.category || detectEventCategory(event)
+
+    const artworkPromises = drafts.map(async (draft, i) => {
+      const llmDraft = llmData?.drafts?.[i]
+      const prompt = llmDraft?.artworkPrompt || llmData?.visualDirection || `${eventName} ${eventDesc}`
+      try {
+        const artRes = await fetch('/api/image/generate-background', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt,
+            eventName,
+            eventDescription: eventDesc,
+            category,
+            primaryColor: llmDraft?.primaryColor || draft.tokens?.primaryColor,
+            accentColor: llmDraft?.accentColor || draft.tokens?.accentColor,
+            backgroundColor: llmDraft?.backgroundColor || draft.tokens?.backgroundColor,
+            draftId: draft.id,
+          }),
+          signal: AbortSignal.timeout(20000),
+        })
+        if (artRes.ok) {
+          const artData = await artRes.json()
+          if (artData.imageUrl) {
+            return attachArtworkToDraft(draft, artData.imageUrl, !!artData.isGenerated, prompt)
+          }
+        }
+      } catch (artErr) {
+        console.warn(`Artwork generation failed for draft ${draft.id}:`, artErr)
+      }
+      return draft
+    })
+
+    return await Promise.all(artworkPromises)
+  } catch (err) {
+    console.warn('Background artwork attachment failed:', err)
+    return drafts
   }
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BUILDER 1: MODERN MINIMAL (Dual-Tone Vertical Split - Category Aware)

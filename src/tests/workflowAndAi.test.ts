@@ -649,5 +649,47 @@ describe('Workflow & AI Improvements — Tests 1 to 7', () => {
       }
     })
   })
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // TEST: Dynamic Event-Specific Background Artwork Integration
+  // ───────────────────────────────────────────────────────────────────────────
+  describe('Dynamic Event-Specific Background Artwork Integration', () => {
+    it('attaches background artwork image layer behind official logos and text', async () => {
+      const { attachArtworkToDraft } = await import('../core/ai/draftGenerator')
+      const result = parseIntentDeterministic('Raas Utsav traditional Gujarati Garba night with 5 participants')
+      const drafts = generateDraftsDeterministic(result.eventContext, [getRoleOrDefault('participant')])
+      const baseDraft = drafts[0]
+
+      const sampleArtworkUrl = 'data:image/svg+xml;utf8,<svg width="54" height="85.6"><rect fill="#ec4899"/></svg>'
+      const enrichedDraft = attachArtworkToDraft(baseDraft, sampleArtworkUrl, true, 'Festive traditional Garba')
+
+      // 1. Verify bg-artwork element exists
+      const bgArtwork = enrichedDraft.elements.find(e => e.id === 'bg-artwork')
+      expect(bgArtwork).toBeDefined()
+      expect(bgArtwork?.type).toBe('image')
+      expect((bgArtwork as any)?.src).toBe(sampleArtworkUrl)
+
+      // 2. Verify bg-artwork is positioned at the back (first elements in z-order)
+      const bgIndex = enrichedDraft.elements.findIndex(e => e.id === 'bg-artwork')
+      const acmIndex = enrichedDraft.elements.findIndex(e => e.id === 'acm-logo')
+      const svnitIndex = enrichedDraft.elements.findIndex(e => e.id === 'svnit-logo')
+      const nameIndex = enrichedDraft.elements.findIndex(e => e.id === 'person-name')
+
+      expect(bgIndex).toBeLessThan(acmIndex)
+      expect(bgIndex).toBeLessThan(svnitIndex)
+      expect(bgIndex).toBeLessThan(nameIndex)
+
+      // 3. Verify official logos are preserved in their fixed coordinates
+      const acmLogo = enrichedDraft.elements.find(e => e.id === 'acm-logo')
+      const svnitLogo = enrichedDraft.elements.find(e => e.id === 'svnit-logo')
+      expect(acmLogo?.anchor.x).toBeLessThan(10) // Fixed Top-Left
+      expect(svnitLogo?.anchor.x).toBeGreaterThan(35) // Fixed Top-Right
+
+      // 4. Verify tokens reflect artwork status
+      expect(enrichedDraft.tokens?.bgArtworkUrl).toBe(sampleArtworkUrl)
+      expect(enrichedDraft.tokens?.isGeneratedArtwork).toBe('true')
+    })
+  })
 })
+
 

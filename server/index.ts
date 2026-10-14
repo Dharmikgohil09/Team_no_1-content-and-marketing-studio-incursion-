@@ -21,7 +21,7 @@ function getGenAI() {
 }
 
 async function generateWithGemini(genAI: GoogleGenerativeAI, prompt: string): Promise<string> {
-  const models = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash']
+  const models = ['gemini-3-flash-preview', 'gemini-3.1-pro-preview', 'gemini-2.5-flash']
   let lastErr: any = null
   for (const m of models) {
     try {
@@ -104,6 +104,271 @@ User description:
   }
 })
 
+// ─── Gemini Image Generation setup ───────────────────────────────────────
+
+async function generateImageWithGemini(
+  genAI: GoogleGenerativeAI,
+  prompt: string
+): Promise<{ data: string; mimeType: string; modelName: string }> {
+  const imageModels = [
+    'gemini-2.5-flash-image',
+    'gemini-3.1-flash-image',
+    'gemini-3-pro-image',
+    'gemini-3.1-flash-lite-image',
+  ]
+  let lastErr: any = null
+
+  for (const m of imageModels) {
+    try {
+      const model = genAI.getGenerativeModel({ model: m })
+      const res = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      })
+      const candidate = res.response?.candidates?.[0]
+      const part = candidate?.content?.parts?.find((p: any) => p.inlineData)
+      if (part && (part as any).inlineData?.data) {
+        return {
+          data: (part as any).inlineData.data,
+          mimeType: (part as any).inlineData.mimeType || 'image/png',
+          modelName: m,
+        }
+      }
+    } catch (e: any) {
+      lastErr = e
+      console.warn(`Image model ${m} unavailable: ${e.message?.slice(0, 100)}`)
+    }
+  }
+
+  throw lastErr || new Error('All Gemini image generation models failed or quota exceeded')
+}
+
+// ─── Event-specific generative SVG artwork fallback ───────────────────────
+// When external image model quota is exceeded (e.g. Free Tier limit: 0),
+// generate a rich, distinct, high-fidelity procedural artwork based on the AI's concept
+function generateEventSpecificFallbackArtwork(options: {
+  eventName?: string
+  eventDescription?: string
+  category?: string
+  primaryColor?: string
+  accentColor?: string
+  backgroundColor?: string
+  concept?: string
+}): string {
+  const p = options.primaryColor || '#6366f1'
+  const a = options.accentColor || '#ec4899'
+  const bg = options.backgroundColor || '#090d16'
+  const desc = (options.eventDescription || options.concept || '').toLowerCase()
+  const isCulturalOrGarba = desc.includes('garba') || desc.includes('dandiya') || desc.includes('navratri') || desc.includes('folk') || desc.includes('festive')
+  const isDanceOrHipHop = desc.includes('hip') || desc.includes('hop') || desc.includes('dance') || desc.includes('cypher') || desc.includes('battle') || desc.includes('dj')
+  const isSports = desc.includes('sport') || desc.includes('cricket') || desc.includes('football') || desc.includes('tournament') || desc.includes('league')
+  const isTechOrRobotics = desc.includes('hack') || desc.includes('robot') || desc.includes('code') || desc.includes('cyber') || desc.includes('tech')
+
+  let decorativeElements = ''
+
+  if (isCulturalOrGarba) {
+    // Rich traditional festive lighting, radiant mandala arcs and celebratory star motifs
+    decorativeElements = `
+      <defs>
+        <radialGradient id="diyaGlow" cx="50%" cy="85%" r="65%">
+          <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.45"/>
+          <stop offset="50%" stop-color="#f59e0b" stop-opacity="0.2"/>
+          <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="festiveDrapes" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${p}" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="${a}" stop-opacity="0.4"/>
+        </linearGradient>
+      </defs>
+      <circle cx="27" cy="80" r="35" fill="url(#diyaGlow)" />
+      <!-- Radiant festoon arcs -->
+      <path d="M -10,15 Q 27,35 64,15" fill="none" stroke="${a}" stroke-width="0.75" opacity="0.6"/>
+      <path d="M -10,22 Q 27,42 64,22" fill="none" stroke="#fbbf24" stroke-width="0.5" opacity="0.4" stroke-dasharray="1.5,1.5"/>
+      <!-- Celebratory cultural starbursts -->
+      <g transform="translate(10, 28) scale(0.6)" fill="#fbbf24" opacity="0.7">
+        <polygon points="5,0 6.5,3.5 10,5 6.5,6.5 5,10 3.5,6.5 0,5 3.5,3.5"/>
+      </g>
+      <g transform="translate(42, 28) scale(0.6)" fill="#fbbf24" opacity="0.7">
+        <polygon points="5,0 6.5,3.5 10,5 6.5,6.5 5,10 3.5,6.5 0,5 3.5,3.5"/>
+      </g>
+      <!-- Hanging traditional festive lantern motif -->
+      <line x1="8" y1="0" x2="8" y2="18" stroke="#fbbf24" stroke-width="0.35" opacity="0.7"/>
+      <polygon points="8,18 5.5,23 10.5,23" fill="${a}" opacity="0.8"/>
+      <line x1="46" y1="0" x2="46" y2="18" stroke="#fbbf24" stroke-width="0.35" opacity="0.7"/>
+      <polygon points="46,18 43.5,23 48.5,23" fill="${a}" opacity="0.8"/>
+    `
+  } else if (isDanceOrHipHop) {
+    // Modern urban street-dance cypher: dramatic stage light beams, neon angled trusses and audio frequencies
+    decorativeElements = `
+      <defs>
+        <linearGradient id="neonBeam1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${a}" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="neonBeam2" x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="${p}" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <!-- Angled stage searchlight beams -->
+      <polygon points="0,0 20,0 45,86 0,86" fill="url(#neonBeam1)" />
+      <polygon points="54,0 34,0 9,86 54,86" fill="url(#neonBeam2)" />
+      <!-- Urban stage grid & rhythm bars -->
+      <line x1="0" y1="70" x2="54" y2="70" stroke="${a}" stroke-width="0.4" opacity="0.5"/>
+      <line x1="0" y1="75" x2="54" y2="75" stroke="${p}" stroke-width="0.25" opacity="0.4"/>
+      <!-- Neon spotlight bursts -->
+      <circle cx="8" cy="18" r="1.5" fill="#ffffff" opacity="0.9"/>
+      <circle cx="46" cy="18" r="1.5" fill="#ffffff" opacity="0.9"/>
+    `
+  } else if (isSports) {
+    // Dynamic athletic speed chevrons, track curves and stadium floodlight flares
+    decorativeElements = `
+      <defs>
+        <linearGradient id="speedGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${p}" stop-opacity="0.45"/>
+          <stop offset="100%" stop-color="${a}" stop-opacity="0.1"/>
+        </linearGradient>
+      </defs>
+      <!-- Stadium dynamic curved motion tracks -->
+      <path d="M -10,35 Q 27,15 64,45" fill="none" stroke="${a}" stroke-width="1.2" opacity="0.6"/>
+      <path d="M -10,42 Q 27,22 64,52" fill="none" stroke="${p}" stroke-width="0.8" opacity="0.4"/>
+      <!-- Athletic angular slash -->
+      <polygon points="0,0 15,0 35,86 20,86" fill="url(#speedGrad)" />
+    `
+  } else if (isTechOrRobotics) {
+    // Precision engineering lines, subtle circuit traces and cybernetic glow
+    decorativeElements = `
+      <defs>
+        <pattern id="techGrid" width="6" height="6" patternUnits="userSpaceOnUse">
+          <path d="M 6 0 L 0 0 0 6" fill="none" stroke="${p}" stroke-width="0.15" opacity="0.2"/>
+        </pattern>
+      </defs>
+      <rect width="54" height="85.6" fill="url(#techGrid)"/>
+      <!-- Precision bus lines -->
+      <polyline points="4,25 12,25 18,32 36,32 42,25 50,25" fill="none" stroke="${a}" stroke-width="0.5" opacity="0.6"/>
+      <circle cx="18" cy="32" r="1" fill="${a}" opacity="0.8"/>
+      <circle cx="36" cy="32" r="1" fill="${a}" opacity="0.8"/>
+    `
+  } else {
+    // Ambient editorial atmospheric depth
+    decorativeElements = `
+      <circle cx="10" cy="20" r="22" fill="${p}" opacity="0.15" filter="blur(8px)"/>
+      <circle cx="44" cy="70" r="24" fill="${a}" opacity="0.15" filter="blur(8px)"/>
+    `
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 54 85.6" width="54mm" height="85.6mm">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="${p}" stop-opacity="0.35"/>
+      <stop offset="60%" stop-color="${bg}" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="${bg}" stop-opacity="1"/>
+    </radialGradient>
+    <linearGradient id="cardWash" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${p}" stop-opacity="0.25"/>
+      <stop offset="50%" stop-color="${bg}" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="${a}" stop-opacity="0.25"/>
+    </linearGradient>
+  </defs>
+  <!-- Deep Base Surface -->
+  <rect width="54" height="85.6" fill="${bg}"/>
+  <rect width="54" height="85.6" fill="url(#bgGlow)"/>
+  <rect width="54" height="85.6" fill="url(#cardWash)"/>
+  ${decorativeElements}
+  <!-- Subtle Vignette Frame for text readability -->
+  <rect width="54" height="85.6" fill="none" stroke="${p}" stroke-width="0.5" opacity="0.3"/>
+</svg>`
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+}
+
+// ─── Image generation endpoint ───────────────────────────────────────────
+
+const artworkCache = new Map<string, { imageUrl: string; isGenerated: boolean; prompt: string }>()
+
+app.post('/api/image/generate-background', async (req, res) => {
+  try {
+    const {
+      prompt,
+      eventName,
+      eventDescription,
+      category,
+      primaryColor,
+      accentColor,
+      backgroundColor,
+      concept,
+      draftId,
+      forceRegenerate,
+    } = req.body as {
+      prompt?: string
+      eventName?: string
+      eventDescription?: string
+      category?: string
+      primaryColor?: string
+      accentColor?: string
+      backgroundColor?: string
+      concept?: string
+      draftId?: string
+      forceRegenerate?: boolean
+    }
+
+    const cacheKey = `${draftId || 'draft'}_${eventName || ''}_${prompt?.slice(0, 40) || ''}`
+    if (!forceRegenerate && artworkCache.has(cacheKey)) {
+      const cached = artworkCache.get(cacheKey)!
+      return res.json({
+        success: true,
+        imageUrl: cached.imageUrl,
+        isGenerated: cached.isGenerated,
+        cached: true,
+        promptUsed: cached.prompt,
+      })
+    }
+
+    // Try Google Generative AI image models if key is present
+    if (process.env.GEMINI_API_KEY && prompt) {
+      try {
+        const genAI = getGenAI()
+        const fullArtworkPrompt = `Cinematic vertical event ID card background artwork for "${eventName || 'Event'}". ${prompt}. High quality, rich lighting, detailed atmosphere and realistic textures, vertical portrait composition (3:4 aspect ratio). Completely clean negative space in the center for photo badge overlay. Absolutely NO text, NO typography, NO watermark, NO letters, NO numbers.`
+        const result = await generateImageWithGemini(genAI, fullArtworkPrompt)
+        const imageUrl = `data:${result.mimeType};base64,${result.data}`
+        artworkCache.set(cacheKey, { imageUrl, isGenerated: true, prompt: fullArtworkPrompt })
+        return res.json({
+          success: true,
+          imageUrl,
+          isGenerated: true,
+          model: result.modelName,
+          promptUsed: fullArtworkPrompt,
+        })
+      } catch (imgErr: any) {
+        console.warn('Gemini image model request failed (likely quota or key):', imgErr.message?.slice(0, 120))
+      }
+    }
+
+    // Fallback: Event-specific generative artwork derived from the AI concept
+    const fallbackUrl = generateEventSpecificFallbackArtwork({
+      eventName,
+      eventDescription,
+      category,
+      primaryColor,
+      accentColor,
+      backgroundColor,
+      concept,
+    })
+
+    artworkCache.set(cacheKey, { imageUrl: fallbackUrl, isGenerated: false, prompt: prompt || '' })
+    return res.json({
+      success: true,
+      imageUrl: fallbackUrl,
+      isGenerated: false,
+      isFallback: true,
+      message: 'Gemini image generation model quota reached (or not configured). Using event-specific generative background artwork fallback.',
+      promptUsed: prompt || '',
+    })
+  } catch (err: any) {
+    console.error('generate-background error:', err.message)
+    res.status(500).json({ error: 'Failed to generate background artwork', detail: err.message })
+  }
+})
+
 // ─── Generate drafts endpoint ────────────────────────────────────────────
 
 app.post('/api/llm/generate-drafts', async (req, res) => {
@@ -115,45 +380,49 @@ app.post('/api/llm/generate-drafts', async (req, res) => {
 
     const genAI = getGenAI()
     const prompt = `
-You are a senior art director creating event-specific ID badge proposals.
+You are a world-class art director and identity designer creating 3 distinct, event-specific ID badge proposals.
 Event: ${JSON.stringify(event)}
 Roles: ${JSON.stringify(roles)}
 
-Create 3 distinct design concepts that genuinely match the event category and theme:
-- If MUSIC / CONCERT / SINGING: use live concert stage ambiance, audio equalizer waveforms, spotlight beams, glowing neon gradients (magenta/violet/cyan), musical note motifs, stage singer silhouette and cheering audience crowds.
-- If BUSINESS / STARTUP / PITCH / SHARK TANK: use venture growth charts, executive spotlight, founder/pitch presenter silhouette, investor audience watermark, deep obsidian navy and amber gold accents.
-- If GAMING / ESPORTS: use futuristic esports arena, laser grids, battlestations, cyber violet and neon cyan.
-- If SPORTS: use athletic motion, dynamic jersey/stadium accents, sprinting runner athlete, spectator crowd silhouettes.
-- If HACKATHON: use modern technology, matrix cascades, coder workspaces, electric blue/cyan accents.
-- If ROBOTICS: use industrial robotic arms, engineering caliper lines, technical precision, cyan/amber/slate.
-- If CULTURAL / ARTS / DANCE: use celebratory artistic flair, festive drapery arcs, leaping dancers, vibrant expression.
-- If CONFERENCE / SEMINAR: use executive prestige, editorial typography, subtle institutional pinstripes.
+CRITICAL INSTRUCTIONS:
+1. Examine the ACTUAL event description and context deeply. Do NOT use generic silhouettes or repetitive preset themes.
+2. If it is an Indian cultural celebration like traditional Garba/Dandiya, derive rich traditional Gujarati folk-dance aesthetics, textile patterns, festive lighting and warm jewel tones.
+3. If it is a modern hip-hop dance battle, derive contemporary street-dance culture, stage lighting rigs, boombox / audio waveforms, urban arena glow and dynamic neon accents.
+4. If it is a technical or robotics event, derive engineering schematics, precision titanium / circuit aesthetics.
+5. If it is a sports tournament, derive the exact sport's dynamics, court/pitch turf textures, and athletic velocity lines.
+6. Create 3 genuinely distinct design concepts for this event, each with an artworkPrompt suitable for an image generator (NO text, vertical portrait format, clean negative space in the center).
 
 Return ONLY a valid JSON object matching this exact shape (no markdown, no backticks):
 {
   "category": "music|business|sports|hackathon|robotics|cultural|conference|gaming|workshop|general",
-  "visualDirection": "Brief description of the visual identity",
+  "visualDirection": "Detailed summary of the event visual concept and artistic identity",
   "drafts": [
     {
       "id": "modern-minimal",
       "name": "Creative Event-Specific Title",
       "description": "Specific 1-2 sentence description explaining the visual elements chosen for this event",
       "primaryColor": "#hex",
-      "accentColor": "#hex"
+      "accentColor": "#hex",
+      "backgroundColor": "#hex",
+      "artworkPrompt": "A highly descriptive image-generation prompt for a vertical portrait background artwork capturing the essence of the event, realistic lighting and scenery, absolutely NO text or typography"
     },
     {
       "id": "creative-tech",
       "name": "Creative Event-Specific Title",
       "description": "Specific 1-2 sentence description explaining the visual elements chosen for this event",
       "primaryColor": "#hex",
-      "accentColor": "#hex"
+      "accentColor": "#hex",
+      "backgroundColor": "#hex",
+      "artworkPrompt": "A highly descriptive image-generation prompt for a vertical portrait background artwork capturing the essence of the event, realistic lighting and scenery, absolutely NO text or typography"
     },
     {
       "id": "premium-editorial",
       "name": "Creative Event-Specific Title",
       "description": "Specific 1-2 sentence description explaining the visual elements chosen for this event",
       "primaryColor": "#hex",
-      "accentColor": "#hex"
+      "accentColor": "#hex",
+      "backgroundColor": "#hex",
+      "artworkPrompt": "A highly descriptive image-generation prompt for a vertical portrait background artwork capturing the essence of the event, realistic lighting and scenery, absolutely NO text or typography"
     }
   ]
 }
