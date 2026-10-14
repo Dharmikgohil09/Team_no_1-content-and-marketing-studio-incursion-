@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProjectStore } from '../../store/projectStore'
 import { CardPreview } from '../components/CardPreview'
@@ -30,6 +30,13 @@ export function ExportPage() {
   const [exportFace,   setExportFace]   = useState<'front' | 'back'>('front')
   const [exporting,    setExporting]    = useState(false)
   const [done,         setDone]         = useState(false)
+
+  useEffect(() => {
+    const hasInput = Boolean(project?.eventContext?.description?.value?.trim() || project?.eventContext?.name?.value?.trim())
+    if (!project || !hasInput) {
+      navigate('/studio/describe', { replace: true })
+    }
+  }, [project])
 
   const brandKit = getDefaultBrandKit()
   const roles    = (project?.roles && project.roles.length > 0) ? project.roles : DEFAULT_ROLES

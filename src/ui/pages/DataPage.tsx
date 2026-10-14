@@ -56,6 +56,13 @@ export function DataPage() {
   const [rawRows, setRawRows]             = useState<Record<string, string>[]>([])
   const [rowStatuses, setRowStatuses]     = useState<PersonRowStatus[]>([])
   const [csvError, setCsvError]           = useState('')
+  // Redirect to Describe if project or input is missing
+  useEffect(() => {
+    const hasInput = Boolean(project?.eventContext?.description?.value?.trim() || project?.eventContext?.name?.value?.trim())
+    if (!project || !hasInput) {
+      navigate('/studio/describe', { replace: true })
+    }
+  }, [project])
 
   // Sync targetCount when expectedParticipantCount is detected
   useEffect(() => {

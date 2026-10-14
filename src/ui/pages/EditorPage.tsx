@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProjectStore } from '../../store/projectStore'
 import { CardPreview } from '../components/CardPreview'
@@ -24,6 +24,12 @@ export function EditorPage() {
   const saveVersion       = useProjectStore(s => s.saveVersion)
   const setWizardStep     = useProjectStore(s => s.setWizardStep)
 
+  useEffect(() => {
+    const hasInput = Boolean(project?.eventContext?.description?.value?.trim() || project?.eventContext?.name?.value?.trim())
+    if (!project || !hasInput) {
+      navigate('/studio/describe', { replace: true })
+    }
+  }, [project])
   const instituteLogo      = useProjectStore(s => s.instituteLogo)
   const clubLogo           = useProjectStore(s => s.clubLogo)
   const setInstituteLogo   = useProjectStore(s => s.setInstituteLogo)

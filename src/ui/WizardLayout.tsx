@@ -42,7 +42,8 @@ export function WizardLayout() {
             {STEPS.map((s, idx) => {
               const isActive   = idx === currentIdx
               const isComplete = idx < currentIdx
-              const isReachable = idx <= Math.max(step, currentIdx + 1)
+              // Forward navigation in the stepper is blocked until input on the current page is submitted
+              const isReachable = idx < currentIdx
 
               return (
                 <div key={s.id} className="flex items-center gap-1 shrink-0">
@@ -60,8 +61,6 @@ export function WizardLayout() {
                         ? 'bg-acm-600/30 text-acm-300 border border-acm-500/40 shadow-glow-acm'
                         : isComplete
                         ? 'text-acm-400 hover:text-acm-300 hover:bg-acm-600/20 cursor-pointer'
-                        : isReachable
-                        ? 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] cursor-pointer'
                         : 'text-slate-600 cursor-not-allowed'
                       }
                     `}

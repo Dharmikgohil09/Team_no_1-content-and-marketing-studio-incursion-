@@ -50,7 +50,11 @@ export function DraftsPage() {
   const brandKit = getDefaultBrandKit()
 
   useEffect(() => {
-    if (!project) { navigate('/studio/describe'); return }
+    const hasInput = Boolean(project?.eventContext?.description?.value?.trim() || project?.eventContext?.name?.value?.trim())
+    if (!project || !hasInput) {
+      navigate('/studio/describe', { replace: true })
+      return
+    }
     generate()
   }, [])
 
