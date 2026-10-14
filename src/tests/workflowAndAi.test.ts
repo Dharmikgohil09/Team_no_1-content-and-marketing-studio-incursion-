@@ -568,5 +568,42 @@ describe('Workflow & AI Improvements — Tests 1 to 7', () => {
       expect(svg).toContain('biz-growth-curve')
       expect(svg).not.toMatch(/[=" ]NaN[" ]/)
     })
+
+    it('extracts event name from "name as garba" and never asks for already provided details in clarification', () => {
+      const input = "the event is cultural name as garba 10 participant and 3 organizer make card for them"
+      const result = parseIntentDeterministic(input)
+
+      // 1. Name must be extracted as Garba with status provided
+      expect(result.eventContext.name.status).toBe('provided')
+      expect(result.eventContext.name.value).toBe('Garba')
+
+      // 2. Category must be cultural with status provided
+      expect((result.eventContext as any).category?.value).toBe('cultural')
+      expect((result.eventContext as any).category?.status).toBe('provided')
+
+      // 3. Roles: participant (count 10), organizer (count 3)
+      const roleMap = new Map(result.roles.map(r => [r.id, r]))
+      expect(roleMap.has('participant')).toBe(true)
+      expect(roleMap.get('participant')?.count).toBe(10)
+      expect(roleMap.has('organizer')).toBe(true)
+      expect(roleMap.get('organizer')?.count).toBe(3)
+
+      // 4. Requested fields should NOT falsely contain 'name' from "name as garba"
+      const reqFields = (result.eventContext as any).requestedFields?.value || []
+      expect(reqFields).not.toContain('name')
+
+      // 5. generateQuestions must NOT ask for event name, category, or roles because they were already provided in description!
+      const roles = result.roles.map(r => getRoleOrDefault(r.id))
+      const questions = generateQuestions(result.eventContext, roles)
+      const questionIds = questions.map(q => q.id)
+
+      expect(questionIds).not.toContain('q-event-name')
+      expect(questionIds).not.toContain('q-category')
+      expect(questionIds).not.toContain('q-roles')
+
+      // 6. Only genuinely missing details (date, venue) are asked
+      expect(questionIds).toContain('q-date-start')
+      expect(questionIds).toContain('q-venue')
+    })
   })
 })

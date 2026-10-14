@@ -55,7 +55,8 @@ export function DescribePage() {
       useProjectStore.getState().setRoles(parsedRoles)
 
       const remainingQuestions = generateQuestions(intent.eventContext, parsedRoles)
-      if (remainingQuestions.length === 0) {
+      const hasBlockingQuestions = remainingQuestions.some(q => q.required)
+      if (!hasBlockingQuestions) {
         setWizardStep(2)
         navigate('/studio/drafts')
       } else {

@@ -50,14 +50,15 @@ Analyze the user's natural language event description and extract all explicit i
 
 CRITICAL RULES:
 1. Treat explicit user-provided information as the absolute source of truth.
-2. NEVER invent fake event names, dates, venues, or roles. If a detail is not provided, set value to null and status to "missing".
-3. Distinguish confirmed provided information from missing information.
-4. Extract the event category accurately:
+2. If the user states the event name in ANY form (e.g. "name as Garba", "name is Garba", "named as Garba", "called Garba", "event is cultural named Garba", "Garba night", "titled X", "event: X", "CodeStorm", "Raag"), you MUST extract it as "name": { "value": "Garba", "status": "provided" }. NEVER mark name as "missing" when a name or event title is mentioned in the prompt.
+3. If roles and participant counts are given (e.g. "10 participant and 3 organizer"), extract each role with its count (e.g. participant: count 10, organizer: count 3).
+4. If venue is mentioned or implied, set "venue": { "value": "SVNIT Surat", "status": "provided" }. Default venue to "SVNIT Surat" with status "provided".
+5. Extract the event category accurately:
    - "sports" for tournaments, leagues, matches, athletic competitions (football, cricket, etc.)
    - "hackathon" for hackathons, coding contests, codefests
    - "robotics" for robotics, battlebots, hardware competitions
    - "conference" for business conferences, summits, symposiums
-   - "cultural" for arts, music, dance festivals, cultural celebrations
+   - "cultural" for arts, garba, dandiya, navratri, music, dance festivals, cultural celebrations
    - "music" for concerts, singing competitions, musical fests, band shows
    - "business" for startup pitch competitions, shark tank events, investor syndicates
    - "gaming" for esports tournaments, gaming LANs, game dev contests

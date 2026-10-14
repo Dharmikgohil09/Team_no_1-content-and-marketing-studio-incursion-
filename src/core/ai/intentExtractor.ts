@@ -65,27 +65,56 @@ export function parseIntentDeterministic(text: string): IntentResult {
   // Always retain raw description text for downstream category & theme detection
   ;(ctx as any).description = { value: text, status: 'provided' }
 
-  // 1. Event Name: look for "called X", "named X", "titled X", "cards for X at/on", or quoted names
-  const namePatterns = [
-    /(?:called|named|titled)\s+["']?([^"',.\n]+?)["']?(?:\s+(?:at|on|for|with|in|happening|scheduled|taking\s+place)|$|\.|\,)/i,
-    /(?:hackathon|tournament|conference|event|workshop|competition|concert|pitch|expo)\s+(?:called|named)\s+["']?([^"',.\n]+?)["']?(?:\s+(?:at|on|for|with|in|happening|scheduled|taking\s+place)|$|\.|\,)/i,
-    /(?:cards|passes|badges)\s+for\s+(?:an?\s+|the\s+)?([A-Z0-9][A-Za-z0-9\s-]{2,40}?)(?:\s+(?:at|on|in|with|happening)|$|\.|\,)/i,
-    /["']([^"'\n]{3,40})["']/,
+  // 1. Event Name:
+  // - "event name is Garba" / "event name: Garba" / "event name as Garba"
+  // - "event is [cultural/music/etc.] name as Garba" / "event is Garba"
+  // - "event ka naam Garba" / "naam Garba"
+  // - "cards/badges/passes for Garba"
+  // - "Garba event", "Garba fest", "Garba night"
+  // - Quoted strings "Garba"
+  const namePatterns: RegExp[] = [
+    // 1. Explicit name assignment keywords: "name as X", "name is X", "named as X", "event name as X", "event name: X", "event name X", "naam X"
+    /(?:event\s+name\s*(?:is|as|=|:)?|name\s*(?:is|as|=|:)|named\s*(?:as|is)?|called|titled|naam\s*(?:hai|is|=|:)?)\s+["']?([^"',.\n]+?)["']?(?:\s+(?:\d+\s+(?:participants?|attendees?|players?|organizers?|mentors?|volunteers?|people|members?|delegates?|\-?\s*hours?|\-?\s*days?)|and\b|for\b|with\b|at\b|on\b|in\b|having\b|make\b|need\b|create\b|cards?\b|passes?\b|badges?\b|participants?\b|organizers?\b|mentors?\b|volunteers?\b|judges?\b|speakers?\b|happening\b|scheduled\b|taking\s+place)|$|\.|\,)/i,
+
+    // 2. "event is [cultural/sports/etc.] [name as/called/named] X"
+    /(?:the\s+)?event\s+is\s+(?:cultural|technical|sports|music|dance|business|academic|gaming)?\s*(?:named|called|as|is|name\s+as)?\s+["']?([^"',.\n]+?)["']?(?:\s+(?:\d+\s+(?:participants?|attendees?|players?|organizers?|mentors?|volunteers?|people|members?|delegates?|\-?\s*hours?|\-?\s*days?)|and\b|for\b|with\b|at\b|on\b|in\b|having\b|make\b|need\b|create\b|cards?\b|passes?\b|badges?\b|participants?\b|organizers?\b)|$|\.|\,)/i,
+
+    // 3. "hackathon/tournament/event called/named/name as X"
+    /(?:hackathon|tournament|conference|event|workshop|competition|concert|pitch|expo|fest|festival)\s+(?:called|named|name\s+as|as)\s+["']?([^"',.\n]+?)["']?(?:\s+(?:\d+\s+(?:participants?|attendees?|players?|organizers?|mentors?|volunteers?|people|members?|delegates?|\-?\s*hours?|\-?\s*days?)|at\b|on\b|for\b|with\b|in\b|having\b|happening\b|scheduled\b|taking\s+place)|$|\.|\,)/i,
+
+    // 4. "cards/passes/badges for [an/the]? X"
+    /(?:cards?|passes?|badges?)\s+for\s+(?:an?\s+|the\s+)?([A-Z0-9][A-Za-z0-9\s-]{1,40}?)(?:\s+(?:at\b|on\b|in\b|with\b|having\b|happening\b|\d+\s+(?:participants?|attendees?|players?|organizers?))|$|\.|\,)/i,
+
+    // 5. "X event / fest / festival / tournament / hackathon / concert / night" (1-2 capitalized words, e.g. "Garba Night", "TechFest")
+    /\b([A-Z][a-zA-Z0-9-]{1,20}(?:\s+[A-Z0-9][a-zA-Z0-9-]{1,20})?)\s+(?:event|fest|festival|competition|tournament|hackathon|concert|pitch|expo|summit|championship|night|utsav|mahotsav)\b/,
+
+    // 6. Quoted names "X" or 'X'
+    /["']([^"'\n]{2,40})["']/,
   ]
+
   for (const pat of namePatterns) {
     const m = text.match(pat)
-    if (m && m[1]?.trim() && !/^(an|a|the|our|college)\b/i.test(m[1].trim())) {
-      const cleanName = m[1].trim().replace(/\s+(?:happening|taking\s+place|scheduled).*$/i, '').trim()
-      ctx.name = { value: cleanName, status: 'provided' }
-      break
+    if (m && m[1]?.trim()) {
+      const rawCandidate = m[1].trim()
+      if (/\b(?:an?|the|our|college|this|my|annual)\b/i.test(rawCandidate)) {
+        continue
+      }
+      let candidate = rawCandidate.replace(/\s+(?:happening|taking\s+place|scheduled|make\s+cards?|cards?).*$/i, '').trim()
+      if (candidate.length >= 2 && !/^(event|college|school|university|campus|annual|this|my|cards?|badges?|passes?|cultural|technical|sports|music|dance)$/i.test(candidate)) {
+        const cleanName = (!/[a-z]/.test(candidate) || !/[A-Z]/.test(candidate))
+          ? candidate.replace(/\b\w/g, l => l.toUpperCase())
+          : candidate
+        ctx.name = { value: cleanName, status: 'provided' }
+        break
+      }
     }
   }
 
-  // If no specific name pattern matched, try title case extraction or fallback to first words
+  // Fallback: check known festival, competition, and event titles in text
   if (ctx.name.status === 'missing') {
-    const sharkMatch = text.match(/\b(shark\s*(?:tank|mank)|startup\s*pitch|incursion|techfest|battlebots?)\b/i)
-    if (sharkMatch) {
-      ctx.name = { value: sharkMatch[1].replace(/\b\w/g, l => l.toUpperCase()), status: 'provided' }
+    const knownEventMatch = text.match(/\b(garba(?:\s+(?:night|utsav|dandiya|mahotsav|fest|20\d\d))?|dandiya|navratri|diwali\s*mela|spardha|incursion|techfest|codestorm|hacknit|battlebots?|shark\s*(?:tank|mank)|startup\s*pitch|raag|raga|tarang)\b/i)
+    if (knownEventMatch) {
+      ctx.name = { value: knownEventMatch[1].replace(/\b\w/g, l => l.toUpperCase()), status: 'provided' }
     }
   }
 
@@ -103,7 +132,7 @@ export function parseIntentDeterministic(text: string): IntentResult {
     category = 'hackathon'
   } else if (/(?:robotics?|robots?|bots?|battlebots?|mechatronics)/i.test(text)) {
     category = 'robotics'
-  } else if (/(?:cultural|fest|festival|dance|arts?|celebration|drama|theatre)/i.test(text)) {
+  } else if (/(?:cultural|garba|dandiya|navratri|diwali|fest|festival|dance|arts?|celebration|drama|theatre)/i.test(text)) {
     category = 'cultural'
   } else if (/(?:conference|summit|symposium|keynote|business|seminar)/i.test(text)) {
     category = 'conference'
@@ -138,17 +167,19 @@ export function parseIntentDeterministic(text: string): IntentResult {
     }
   }
 
-  // 5. Venue — look for "at VENUE" or "in VENUE" patterns
-  const venueMatch = text.match(/\bat\s+([A-Z0-9][A-Za-z0-9,.\s]+?)(?:\s+with|\s+on|\s+for|$|\.|\,)/i)
-  if (venueMatch) {
+  // 5. Venue — look for "at VENUE" or "in VENUE" patterns or SVNIT
+  const venueMatch = text.match(/\b(?:at|in)\s+([A-Z0-9][A-Za-z0-9,.\s]+?)(?:\s+with|\s+on|\s+for|$|\.|\,)/i)
+  if (venueMatch && !/^(?:the|our|an?)\s*(?:event|college|campus)$/i.test(venueMatch[1].trim())) {
     ctx.venue = { value: venueMatch[1].trim(), status: 'provided' }
+  } else if (/svnit|nit\s*surat/i.test(text)) {
+    ctx.venue = { value: 'SVNIT Surat', status: 'provided' }
   }
 
   // 6. Roles + counts
   for (const { pattern, id, label } of ROLE_KEYWORDS) {
     if (pattern.test(text)) {
-      const countMatch = text.match(new RegExp(`(?:approximately\\s+|about\\s+)?(\\d+)\\s+${label.toLowerCase()}s?`, 'i'))
-      const count = countMatch ? parseInt(countMatch[1]) : undefined
+      const countMatch = text.match(new RegExp(`(?:approximately\\s+|about\\s+)?(\\d+)\\s+${label.toLowerCase()}s?|${label.toLowerCase()}s?\\s*(?:count\s*)?[:=]?\\s*(\\d+)`, 'i'))
+      const count = countMatch ? parseInt(countMatch[1] || countMatch[2]) : undefined
       detectedRoles.push({ id, label, count })
     }
   }
@@ -159,9 +190,9 @@ export function parseIntentDeterministic(text: string): IntentResult {
     (ctx as any).participantCount = { value: parseInt(totalPartMatch[1]), status: 'provided' }
   }
 
-  // 8. Requested Fields (name, photo, team, role, id, qr)
+  // 8. Requested Fields (photo, team, role, id, qr)
   const reqFields: string[] = []
-  if (/name/i.test(text)) reqFields.push('name')
+  if (/\b(?:participant\s*names?|person\s*names?|attendee\s*names?|full\s*names?|names?\s*on\s*cards?|with\s+(?:participant\s+)?names?)\b/i.test(text) || (/\bnames\b/i.test(text) && !/\bname\s*(?:as|is|=|:)\b/i.test(text))) reqFields.push('name')
   if (/photo|photograph|picture/i.test(text)) {
     reqFields.push('photo')
     ;(ctx as any).hasPhotos = { value: true, status: 'provided' }
@@ -202,6 +233,7 @@ export function parseIntentDeterministic(text: string): IntentResult {
 
 /** Call the LLM proxy; falls back to deterministic if unavailable */
 export async function extractIntent(text: string): Promise<IntentResult> {
+  const deterministic = parseIntentDeterministic(text)
   try {
     const res = await fetch('/api/llm/extract-intent', {
       method: 'POST',
@@ -211,9 +243,35 @@ export async function extractIntent(text: string): Promise<IntentResult> {
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json()
-    return IntentResultSchema.parse(data)
+    const parsed = IntentResultSchema.parse(data)
+
+    // MERGE GUARANTEE:
+    // If deterministic extractor extracted explicit details (name, category, venue, dateStart),
+    // ensure the LLM response does NOT degrade them to 'missing' or null!
+    if (deterministic.eventContext.name?.status === 'provided' && (!parsed.eventContext.name?.value || parsed.eventContext.name.status === 'missing')) {
+      parsed.eventContext.name = deterministic.eventContext.name
+    }
+    if ((deterministic.eventContext as any).category?.status === 'provided' && (!(parsed.eventContext as any).category?.value || (parsed.eventContext as any).category?.status === 'missing')) {
+      (parsed.eventContext as any).category = (deterministic.eventContext as any).category
+    }
+    if (deterministic.eventContext.venue?.status === 'provided' && (!parsed.eventContext.venue?.value || parsed.eventContext.venue.status === 'missing')) {
+      parsed.eventContext.venue = deterministic.eventContext.venue
+    }
+    if (deterministic.eventContext.dateStart?.status === 'provided' && (!parsed.eventContext.dateStart?.value || parsed.eventContext.dateStart.status === 'missing')) {
+      parsed.eventContext.dateStart = deterministic.eventContext.dateStart
+    }
+    // Merge roles and role counts
+    for (const dRole of deterministic.roles) {
+      const match = parsed.roles.find(r => r.id === dRole.id)
+      if (match) {
+        if (!match.count && dRole.count) match.count = dRole.count
+      } else {
+        parsed.roles.push(dRole)
+      }
+    }
+    return parsed
   } catch (err) {
     console.warn('LLM unavailable, falling back to deterministic parser:', err)
-    return parseIntentDeterministic(text)
+    return deterministic
   }
 }
