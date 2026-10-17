@@ -51,7 +51,7 @@ export function attachArtworkToDraft(
     src: imageUrl,
     fit: 'cover',
     cornerRadius: 0,
-    opacity: 0.88,
+    opacity: 0.95,
     preserveAspectRatio: true,
     isLogo: false,
   }
@@ -65,24 +65,27 @@ export function attachArtworkToDraft(
     stroke: 'transparent',
     strokeWidth: 0,
     cornerRadius: 0,
-    opacity: 0.35,
+    opacity: 0.25,
   }
 
-  const OPAQUE_BG_IDS = new Set(['header-bg', 'lower-bg', 'tech-hero-bg', 'tech-lower-bg', 'bg-obsidian'])
+  const OPAQUE_BG_IDS = new Set(['header-bg', 'lower-bg', 'tech-hero-bg', 'tech-lower-bg', 'bg-obsidian', 'back-bg'])
 
   const updateElementList = (elements: Element[]): Element[] => {
     const filtered = elements.filter(e => {
       if (e.id === 'bg-artwork' || e.id === 'bg-contrast-overlay') return false
       // Filter out opaque background shapes so bg-artwork is not hidden beneath them
       if (OPAQUE_BG_IDS.has(e.id)) return false
-      // Filter out generic silhouettes that would clash with the AI-generated artwork
+      // Filter out hardcoded preset theme motifs so the AI generated artwork is unhindered
       if (
-        e.id?.startsWith('music-singer') ||
-        e.id?.startsWith('music-crowd') ||
-        e.id?.startsWith('sports-runner') ||
-        e.id?.startsWith('cultural-dancer') ||
-        e.id?.startsWith('startup-pitcher') ||
-        e.id?.startsWith('investor-crowd')
+        e.id?.startsWith('music-') ||
+        e.id?.startsWith('sports-') ||
+        e.id?.startsWith('cultural-') ||
+        e.id?.startsWith('startup-') ||
+        e.id?.startsWith('investor-') ||
+        e.id?.startsWith('theme-motif') ||
+        e.id?.startsWith('robotics-') ||
+        e.id?.startsWith('cyber-') ||
+        e.id?.startsWith('festive-')
       ) {
         return false
       }
@@ -181,15 +184,17 @@ export async function generateDrafts(
 
   const drafts = generateDraftsDeterministic(event, roles, logos, llmData)
 
-  // Asynchronously generate and attach background artwork for all drafts via backend
+  // Generate and attach background artwork for all drafts via backend
   try {
     const eventName = event.name?.value || 'Event'
     const eventDesc = (event as any).description?.value || ''
     const category = llmData?.category || detectEventCategory(event)
 
-    const artworkPromises = drafts.map(async (draft, i) => {
+    const finalizedDrafts: CardTemplate[] = []
+    for (let i = 0; i < drafts.length; i++) {
+      const draft = drafts[i]
       const llmDraft = llmData?.drafts?.[i]
-      const prompt = llmDraft?.artworkPrompt || llmData?.visualDirection || `${eventName} ${eventDesc}`
+      const prompt = llmDraft?.artworkPrompt || (llmData?.visualDirection ? `${llmData.visualDirection} (Concept ${i + 1})` : `${eventName}: ${eventDesc}`)
       try {
         const artRes = await fetch('/api/image/generate-background', {
           method: 'POST',
@@ -204,21 +209,22 @@ export async function generateDrafts(
             backgroundColor: llmDraft?.backgroundColor || draft.tokens?.backgroundColor,
             draftId: draft.id,
           }),
-          signal: AbortSignal.timeout(20000),
+          signal: AbortSignal.timeout(25000),
         })
         if (artRes.ok) {
           const artData = await artRes.json()
           if (artData.imageUrl) {
-            return attachArtworkToDraft(draft, artData.imageUrl, !!artData.isGenerated, prompt)
+            finalizedDrafts.push(attachArtworkToDraft(draft, artData.imageUrl, !!artData.isGenerated, prompt))
+            continue
           }
         }
       } catch (artErr) {
         console.warn(`Artwork generation failed for draft ${draft.id}:`, artErr)
       }
-      return draft
-    })
+      finalizedDrafts.push(draft)
+    }
 
-    return await Promise.all(artworkPromises)
+    return finalizedDrafts
   } catch (err) {
     console.warn('Background artwork attachment failed:', err)
     return drafts
@@ -1901,6 +1907,12 @@ export function generateDraftsDeterministic(
     backElements: draft1RoleBack[defaultRole.id],
     roleElements: draft1RoleFront,
     roleBackElements: draft1RoleBack,
+    tokens: {
+      primaryColor: llmD1?.primaryColor || '#6366f1',
+      accentColor: llmD1?.accentColor || '#ec4899',
+      backgroundColor: llmD1?.backgroundColor || '#090d16',
+      artworkPrompt: llmD1?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
+    },
   }
 
   // Draft 2: Creative Dynamic (Chevron Banner & Visual Motifs)
@@ -1925,6 +1937,12 @@ export function generateDraftsDeterministic(
     backElements: draft2RoleBack[defaultRole.id],
     roleElements: draft2RoleFront,
     roleBackElements: draft2RoleBack,
+    tokens: {
+      primaryColor: llmD2?.primaryColor || '#06b6d4',
+      accentColor: llmD2?.accentColor || '#f59e0b',
+      backgroundColor: llmD2?.backgroundColor || '#0a101d',
+      artworkPrompt: llmD2?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
+    },
   }
 
   // Draft 3: Premium Editorial (Matte Obsidian & Accent Block)
@@ -1949,6 +1967,12 @@ export function generateDraftsDeterministic(
     backElements: draft3RoleBack[defaultRole.id],
     roleElements: draft3RoleFront,
     roleBackElements: draft3RoleBack,
+    tokens: {
+      primaryColor: llmD3?.primaryColor || '#ec4899',
+      accentColor: llmD3?.accentColor || '#a855f7',
+      backgroundColor: llmD3?.backgroundColor || '#070110',
+      artworkPrompt: llmD3?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
+    },
   }
 
   return [draft1, draft2, draft3]
