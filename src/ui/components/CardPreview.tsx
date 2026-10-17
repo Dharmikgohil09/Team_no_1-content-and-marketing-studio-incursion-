@@ -54,8 +54,8 @@ export function CardPreview({
   const effectivePerson = useMemo(() => ({
     ...person,
     name: person?.name && person.name !== '[No Name]' ? person.name : 'Participant Name',
-    team: person?.team || 'Team Alpha',
-    id: person?.id || 'ID-042',
+    team: person?.team || '',
+    id: person?.id || '',
   }), [person])
 
   const { svg, warnings } = useMemo(() => {

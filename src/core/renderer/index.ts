@@ -214,7 +214,7 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
     } else if (id.includes('role-label') || id === 'role') {
       content = (ctx.role?.label || 'PARTICIPANT').toUpperCase()
     } else if (id.includes('person-detail') || id.includes('team')) {
-      content = ctx.person?.team || 'Team Alpha'
+      content = ctx.person?.team || ''
     } else if (id.includes('org') || id.includes('branding') || id.includes('acm-label')) {
       content = ctx.event?.organizer?.value
         ? ctx.event.organizer.value.toUpperCase()
@@ -224,6 +224,11 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
     }
   }
 
+  // If text content is completely empty, do not render an empty tspan or orphan element
+  if (!content || !content.trim()) {
+    return ''
+  }
+
   // Title-case raw lowercase event names for professional look
   if ((el.id.includes('event-name') || el.id.includes('title') || el.id.includes('header-category')) && content && content === content.toLowerCase()) {
     content = content.replace(/\b\w/g, l => l.toUpperCase())
@@ -231,7 +236,7 @@ function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): s
 
   // Auto-fit
   const fit = autoFitText({
-    text:        content || '—',
+    text:        content,
     widthMm:     a.w,
     heightMm:    a.h,
     fontFamily:  el.fontFamily,

@@ -56,9 +56,9 @@ function resolvePath(path: string, ctx: BindingContext): unknown {
       return ctx.person?.photoUrl || (ctx.person as any)?.photo || (ctx.person as any)?.avatar || ''
     }
     if (trimmed === 'person.team' || trimmed === 'person.college' || trimmed === 'person.org' || trimmed === 'person.department') {
-      return ctx.person?.team || ctx.person?.extra?.college || ctx.person?.extra?.department || 'Team Alpha'
+      return ctx.person?.team || ctx.person?.extra?.college || ctx.person?.extra?.department || ''
     }
-    if (trimmed === 'person.id' || trimmed === 'person.uid' || trimmed === 'person.regNo') return ctx.person?.id || 'ID-042'
+    if (trimmed === 'person.id' || trimmed === 'person.uid' || trimmed === 'person.regNo') return ctx.person?.id || ''
     if (trimmed === 'role.label' || trimmed === 'person.role') return ctx.role?.label || 'Participant'
   }
   return obj

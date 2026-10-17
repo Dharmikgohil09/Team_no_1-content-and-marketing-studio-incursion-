@@ -84,14 +84,16 @@ describe('Draft Generation System', () => {
     const minimalPhoto = minimal.elements.find((el) => el.type === 'photo');
     expect(minimalPhoto?.shape).toBe('circle');
 
-    // Creative Tech has hexagon / tech shapes and barcode
+    // Creative Tech has hexagon / tech shapes and scannable QR (barcode removed per design requirements)
     const techShapes = tech.elements.filter((el) => el.type === 'shape');
     const hasHexOrChevron = techShapes.some(
       (s) => s.id?.includes('hex') || s.id?.includes('chevron')
     );
     expect(hasHexOrChevron).toBe(true);
     const techBarcode = tech.elements.find((el) => el.type === 'barcode');
-    expect(techBarcode).toBeDefined();
+    expect(techBarcode).toBeUndefined();
+    const techQr = tech.elements.find((el) => el.type === 'qr');
+    expect(techQr).toBeDefined();
 
     // Premium Editorial has asymmetric vertical block and rectangular photo
     const editorialPhoto = editorial.elements.find((el) => el.type === 'photo');
@@ -170,12 +172,24 @@ describe('Vector SVG Renderer', () => {
     expect(result.svg).toContain('shape-rendering="crispEdges"');
   });
 
-  it('should render vector barcode with ID text in Creative Tech card', () => {
-    const drafts = generateDraftsDeterministic(dummyEvent, ['participant']);
-    const techDraft = drafts.find((d) => d.id === 'creative-tech')!;
+  it('should render vector barcode with ID text in templates with barcode element', () => {
+    const customTemplate = {
+      ...generateDraftsDeterministic(dummyEvent, ['participant'])[0],
+      roleElements: {
+        participant: [
+          {
+            type: 'barcode' as const,
+            id: 'person-barcode',
+            anchor: { x: 7, y: 73, w: 40, h: 8 },
+            valueBinding: '{{person.id}}',
+            format: 'CODE128' as const,
+          },
+        ],
+      },
+    };
     const role = getRoleOrDefault('participant');
     const result = renderCard({
-      template: techDraft,
+      template: customTemplate,
       role,
       person: dummyPerson,
       event: dummyEvent,

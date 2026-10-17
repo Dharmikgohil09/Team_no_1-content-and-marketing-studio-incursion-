@@ -371,21 +371,6 @@ function buildModernMinimalFront(
       maxLines: 1,
       minFontSize: 4.5,
     },
-    // 7. Badge Serial No. (Ref 1 style "No. 0250")
-    {
-      type: 'text',
-      id: 'badge-serial',
-      anchor: { x: 13, y: 16.0, w: 28, h: 3 },
-      content: 'No. {{person.id}}',
-      fontFamily: 'Inter',
-      fontSize: 2.7,
-      fontWeight: '500',
-      color: isDarkCategory ? '#94a3b8' : '#64748b',
-      align: 'center',
-      verticalAlign: 'middle',
-      maxLines: 1,
-      minFontSize: 2,
-    },
     // 8. Lower Deep Credential Section
     {
       type: 'shape',
@@ -495,48 +480,22 @@ function buildModernMinimalFront(
     {
       type: 'text',
       id: 'person-detail',
-      anchor: { x: 2, y: 67.2, w: 50, h: 4 },
-      content: category === 'music'
-        ? (isOrganizer
-          ? 'Concert Management & Production'
-          : isJudge
-          ? 'Honorary Music Jury'
-          : isSpeaker
-          ? 'Headline Artist & Vocalist'
-          : isVolunteer
-          ? 'Audio & Stage Crew'
-          : isMentor
-          ? 'Musical Director & Mentor'
-          : 'Live Arena Pass Holder')
-        : category === 'business'
-        ? (isSpeaker ? 'Founder & Pitch Presenter' : isMentor ? 'Venture Capital & Angel Investor' : isJudge ? 'Syndicate Evaluation Jury' : isOrganizer ? 'Pitch Summit Director' : '{{person.team}}')
-        : category === 'gaming'
-        ? (isPlayer ? 'Esports Pro Player · {{person.team}}' : isJudge ? 'Official Tournament Marshal' : isOrganizer ? 'Arena Director' : '{{person.team}}')
-        : isOrganizer
-        ? 'Executive Organizing Committee'
-        : isJudge
-        ? 'Grand Jury & Evaluation Panel'
-        : isSpeaker
-        ? 'Keynote & Industry Leader'
-        : isVolunteer
-        ? 'Operations & Logistics Crew'
-        : isMentor
-        ? 'Technical Advisor & Mentor'
-        : '{{person.team}}',
-      fontFamily: 'Inter',
-      fontSize: 3.6,
+      anchor: { x: 2, y: 66.5, w: 50, h: 4 },
+      content: '{{person.team}}',
+      fontFamily: 'Space Grotesk',
+      fontSize: 3.5,
       fontWeight: '500',
-      color: '#cbd5e1',
+      color: pal.d1Accent,
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
-      minFontSize: 2.8,
+      minFontSize: 2.5,
     },
     // 17. Real Scannable Vector QR Code
     {
       type: 'qr',
       id: 'person-qr',
-      anchor: { x: 23, y: 74, w: 8, h: 8 },
+      anchor: { x: 22.5, y: 69.5, w: 9, h: 9 },
       urlPattern: event.website?.value ? `${event.website.value.replace(/\/$/, '')}/verify/{{person.id}}` : `https://verify.eventpass.live/{{person.id}}`,
       fgColor: '#ffffff',
       bgColor: 'transparent',
@@ -1082,36 +1041,26 @@ function buildCreativeTechFront(
     {
       type: 'text',
       id: 'person-team',
-      anchor: { x: 2, y: 54.5, w: 50, h: 4 },
-      content: personDetailText,
-      fontFamily: 'Inter',
-      fontSize: 3.9,
-      fontWeight: '600',
-      color: pal.d2TeamColor,
+      anchor: { x: 2, y: 55, w: 50, h: 4 },
+      content: '{{person.team}}',
+      fontFamily: 'Space Grotesk',
+      fontSize: 3.5,
+      fontWeight: '500',
+      color: accentColor,
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
-      minFontSize: 2.8,
+      minFontSize: 2.5,
     },
     // 14. Real Vector QR Code
     {
       type: 'qr',
       id: 'person-qr',
-      anchor: { x: 23, y: 63.5, w: 8, h: 8 },
+      anchor: { x: 21, y: 61, w: 12, h: 12 },
       urlPattern: event.website?.value ? `${event.website.value.replace(/\/$/, '')}/verify/{{person.id}}` : `https://verify.eventpass.live/{{person.id}}`,
       fgColor: pal.d2BarcodeFg,
       bgColor: 'transparent',
       errorCorrection: 'M',
-    },
-    // 15. Vector Barcode Strip
-    {
-      type: 'barcode',
-      id: 'person-barcode',
-      anchor: { x: 7, y: 73, w: 40, h: 8 },
-      valueBinding: '{{person.id}}',
-      format: 'CODE128',
-      fgColor: pal.d2BarcodeFg,
-      bgColor: pal.d2BarcodeBg,
     },
     // 16. Footer Validity Micro-Text
     {
@@ -1286,21 +1235,6 @@ function buildPremiumEditorialFront(
       maxLines: 1,
       minFontSize: 2,
     },
-    // 6. Serial Badge inside the vertical block
-    {
-      type: 'text',
-      id: 'block-serial',
-      anchor: { x: 37, y: 12, w: 12.5, h: 3.5 },
-      content: serialText,
-      fontFamily: 'Space Grotesk',
-      fontSize: 2.4,
-      fontWeight: '700',
-      color: isJudge ? '#0f172a' : '#ffffff',
-      align: 'center',
-      verticalAlign: 'middle',
-      maxLines: 1,
-      minFontSize: 1.8,
-    },
     // 7. Compact QR code nested at bottom of the accent block
     {
       type: 'qr',
@@ -1330,7 +1264,7 @@ function buildPremiumEditorialFront(
     {
       type: 'text',
       id: 'role-label',
-      anchor: { x: 4, y: 60.5, w: 46, h: 4.8 },
+      anchor: { x: 4, y: 60.5, w: 46, h: 4.5 },
       content: role.label,
       fontFamily: 'Space Grotesk',
       fontSize: 4.8,
@@ -1345,22 +1279,22 @@ function buildPremiumEditorialFront(
     {
       type: 'text',
       id: 'person-team',
-      anchor: { x: 4, y: 65.5, w: 46, h: 4 },
-      content: personDetailContent,
+      anchor: { x: 4, y: 65.2, w: 46, h: 3.8 },
+      content: '{{person.team}}',
       fontFamily: 'Inter',
-      fontSize: 3.8,
+      fontSize: 3.2,
       fontWeight: '500',
-      color: '#94a3b8',
+      color: pal.d3Accent,
       align: 'left',
       verticalAlign: 'middle',
       maxLines: 1,
-      minFontSize: 2.8,
+      minFontSize: 2.5,
     },
     // 11. Event Name
     {
       type: 'text',
       id: 'event-name',
-      anchor: { x: 4, y: 69.5, w: 46, h: 4.8 },
+      anchor: { x: 4, y: 69.5, w: 46, h: 4.5 },
       content: event.name?.value
         ? (event.name.value === event.name.value.toLowerCase() ? event.name.value.replace(/\b\w/g, l => l.toUpperCase()) : event.name.value)
         : 'Event Name',
@@ -1714,8 +1648,8 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d1Desc: 'High-contrast athletic badge with dynamic split framing, participant roster tagging, and tournament verification QR.',
     d1Tags: ['sports', 'athletic', 'tournament', 'championship', 'clean'],
     d2Name: n => `Dynamic Arena Pass — ${n}`,
-    d2Desc: 'Energetic sports pass with athletic speed chevrons, bold chevron divider, player barcode, and stadium credentials.',
-    d2Tags: ['sports', 'arena', 'dynamic', 'chevron', 'barcode', 'match-day'],
+    d2Desc: 'Energetic sports pass with athletic speed chevrons, bold chevron divider, and stadium credentials.',
+    d2Tags: ['sports', 'arena', 'dynamic', 'chevron', 'scannable', 'match-day'],
     d3Name: n => `Championship Editorial — ${n}`,
     d3Desc: 'Bold sports credential with asymmetric player portrait, competition accent bar, and official roster verification.',
     d3Tags: ['sports', 'editorial', 'championship', 'prestige', 'roster'],
@@ -1725,8 +1659,8 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d1Desc: 'Clean dual-tone vertical badge with circular ring portrait, lanyard badge slot, and balanced typography.',
     d1Tags: ['minimal', 'dual-tone', 'vertical-split', 'lanyard-badge', 'hackathon'],
     d2Name: n => `Creative Tech — ${n}`,
-    d2Desc: 'Scientific and geometric tech badge with hexagon molecular network, glowing halo avatar, chevron divider, and barcode strip.',
-    d2Tags: ['creative', 'tech', 'hexagons', 'chevron', 'barcode', 'hackathon'],
+    d2Desc: 'Scientific and geometric tech badge with hexagon molecular network, glowing halo avatar, chevron divider, and verification QR code.',
+    d2Tags: ['creative', 'tech', 'hexagons', 'chevron', 'scannable', 'hackathon'],
     d3Name: n => `Premium Editorial — ${n}`,
     d3Desc: 'Minimal matte obsidian card with bold asymmetric rectangular photo framing, striking vertical accent block, and cyber typography.',
     d3Tags: ['editorial', 'asymmetric', 'matte-obsidian', 'accent-block', 'prestige', 'hackathon'],
@@ -1736,8 +1670,8 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d1Desc: 'Precision technical badge with geometric dual-tone layout, engineering badges, and automated verification.',
     d1Tags: ['robotics', 'engineering', 'precision', 'minimal', 'hardware'],
     d2Name: n => `Telemetry Grid — ${n}`,
-    d2Desc: 'Robotics lab credential with telemetry caliper brackets, technical circuit accents, and equipment barcode.',
-    d2Tags: ['robotics', 'telemetry', 'circuits', 'barcode', 'tech'],
+    d2Desc: 'Robotics lab credential with telemetry caliper brackets, technical circuit accents, and technical accreditation QR.',
+    d2Tags: ['robotics', 'telemetry', 'circuits', 'scannable', 'tech'],
     d3Name: n => `Lab Accreditation — ${n}`,
     d3Desc: 'Matte obsidian research credential with asymmetric photo frame, telemetry accent bar, and laboratory accreditation.',
     d3Tags: ['robotics', 'lab', 'accreditation', 'editorial', 'prestige'],
@@ -1748,7 +1682,7 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d1Tags: ['conference', 'summit', 'executive', 'delegate', 'minimal'],
     d2Name: n => `Summit Diamond Crest — ${n}`,
     d2Desc: 'Prestigious conference badge with geometric crest accents, chevron divider, and keynote session credentials.',
-    d2Tags: ['conference', 'summit', 'crest', 'keynote', 'barcode'],
+    d2Tags: ['conference', 'summit', 'crest', 'keynote', 'scannable'],
     d3Name: n => `Prestigious Delegate — ${n}`,
     d3Desc: 'Premium matte obsidian delegate pass with asymmetric portrait framing, champagne accent bar, and executive branding.',
     d3Tags: ['conference', 'delegate', 'obsidian', 'editorial', 'vip'],
@@ -1758,8 +1692,8 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d1Desc: 'Celebratory festival badge with dynamic split styling, colorful role badge, and festival access QR code.',
     d1Tags: ['cultural', 'fest', 'radiance', 'arts', 'celebration'],
     d2Name: n => `Celebration Mosaic — ${n}`,
-    d2Desc: 'Vibrant cultural identity card with festive star diamond motifs, chevron apex, and event entry barcode.',
-    d2Tags: ['cultural', 'festive', 'mosaic', 'celebration', 'barcode'],
+    d2Desc: 'Vibrant cultural identity card with festive star diamond motifs, chevron apex, and festival access QR.',
+    d2Tags: ['cultural', 'festive', 'mosaic', 'celebration', 'scannable'],
     d3Name: n => `Artisan VIP Pass — ${n}`,
     d3Desc: 'Deep velvet festival pass with asymmetric artist portrait framing, vibrant accent block, and stage accreditation.',
     d3Tags: ['cultural', 'artisan', 'editorial', 'artist-pass', 'vip'],
@@ -1769,8 +1703,8 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d1Desc: 'Executive startup pitch badge with pitch presenter silhouette, venture growth trajectory, and investor audience watermark.',
     d1Tags: ['business', 'pitch', 'shark-tank', 'startup', 'investor', 'executive'],
     d2Name: n => `Venture Capital Pass — ${n}`,
-    d2Desc: 'High-stakes founder & investor credential with summit rays, growth metrics, chevron apex, and executive barcode.',
-    d2Tags: ['business', 'venture', 'founder', 'investor', 'growth', 'barcode'],
+    d2Desc: 'High-stakes founder & investor credential with summit rays, growth metrics, chevron apex, and executive verification QR.',
+    d2Tags: ['business', 'venture', 'founder', 'investor', 'growth', 'scannable'],
     d3Name: n => `Angel Syndicate VIP — ${n}`,
     d3Desc: 'Premium obsidian executive pass with asymmetric portrait framing, champagne gold accent bar, and venture verification.',
     d3Tags: ['business', 'syndicate', 'angel', 'executive', 'editorial', 'vip'],
@@ -1780,8 +1714,8 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d1Desc: 'High-energy esports tournament badge with cyber neon split, gamer battlestation silhouette, arena lasers, and audience crowd.',
     d1Tags: ['gaming', 'esports', 'tournament', 'cyber', 'arena', 'gamer'],
     d2Name: n => `Cyber Battlestation — ${n}`,
-    d2Desc: 'Futuristic gaming credential with laser matrix grid, halo avatar framing, battlestation watermark, and gamer barcode.',
-    d2Tags: ['gaming', 'battlestation', 'neon', 'cyber', 'barcode'],
+    d2Desc: 'Futuristic gaming credential with laser matrix grid, halo avatar framing, battlestation watermark, and arena access QR.',
+    d2Tags: ['gaming', 'battlestation', 'neon', 'cyber', 'scannable'],
     d3Name: n => `Pro Roster VIP — ${n}`,
     d3Desc: 'Matte obsidian esports pass with asymmetric gamer portrait framing, electric violet accent bar, and tournament accreditation.',
     d3Tags: ['gaming', 'pro-roster', 'editorial', 'obsidian', 'tournament'],
@@ -1802,8 +1736,8 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d1Desc: 'Clean educational credential with dual-tone layout, cohort details, and verification badge.',
     d1Tags: ['workshop', 'academic', 'training', 'bootcamp', 'minimal'],
     d2Name: n => `Bootcamp Cohort Pass — ${n}`,
-    d2Desc: 'Structured learning credential with technical motifs, chevron accent, and attendance barcode.',
-    d2Tags: ['workshop', 'cohort', 'bootcamp', 'barcode', 'learning'],
+    d2Desc: 'Structured learning credential with technical motifs, chevron accent, and attendance verification QR.',
+    d2Tags: ['workshop', 'cohort', 'bootcamp', 'scannable', 'learning'],
     d3Name: n => `Editorial Scholar — ${n}`,
     d3Desc: 'Matte scholar credential with asymmetric portrait framing, cohort accent bar, and masterclass certification.',
     d3Tags: ['workshop', 'scholar', 'editorial', 'masterclass', 'certification'],
@@ -1813,8 +1747,8 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d1Desc: 'Clean dual-tone vertical badge with circular ring portrait, lanyard badge slot, and balanced typography.',
     d1Tags: ['minimal', 'dual-tone', 'vertical-split', 'lanyard-badge', 'clean'],
     d2Name: n => `Creative Tech — ${n}`,
-    d2Desc: 'Scientific and geometric badge with molecular network, glowing halo avatar, chevron divider, and barcode strip.',
-    d2Tags: ['creative', 'geometric', 'chevron', 'barcode', 'modern'],
+    d2Desc: 'Scientific and geometric badge with molecular network, glowing halo avatar, chevron divider, and verification QR code.',
+    d2Tags: ['creative', 'geometric', 'chevron', 'scannable', 'modern'],
     d3Name: n => `Premium Editorial — ${n}`,
     d3Desc: 'Minimal matte obsidian card with bold asymmetric rectangular photo framing, striking vertical accent block, and editorial typography.',
     d3Tags: ['editorial', 'asymmetric', 'matte-obsidian', 'accent-block', 'prestige'],

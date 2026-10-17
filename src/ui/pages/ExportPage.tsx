@@ -10,11 +10,11 @@ import { exportPng, downloadPng } from '../../core/export/png'
 import { listTemplates } from '../../templates/registry'
 
 const SAMPLE_PERSON = {
-  id: 'SAMPLE-001',
+  id: '',
   name: 'Aarav Sharma',
   role: 'participant',
   email: 'aarav@example.com',
-  team: 'Team Alpha',
+  team: '',
   photoUrl: '',
   extra: {},
 }

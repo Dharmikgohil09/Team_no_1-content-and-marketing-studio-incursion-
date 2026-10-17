@@ -9,11 +9,11 @@ import type { CardTemplate } from '../../core/schema/CardTemplate'
 import type { Element, TextElement, ShapeElement, ImageElement } from '../../core/schema/Element'
 
 const BASE_SAMPLE_PERSON = {
-  id: 'SAMPLE-001',
+  id: '',
   name: 'Aarav Sharma',
   role: 'participant',
   email: 'aarav@example.com',
-  team: 'Team Alpha',
+  team: '',
   extra: {},
 }
 

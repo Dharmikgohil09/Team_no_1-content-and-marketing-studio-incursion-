@@ -10,11 +10,11 @@ import { DEFAULT_ROLES, getRoleOrDefault } from '../../core/schema/Role'
 
 // Sample person for previewing drafts
 const SAMPLE_PERSON = {
-  id: 'SAMPLE-001',
+  id: '',
   name: 'Aarav Sharma',
   role: 'participant',
   email: 'aarav@example.com',
-  team: 'Team Alpha (HackNIT)',
+  team: '',
   photoUrl: '',
   extra: {},
 }
