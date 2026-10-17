@@ -137,9 +137,11 @@ export function parseIntentDeterministic(text: string): IntentResult {
     category = 'hackathon'
   } else if (/(?:robotics?|robots?|bots?|battlebots?|mechatronics)/i.test(text)) {
     category = 'robotics'
-  } else if (/(?:cultural|nukkad\s*natak|natak|street\s*play|skit|drama|theatre|garba|dandiya|navratri|diwali|fest|festival|dance|arts?|celebration)/i.test(text)) {
+  } else if (/(?:quiz|trivia|olympiad|debate|spelling\s*bee|academic|examination|knowledge\s*bowl|scholar)/i.test(text)) {
+    category = 'workshop'
+  } else if (/(?:cultural|nukkad\s*natak|natak|street\s*play|skit|drama|theatre|garba|dandiya|navratri|diwali|fest|festival|dance|\barts?\b|\bfine\s*arts?\b|celebration)/i.test(text)) {
     category = 'cultural'
-  } else if (/(?:conference|summit|symposium|keynote|business|seminar)/i.test(text)) {
+  } else if (/(?:conference|summit|symposium|keynote|seminar)/i.test(text)) {
     category = 'conference'
   } else if (/(?:workshop|bootcamp|masterclass|training)/i.test(text)) {
     category = 'workshop'

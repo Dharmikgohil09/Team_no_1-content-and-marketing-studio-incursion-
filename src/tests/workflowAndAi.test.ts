@@ -363,6 +363,12 @@ describe('Workflow & AI Improvements — Tests 1 to 7', () => {
 
       const workshopCtx = { ...makeEmptyEventContext(), name: { value: 'Full-Stack Bootcamp Workshop', status: 'provided' as const } }
       expect(detectEventCategory(workshopCtx)).toBe('workshop')
+
+      // Quiz / Academic competition must be categorized as workshop, NEVER cultural (and participants keyword must not trigger cultural)
+      const quizResult = parseIntentDeterministic('I want to organize a quiz competition for 5 participants, generate ID cards for them')
+      expect((quizResult.eventContext as any).category.value).toBe('workshop')
+      expect(detectEventCategory(quizResult.eventContext)).toBe('workshop')
+      expect((quizResult.eventContext as any).participantCount.value).toBe(5)
     })
 
     it('ensures all 3 drafts adhere to standard CR80 physical card dimensions (54x85.6mm)', () => {

@@ -23,12 +23,13 @@ export function detectEventCategory(event: EventContext): EventCategory {
     }
   }
   const text = `${event.name?.value || ''} ${(event as any).description?.value || ''} ${(event as any).themeHint?.value || ''}`.toLowerCase()
+  if (/(?:quiz|trivia|olympiad|debate|spelling\s*bee|academic|scholar|knowledge\s*bowl)/i.test(text)) return 'workshop'
   if (/(?:music|concert|singing|song|band|raag|raga|musical|vocal|melody|rhythm|audio|orchestra|gig|acoustic|live\s*stage|dj|soundfest|sangeet)/i.test(text)) return 'music'
   if (/(?:shark\s*(?:tank|mank)|pitch|startup|venture|investor|angel|funding|founder|entrepreneur)/i.test(text)) return 'business'
   if (/(?:gaming|esports|lan\s*party|game\s*dev|gamer)/i.test(text)) return 'gaming'
   if (/(?:sports?|tournament|football|cricket|basketball|badminton|athletics?|championship|league|match|referee|players?)/i.test(text)) return 'sports'
   if (/(?:robotics?|robots?|robos?|bots?|battlebots?|mechatronics)/i.test(text)) return 'robotics'
-  if (/(?:cultural|fest|festival|dance|arts?|celebration|drama|theatre)/i.test(text)) return 'cultural'
+  if (/(?:cultural|fest|festival|dance|\barts?\b|\bfine\s*arts?\b|celebration|drama|theatre)/i.test(text)) return 'cultural'
   if (/(?:conference|summit|symposium|keynote|seminar)/i.test(text)) return 'conference'
   if (/(?:workshop|bootcamp|masterclass|training)/i.test(text)) return 'workshop'
   if (/(?:hackathon|coding|codefest|hacknit|datathon|programming)/i.test(text)) return 'hackathon'

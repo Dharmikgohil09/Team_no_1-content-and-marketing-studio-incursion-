@@ -18,10 +18,25 @@ export function DescribePage() {
   const addNlMessage  = useProjectStore(s => s.addNlMessage)
   const setWizardStep = useProjectStore(s => s.setWizardStep)
 
-  const [text, setText]         = useState('')
+  const storeDesc = useProjectStore(s => s.project?.eventContext?.description?.value) || ''
+  const [text, setText] = useState(() => {
+    if (storeDesc) return storeDesc
+    try {
+      return sessionStorage.getItem('cms_event_description') || localStorage.getItem('cms_event_description') || ''
+    } catch {
+      return ''
+    }
+  })
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
   const textareaRef             = useRef<HTMLTextAreaElement>(null)
+
+  // Synchronize text if stored description changes or loads
+  useEffect(() => {
+    if (storeDesc && (!text || text !== storeDesc)) {
+      setText(storeDesc)
+    }
+  }, [storeDesc])
 
   async function handleSubmit() {
     if (!text.trim()) { setError('Please describe your event first.'); return }
@@ -29,8 +44,11 @@ export function DescribePage() {
     setError('')
 
     try {
-      // Create project
-      const project = newProject()
+      // Use existing project if available to retain session logos & configuration, or create new
+      let project = useProjectStore.getState().project
+      if (!project) {
+        project = newProject()
+      }
       addNlMessage('user', text)
 
       // Extract intent
@@ -66,8 +84,10 @@ export function DescribePage() {
       useProjectStore.getState().setRoles(parsedRoles)
 
       try {
+        sessionStorage.setItem('cms_event_description', text)
         localStorage.setItem('cms_event_description', text)
         if (pCount && pCount > 0) {
+          sessionStorage.setItem('cms_expected_participants', String(pCount))
           localStorage.setItem('cms_expected_participants', String(pCount))
         }
       } catch {}
@@ -115,7 +135,14 @@ export function DescribePage() {
           className="textarea min-h-[140px] text-base leading-relaxed mb-4"
           placeholder="e.g. ID cards for our 24-hour hackathon on 18 October at SVNIT, with separate looks for participants, organizers and mentors"
           value={text}
-          onChange={e => setText(e.target.value)}
+          onChange={e => {
+            const val = e.target.value
+            setText(val)
+            try {
+              sessionStorage.setItem('cms_event_description', val)
+              localStorage.setItem('cms_event_description', val)
+            } catch {}
+          }}
           onKeyDown={e => {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSubmit()
           }}

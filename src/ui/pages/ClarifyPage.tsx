@@ -25,6 +25,78 @@ export function ClarifyPage() {
 
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({})
   const [questions, setQuestions] = useState<Question[]>([])
+  const [feedbackMsg, setFeedbackMsg] = useState('')
+  const [editingDesc, setEditingDesc] = useState(false)
+  const [descDraft, setDescDraft] = useState('')
+
+  const CATEGORY_OPTIONS = [
+    { value: 'workshop',   label: 'Academic / Quiz / Workshop', icon: '🎓', desc: 'Quizzes, trivia, academic competitions, bootcamps' },
+    { value: 'hackathon',  label: 'Hackathon & Coding',        icon: '💻', desc: 'Hackathons, coding challenges, datathons' },
+    { value: 'cultural',   label: 'Cultural & Arts',           icon: '🎭', desc: 'Festivals, dance, drama, garba, celebrations' },
+    { value: 'sports',     label: 'Sports & Athletics',        icon: '⚽', desc: 'Tournaments, matches, leagues, athletics' },
+    { value: 'music',      label: 'Music & Concert',           icon: '🎵', desc: 'Live concerts, singing, band shows' },
+    { value: 'business',   label: 'Business & Startup Pitch',  icon: '💼', desc: 'Startup summits, shark tank pitches, investors' },
+    { value: 'gaming',     label: 'Gaming & Esports',          icon: '🎮', desc: 'Esports tourneys, LAN parties, competitive gaming' },
+    { value: 'robotics',   label: 'Robotics & Hardware',       icon: '🤖', desc: 'RoboWars, battlebots, mechatronics' },
+    { value: 'conference', label: 'Conference & Summit',       icon: '🎤', desc: 'Symposiums, keynotes, executive summits' },
+    { value: 'general',    label: 'General Event',             icon: '🌐', desc: 'Standard multipurpose event passes' },
+  ]
+
+  function handleCategoryChange(newCat: string) {
+    if (!project) return
+    const updatedCtx = {
+      ...project.eventContext,
+      category: { value: newCat, status: 'confirmed' as const }
+    }
+    setEventContext(updatedCtx)
+    const catLabel = CATEGORY_OPTIONS.find(c => c.value === newCat)?.label || newCat
+    setFeedbackMsg(`Category updated to ${catLabel}`)
+    setTimeout(() => setFeedbackMsg(''), 3500)
+  }
+
+  function handleParticipantCountChange(count: number) {
+    if (!project || count < 1) return
+    const updatedCtx = {
+      ...project.eventContext,
+      participantCount: { value: count, status: 'confirmed' as const }
+    }
+    setEventContext(updatedCtx)
+
+    const updatedRoles = project.roles.map(r =>
+      (r.id === 'participant' || r.id === 'player') ? { ...r, count } : r
+    )
+    setRoles(updatedRoles)
+
+    try {
+      sessionStorage.setItem('cms_expected_participants', String(count))
+      localStorage.setItem('cms_expected_participants', String(count))
+    } catch {}
+
+    setFeedbackMsg(`Participant count set to ${count}`)
+    setTimeout(() => setFeedbackMsg(''), 3000)
+  }
+
+  function handleStartEditDesc() {
+    setDescDraft(project?.eventContext?.description?.value || '')
+    setEditingDesc(true)
+  }
+
+  function handleSaveDesc() {
+    if (!project) return
+    const val = descDraft.trim()
+    const updatedCtx = {
+      ...project.eventContext,
+      description: { value: val, status: 'provided' as const }
+    }
+    setEventContext(updatedCtx)
+    try {
+      sessionStorage.setItem('cms_event_description', val)
+      localStorage.setItem('cms_event_description', val)
+    } catch {}
+    setEditingDesc(false)
+    setFeedbackMsg('Event description updated')
+    setTimeout(() => setFeedbackMsg(''), 3000)
+  }
 
   function handleInstituteUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -89,6 +161,13 @@ export function ClarifyPage() {
 
   function handleContinue() {
     applyAnswers()
+    try {
+      const descVal = project?.eventContext?.description?.value
+      if (descVal) {
+        sessionStorage.setItem('cms_event_description', descVal)
+        localStorage.setItem('cms_event_description', descVal)
+      }
+    } catch {}
     setWizardStep(2)
     navigate('/studio/drafts')
   }
@@ -118,21 +197,153 @@ export function ClarifyPage() {
         </p>
       </div>
 
-      {/* Already known chips */}
-      {knownFields.length > 0 && (
-        <div className="glass-sm p-4 mb-6">
-          <p className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-3">Already detected ✓</p>
-          <div className="flex flex-wrap gap-2">
-            {knownFields.map(({ key, value }) => (
-              <span key={key} className="chip">
-                <span className="text-acm-400">✓</span>
-                <span className="text-slate-300 capitalize">{key}:</span>
-                <span className="font-medium">{value}</span>
-              </span>
-            ))}
+      {/* Interactive AI Detected Parameters Panel */}
+      <div className="glass-sm p-4 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Already detected by AI</p>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-medium">
+              Editable
+            </span>
           </div>
+          {feedbackMsg && (
+            <span className="text-xs text-emerald-400 font-medium animate-fade-in flex items-center gap-1">
+              ✓ {feedbackMsg}
+            </span>
+          )}
         </div>
-      )}
+
+        <p className="text-[11px] text-slate-400 mb-3">
+          Review what the AI understood. You can change the category, participant count, or description at any time:
+        </p>
+
+        <div className="space-y-2.5">
+          {/* Category Dropdown Selector */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-acm-400 font-bold">✓</span>
+              <span className="text-xs font-semibold text-slate-300">Category:</span>
+              <span className="text-[11px] text-slate-400 hidden sm:inline">(Controls card styling & visual motifs)</span>
+            </div>
+            <select
+              id="clarify-category-select"
+              value={((project.eventContext as any).category?.value || 'general').toLowerCase()}
+              onChange={e => handleCategoryChange(e.target.value)}
+              className="bg-surface-900 border border-white/20 text-white rounded-lg px-2.5 py-1 text-xs font-medium focus:border-acm-400 focus:outline-none cursor-pointer"
+            >
+              {CATEGORY_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.icon} {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Participant Count Selector */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-acm-400 font-bold">✓</span>
+              <span className="text-xs font-semibold text-slate-300">Expected Participants:</span>
+              <span className="text-[11px] text-slate-400 hidden sm:inline">(Prepopulates roster count)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const curr = (project.eventContext as any).participantCount?.value || (project.roles.find(r => r.id === 'participant' || r.id === 'player')?.count) || 5
+                  handleParticipantCountChange(Math.max(1, curr - 1))
+                }}
+                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs font-bold"
+              >
+                -
+              </button>
+              <input
+                id="clarify-participant-count"
+                type="number"
+                min="1"
+                max="5000"
+                value={(project.eventContext as any).participantCount?.value || (project.roles.find(r => r.id === 'participant' || r.id === 'player')?.count) || ''}
+                onChange={e => handleParticipantCountChange(parseInt(e.target.value) || 1)}
+                className="w-16 bg-surface-900 border border-white/20 text-white text-center rounded px-2 py-1 text-xs font-bold focus:border-acm-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const curr = (project.eventContext as any).participantCount?.value || (project.roles.find(r => r.id === 'participant' || r.id === 'player')?.count) || 5
+                  handleParticipantCountChange(curr + 1)
+                }}
+                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs font-bold"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* Description Editor */}
+          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-acm-400 font-bold">✓</span>
+                <span className="text-xs font-semibold text-slate-300">Description:</span>
+              </div>
+              <button
+                type="button"
+                id="clarify-edit-desc-btn"
+                onClick={() => editingDesc ? handleSaveDesc() : handleStartEditDesc()}
+                className="text-xs text-acm-400 hover:text-acm-300 font-medium flex items-center gap-1"
+              >
+                {editingDesc ? '✓ Save Changes' : '✏️ Edit Description'}
+              </button>
+            </div>
+            {editingDesc ? (
+              <div className="mt-2 space-y-2">
+                <textarea
+                  id="clarify-desc-textarea"
+                  value={descDraft}
+                  onChange={e => setDescDraft(e.target.value)}
+                  rows={3}
+                  className="w-full bg-surface-900 border border-white/20 text-white text-xs rounded-lg p-2.5 focus:border-acm-400 focus:outline-none"
+                  placeholder="Describe your event..."
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingDesc(false)}
+                    className="text-xs text-slate-400 hover:text-white px-2 py-1"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveDesc}
+                    className="btn-primary text-xs py-1 px-3"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-300 italic bg-black/20 p-2.5 rounded-lg border border-white/5 line-clamp-3">
+                "{project.eventContext.description?.value || 'No description provided'}"
+              </p>
+            )}
+          </div>
+
+          {/* Requested Fields and Optional Tags */}
+          {(project.eventContext as any).requestedFields?.value && (
+            <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-400">
+              <span className="text-slate-400 font-medium">Requested fields:</span>
+              <div className="flex flex-wrap gap-1.5">
+                {((project.eventContext as any).requestedFields.value as string[]).map(f => (
+                  <span key={f} className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300 font-mono text-[10px]">
+                    {f}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Questions */}
       {questions.length === 0 ? (

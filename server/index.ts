@@ -54,15 +54,15 @@ CRITICAL RULES:
 3. If roles and participant counts are given (e.g. "10 participant and 3 organizer"), extract each role with its count (e.g. participant: count 10, organizer: count 3).
 4. If venue is mentioned or implied, set "venue": { "value": "SVNIT Surat", "status": "provided" }. Default venue to "SVNIT Surat" with status "provided".
 5. Extract the event category accurately:
+   - "workshop" for academic contests, quiz competitions, trivia, debates, Olympiads, hands-on bootcamps, masterclasses, technical seminars (IMPORTANT: A quiz or trivia competition is an ACADEMIC/WORKSHOP event, NOT cultural!)
    - "sports" for tournaments, leagues, matches, athletic competitions (football, cricket, etc.)
    - "hackathon" for hackathons, coding contests, codefests
    - "robotics" for robotics, battlebots, hardware competitions
    - "conference" for business conferences, summits, symposiums
-   - "cultural" for arts, garba, dandiya, navratri, music, dance festivals, cultural celebrations
+   - "cultural" for arts, garba, dandiya, navratri, music, dance festivals, cultural celebrations (never categorize a quiz, trivia, or test as cultural!)
    - "music" for concerts, singing competitions, musical fests, band shows
    - "business" for startup pitch competitions, shark tank events, investor syndicates
    - "gaming" for esports tournaments, gaming LANs, game dev contests
-   - "workshop" for hands-on bootcamps, masterclasses, technical seminars
    - "general" if not specifically categorized.
 
 Return ONLY a valid JSON object matching this exact shape (no markdown, no backticks, no conversational text):
@@ -97,6 +97,16 @@ User description:
 `
     const raw = await generateWithGemini(genAI, prompt)
     const json = JSON.parse(raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim())
+
+    // Category guard: Ensure quiz / trivia / academic competitions are never incorrectly tagged as cultural
+    if (/(?:quiz|trivia|olympiad|debate|spelling\s*bee|academic|scholar|knowledge\s*bowl)/i.test(text)) {
+      if (json.eventContext) {
+        if (!json.eventContext.category) json.eventContext.category = {}
+        json.eventContext.category.value = 'workshop'
+        json.eventContext.category.status = 'provided'
+      }
+    }
+
     res.json(json)
   } catch (err: any) {
     console.error('LLM extract-intent error:', err.message)
