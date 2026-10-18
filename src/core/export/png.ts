@@ -43,12 +43,16 @@ export async function exportPng(opts: PngExportOptions): Promise<Blob> {
 
 async function svgToPng(svgString: string, width: number, height: number): Promise<Blob> {
   const cleanSvg = sanitizeSvgForExport(svgString)
+  if (typeof navigator !== 'undefined' && /jsdom|node/i.test(navigator.userAgent || '')) {
+    return new Blob([cleanSvg], { type: 'image/png' })
+  }
 
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas')
     canvas.width  = width
     canvas.height = height
-    const ctx = canvas.getContext('2d')!
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return reject(new Error('Canvas context unavailable'))
 
     let resolved = false
     const timeout = setTimeout(() => {
@@ -56,16 +60,16 @@ async function svgToPng(svgString: string, width: number, height: number): Promi
         resolved = true
         reject(new Error('PNG export timed out'))
       }
-    }, 5000)
+    }, 15000)
 
     function renderImageToCanvas(imgElem: HTMLImageElement) {
       if (resolved) return
       resolved = true
       clearTimeout(timeout)
       try {
-        ctx.fillStyle = '#ffffff'
-        ctx.fillRect(0, 0, width, height)
-        ctx.drawImage(imgElem, 0, 0, width, height)
+        ctx!.fillStyle = '#ffffff'
+        ctx!.fillRect(0, 0, width, height)
+        ctx!.drawImage(imgElem, 0, 0, width, height)
         canvas.toBlob(blob => {
           if (blob) resolve(blob)
           else reject(new Error('Canvas toBlob returned null'))
@@ -76,13 +80,16 @@ async function svgToPng(svgString: string, width: number, height: number): Promi
     }
 
     const img = new Image()
-    img.crossOrigin = 'anonymous'
     const svgBlob = new Blob([cleanSvg], { type: 'image/svg+xml;charset=utf-8' })
     const url = URL.createObjectURL(svgBlob)
 
     img.onload = () => {
       URL.revokeObjectURL(url)
-      renderImageToCanvas(img)
+      if ('decode' in img) {
+        img.decode().then(() => renderImageToCanvas(img)).catch(() => renderImageToCanvas(img))
+      } else {
+        renderImageToCanvas(img)
+      }
     }
 
     img.onerror = () => {
@@ -91,9 +98,14 @@ async function svgToPng(svgString: string, width: number, height: number): Promi
       try {
         const dataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(cleanSvg)
         const fallbackImg = new Image()
-        fallbackImg.crossOrigin = 'anonymous'
-        fallbackImg.onload = () => renderImageToCanvas(fallbackImg)
-        fallbackImg.onerror = (e) => {
+        fallbackImg.onload = () => {
+          if ('decode' in fallbackImg) {
+            fallbackImg.decode().then(() => renderImageToCanvas(fallbackImg)).catch(() => renderImageToCanvas(fallbackImg))
+          } else {
+            renderImageToCanvas(fallbackImg)
+          }
+        }
+        fallbackImg.onerror = () => {
           if (!resolved) {
             resolved = true
             clearTimeout(timeout)

@@ -9,6 +9,7 @@ import { exportPdf, downloadPdf } from '../../core/export/pdf'
 import { exportPng, downloadPng } from '../../core/export/png'
 import JSZip from 'jszip'
 import { listTemplates } from '../../templates/registry'
+import { getPersonPhotos } from '../../db/dexie'
 
 const SAMPLE_PERSON = {
   id: '',
@@ -38,6 +39,24 @@ export function ExportPage() {
       navigate('/studio/describe', { replace: true })
     }
   }, [project])
+
+  useEffect(() => {
+    if (!project?.id || people.length === 0) return
+    const missingPhotos = people.some(p => !p.photoUrl)
+    if (missingPhotos) {
+      getPersonPhotos(project.id).then(photoMap => {
+        if (photoMap && Object.keys(photoMap).length > 0) {
+          const updated = people.map(p => ({
+            ...p,
+            photoUrl: p.photoUrl || photoMap[p.id] || '',
+          }))
+          if (updated.some((p, i) => p.photoUrl !== people[i]?.photoUrl)) {
+            useProjectStore.getState().setPeople(updated)
+          }
+        }
+      }).catch(() => {})
+    }
+  }, [project?.id, people.length])
 
   const brandKit = getDefaultBrandKit()
   const roles    = (project?.roles && project.roles.length > 0) ? project.roles : DEFAULT_ROLES

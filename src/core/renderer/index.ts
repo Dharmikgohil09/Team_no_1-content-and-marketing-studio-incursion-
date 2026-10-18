@@ -108,8 +108,23 @@ function buildDefs(template: CardTemplate, role: Role, w?: number, h?: number): 
   const elemClipPaths = allElements
     .filter(el => el.type === 'image' || el.type === 'photo')
     .map(el => {
+      const a = el.anchor
+      if (el.type === 'photo') {
+        const cx = a.x + a.w / 2
+        const cy = a.y + a.h / 2
+        const r  = Math.min(a.w, a.h) / 2
+        let shapeDef = ''
+        if (el.shape === 'circle') {
+          shapeDef = `<circle cx="${cx}" cy="${cy}" r="${r}"/>`
+        } else if (el.shape === 'rounded') {
+          const rr = el.cornerRadius > 0 ? el.cornerRadius : r * 0.2
+          shapeDef = `<rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" rx="${rr}"/>`
+        } else {
+          shapeDef = `<rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}"/>`
+        }
+        return `<clipPath id="photo-clip-${el.id}">${shapeDef}</clipPath>\n<clipPath id="el-clip-${el.id}">${shapeDef}</clipPath>`
+      }
       const rx = (el as any).cornerRadius ?? 0
-      const a  = el.anchor
       return `<clipPath id="el-clip-${el.id}">
         <rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" rx="${rx}" ry="${rx}" />
       </clipPath>`
@@ -369,26 +384,11 @@ function renderPhoto(el: PhotoElement, ctx: BindingContext, warnings: string[]):
   const cx  = a.x + a.w / 2
   const cy  = a.y + a.h / 2
   const r   = Math.min(a.w, a.h) / 2
-
-  // Inline clip path for the photo shape (circle/rounded/square)
   const clipId = `photo-clip-${el.id}`
-  let shapeDef = ''
-  if (el.shape === 'circle') {
-    shapeDef = `<circle cx="${cx}" cy="${cy}" r="${r}"/>`
-  } else if (el.shape === 'rounded') {
-    const rr = el.cornerRadius > 0 ? el.cornerRadius : r * 0.2
-    shapeDef = `<rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" rx="${rr}"/>`
-  } else {
-    shapeDef = `<rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}"/>`
-  }
-  const clipPathDef = `<clipPath id="${clipId}">${shapeDef}</clipPath>`
 
   if (src && src.trim() && src !== '[No Photo]') {
-    return `
-    <defs>${clipPathDef}</defs>
-    <image id="${el.id}" href="${src}" xlink:href="${src}" x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}"
-      preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>
-    `
+    return `<image id="${el.id}" href="${src}" xlink:href="${src}" x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}"
+      preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>`
   }
 
   // Fallback: colored initials avatar
@@ -397,9 +397,7 @@ function renderPhoto(el: PhotoElement, ctx: BindingContext, warnings: string[]):
   const bgColor  = resolveBindings(el.initialsBg, ctx) || ctx.role?.palette?.primary || '#2563eb'
   const fontSize = r * 0.65
 
-  return `
-  <defs>${clipPathDef}</defs>
-  <g id="${el.id}" clip-path="url(#${clipId})">
+  return `<g id="${el.id}" clip-path="url(#${clipId})">
     <${el.shape === 'circle'
       ? `circle cx="${cx}" cy="${cy}" r="${r}"`
       : `rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}"`} fill="${bgColor}"/>

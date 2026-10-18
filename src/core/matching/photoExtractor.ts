@@ -104,6 +104,57 @@ export async function blobToDataUrl(blob: Blob, mime = 'image/jpeg'): Promise<st
 }
 
 /**
+ * Optimizes an uploaded image file into a performant data URL for ID card generation.
+ * Downscales oversized images (e.g. 12MP phone photos) to max 1200px to ensure
+ * instantaneous SVG/PNG/PDF rendering and prevent memory bloat.
+ */
+async function optimizeImageDataUrl(file: Blob, mime: string): Promise<string> {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return blobToDataUrl(file, mime)
+  }
+  return new Promise((resolve) => {
+    if (mime.includes('svg')) {
+      blobToDataUrl(file, mime).then(resolve).catch(() => resolve(''))
+      return
+    }
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const maxDim = 1200
+      let w = img.naturalWidth || img.width
+      let h = img.naturalHeight || img.height
+      if (w <= maxDim && h <= maxDim) {
+        blobToDataUrl(file, mime).then(resolve).catch(() => resolve(''))
+        return
+      }
+      if (w > h) {
+        h = Math.round((h * maxDim) / w)
+        w = maxDim
+      } else {
+        w = Math.round((w * maxDim) / h)
+        h = maxDim
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        blobToDataUrl(file, mime).then(resolve).catch(() => resolve(''))
+        return
+      }
+      ctx.drawImage(img, 0, 0, w, h)
+      resolve(canvas.toDataURL(mime === 'image/png' ? 'image/png' : 'image/jpeg', 0.9))
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      blobToDataUrl(file, mime).then(resolve).catch(() => resolve(''))
+    }
+    img.src = url
+  })
+}
+
+/**
  * Process a single image File object.
  */
 export async function processImageFile(file: File): Promise<UploadedImage> {
@@ -142,7 +193,7 @@ export async function processImageFile(file: File): Promise<UploadedImage> {
 
   try {
     const mime = file.type || MIME_MAP[extension] || 'image/jpeg'
-    const dataUrl = await blobToDataUrl(file, mime)
+    const dataUrl = await optimizeImageDataUrl(file, mime)
     return {
       id: nanoid(),
       filename: baseName,

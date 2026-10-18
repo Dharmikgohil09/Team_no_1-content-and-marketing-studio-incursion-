@@ -43,6 +43,50 @@ interface ProjectState {
   saveVersion: (label: string) => void
 }
 
+const safeLocalStorage = {
+  getItem: (name: string): string | null => {
+    try {
+      return typeof window !== 'undefined' ? localStorage.getItem(name) : null
+    } catch {
+      return null
+    }
+  },
+  setItem: (name: string, value: string): void => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(name, value)
+      }
+    } catch (e) {
+      console.warn('localStorage quota exceeded, persisting state without raw photo data:', e)
+      try {
+        const parsed = JSON.parse(value)
+        if (parsed?.state) {
+          if (Array.isArray(parsed.state.people)) {
+            parsed.state.people = parsed.state.people.map((p: any) => ({
+              ...p,
+              photoUrl: '',
+            }))
+          }
+          if (Array.isArray(parsed.state.project?.people)) {
+            parsed.state.project.people = parsed.state.project.people.map((p: any) => ({
+              ...p,
+              photoUrl: '',
+            }))
+          }
+          localStorage.setItem(name, JSON.stringify(parsed))
+        }
+      } catch {}
+    }
+  },
+  removeItem: (name: string): void => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(name)
+      }
+    } catch {}
+  },
+}
+
 export const useProjectStore = create<ProjectState>()(
   persist(
     (set, get) => ({
@@ -278,9 +322,19 @@ export const useProjectStore = create<ProjectState>()(
 }),
     {
       name: 'cms_project_store',
+      storage: safeLocalStorage as any,
       partialize: (state) => ({
-        project: state.project,
-        people: state.people,
+        project: state.project ? {
+          ...state.project,
+          people: (state.project.people || []).map(p => ({
+            ...p,
+            photoUrl: p.photoUrl?.startsWith('data:') ? '' : p.photoUrl,
+          })),
+        } : null,
+        people: state.people.map(p => ({
+          ...p,
+          photoUrl: p.photoUrl?.startsWith('data:') ? '' : p.photoUrl,
+        })),
         instituteLogo: state.instituteLogo,
         clubLogo: state.clubLogo,
       }),
@@ -307,6 +361,20 @@ export const useProjectStore = create<ProjectState>()(
               sessionStorage.removeItem('cms_event_description')
               sessionStorage.removeItem('cms_expected_participants')
             } catch {}
+          } else if (state?.project?.id && state.people?.length > 0) {
+            // Session is active: if in-memory people lost photo URLs during reload, restore from Dexie
+            getPersonPhotos(state.project.id).then(photoMap => {
+              if (photoMap && Object.keys(photoMap).length > 0 && state) {
+                const restoredPeople = state.people.map(p => ({
+                  ...p,
+                  photoUrl: p.photoUrl || photoMap[p.id] || '',
+                }))
+                state.people = restoredPeople
+                if (state.project) {
+                  state.project.people = restoredPeople
+                }
+              }
+            }).catch(() => {})
           }
         }
       },

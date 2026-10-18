@@ -363,6 +363,29 @@ export function DataPage() {
         }
       }
 
+      // If no CSV rows but participants exist in store, preserve them and update assigned photos
+      if (targetRows.length === 0 && people.length > 0) {
+        const updatedPeople = people.map((p, idx) => {
+          const matchedImage = currentMatchMap.get(idx)
+          const photoUrl = matchedImage?.dataUrl || p.photoUrl || ''
+          return { ...p, photoUrl }
+        })
+        setPeople(updatedPeople)
+        setWizardStep(5)
+        setConfirmedSuccess(true)
+        try {
+          useProjectStore.getState().saveProject().catch(console.error)
+        } catch {}
+        if (andNavigateToExport) {
+          try {
+            navigate('/studio/export')
+          } catch {
+            window.location.href = '/studio/export'
+          }
+        }
+        return
+      }
+
       // If matches haven't been run yet but images are uploaded, run photo matcher now
       if (currentMatchMap.size === 0 && uploadedImages.length > 0 && targetRows.length > 0) {
         try {
@@ -404,9 +427,9 @@ export function DataPage() {
           }
         }
 
-        // Matched photo from matching engine, or explicit photoUrl column in CSV, or sample
+        // Matched photo from matching engine, or existing person photoUrl, or explicit photoUrl column in CSV
         const matchedImage = currentMatchMap.get(idx)
-        const matchedPhotoUrl = matchedImage?.dataUrl || (inverseMap.photoUrl ? String(row[inverseMap.photoUrl] ?? '') : undefined)
+        const matchedPhotoUrl = matchedImage?.dataUrl || people[idx]?.photoUrl || (inverseMap.photoUrl ? String(row[inverseMap.photoUrl] ?? '') : undefined)
 
         const person: Person = {
           id: id || `P-${idx + 1}`,

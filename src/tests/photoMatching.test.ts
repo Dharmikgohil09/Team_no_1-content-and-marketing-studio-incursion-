@@ -374,6 +374,69 @@ describe('Dynamic Photo Matching & Extraction Engine Tests', () => {
       expect(svg).toContain('SC')
       expect(svg).toContain('Sarah Connor')
     })
+
+    it('exports SVG with participant photo and proper clip-path without crashing', async () => {
+      const { exportSvg } = await import('../core/export/svg')
+      const { getDefaultBrandKit } = await import('../brandKits/loader')
+
+      const dummyPhoto = createDummyDataUrl('Verified Photo')
+      const personWithPhoto: Person = {
+        id: 'P-101',
+        name: 'Aditi Rao',
+        role: 'participant',
+        team: 'Quantum',
+        photoUrl: dummyPhoto,
+        extra: {},
+      }
+      const event = makeEmptyEventContext()
+      event.name = { value: 'Incursion Hackathon', status: 'provided' }
+      const role = getRoleOrDefault('participant')
+      const drafts = generateDraftsDeterministic(event, [role])
+
+      const svg = exportSvg({
+        template: drafts[0],
+        role,
+        person: personWithPhoto,
+        event,
+        brandKit: getDefaultBrandKit(),
+        includeBleed: false,
+        face: 'front',
+      })
+
+      expect(svg).toContain('<image')
+      expect(svg).toContain(dummyPhoto)
+      expect(svg).toContain('Aditi Rao')
+      expect(svg).toContain('photo-clip-person-photo')
+    })
+
+    it('exports PDF with multiple participants including images without error', async () => {
+      const { exportPdf } = await import('../core/export/pdf')
+      const { getDefaultBrandKit } = await import('../brandKits/loader')
+
+      const dummyPhoto = createDummyDataUrl('Verified Photo')
+      const people: Person[] = [
+        { id: 'P-1', name: 'Alice Smith', role: 'participant', team: 'A', photoUrl: dummyPhoto, extra: {} },
+        { id: 'P-2', name: 'Bob Jones', role: 'participant', team: 'B', photoUrl: '', extra: {} },
+      ]
+      const event = makeEmptyEventContext()
+      event.name = { value: 'Annual Fest', status: 'provided' }
+      const role = getRoleOrDefault('participant')
+      const drafts = generateDraftsDeterministic(event, [role])
+
+      const pdfBytes = await exportPdf({
+        template: drafts[0],
+        roles: [role],
+        people,
+        event,
+        brandKit: getDefaultBrandKit(),
+        includeBleed: false,
+        dpi: 150,
+        multiPage: true,
+      })
+
+      expect(pdfBytes).toBeInstanceOf(Uint8Array)
+      expect(pdfBytes.length).toBeGreaterThan(500)
+    })
   })
 
   // ───────────────────────────────────────────────────────────────────────────

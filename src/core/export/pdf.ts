@@ -31,7 +31,8 @@ export interface PdfExportOptions {
 import { sanitizeSvgForExport } from './svgSanitizer'
 
 async function svgToPngBytes(svgString: string, width: number, height: number): Promise<Uint8Array | null> {
-  if (typeof document === 'undefined') return null
+  if (typeof document === 'undefined' || typeof window === 'undefined') return null
+  if (typeof navigator !== 'undefined' && /jsdom|node/i.test(navigator.userAgent || '')) return null
   const cleanSvg = sanitizeSvgForExport(svgString)
 
   return new Promise((resolve) => {
@@ -48,7 +49,7 @@ async function svgToPngBytes(svgString: string, width: number, height: number): 
           resolved = true
           resolve(null)
         }
-      }, 5000)
+      }, 15000)
 
       function renderImageToCanvas(imgElem: HTMLImageElement) {
         if (resolved) return
@@ -74,11 +75,14 @@ async function svgToPngBytes(svgString: string, width: number, height: number): 
       const svgBlob = new Blob([cleanSvg], { type: 'image/svg+xml;charset=utf-8' })
       const url = URL.createObjectURL(svgBlob)
       const img = new Image()
-      img.crossOrigin = 'anonymous'
 
       img.onload = () => {
         URL.revokeObjectURL(url)
-        renderImageToCanvas(img)
+        if ('decode' in img) {
+          img.decode().then(() => renderImageToCanvas(img)).catch(() => renderImageToCanvas(img))
+        } else {
+          renderImageToCanvas(img)
+        }
       }
 
       img.onerror = () => {
@@ -87,8 +91,13 @@ async function svgToPngBytes(svgString: string, width: number, height: number): 
         try {
           const dataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(cleanSvg)
           const fallbackImg = new Image()
-          fallbackImg.crossOrigin = 'anonymous'
-          fallbackImg.onload = () => renderImageToCanvas(fallbackImg)
+          fallbackImg.onload = () => {
+            if ('decode' in fallbackImg) {
+              fallbackImg.decode().then(() => renderImageToCanvas(fallbackImg)).catch(() => renderImageToCanvas(fallbackImg))
+            } else {
+              renderImageToCanvas(fallbackImg)
+            }
+          }
           fallbackImg.onerror = (err) => {
             if (!resolved) {
               resolved = true
