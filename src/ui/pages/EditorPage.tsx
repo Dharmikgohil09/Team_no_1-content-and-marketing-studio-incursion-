@@ -5,6 +5,7 @@ import { CardPreview } from '../components/CardPreview'
 import { getDefaultBrandKit } from '../../brandKits/loader'
 import { DEFAULT_SVNIT_LOGO, DEFAULT_ACM_LOGO } from '../../brandKits/defaultLogos'
 import { DEFAULT_ROLES } from '../../core/schema/Role'
+import { listTemplates } from '../../templates/registry'
 import type { CardTemplate } from '../../core/schema/CardTemplate'
 import type { Element, TextElement, ShapeElement, ImageElement } from '../../core/schema/Element'
 
@@ -73,7 +74,7 @@ export function EditorPage() {
 
   const brandKit = getDefaultBrandKit()
   const roles    = project?.roles?.length ? project.roles : DEFAULT_ROLES
-  const template = project?.activeTemplate
+  const template = project?.activeTemplate || project?.drafts?.[0] || listTemplates()[0]
   const role     = roles.find(r => r.id === previewRole) ?? roles[0]
   const person   = { ...BASE_SAMPLE_PERSON, role: previewRole, photoUrl: '' }
 
@@ -216,7 +217,7 @@ export function EditorPage() {
                     <CardPreview
                       template={template}
                       role={r}
-                      person={{ ...BASE_SAMPLE_PERSON, role: r.id, photoUrl: personPhotoUrl }}
+                      person={{ ...BASE_SAMPLE_PERSON, role: r.id, photoUrl: '' }}
                       event={project.eventContext}
                       brandKit={brandKit}
                       face="front"

@@ -183,6 +183,8 @@ describe('Vector SVG Renderer', () => {
             anchor: { x: 7, y: 73, w: 40, h: 8 },
             valueBinding: '{{person.id}}',
             format: 'CODE128' as const,
+            fgColor: '#000000',
+            bgColor: '#ffffff',
           },
         ],
       },
