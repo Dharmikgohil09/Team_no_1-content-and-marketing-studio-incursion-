@@ -106,12 +106,12 @@ export function ExportPage() {
   return (
     <div className="animate-slide-up">
       <div className="mb-6">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-acm-600/20 border border-acm-500/30 text-acm-300 text-xs font-medium mb-3">
-          <span className="w-1.5 h-1.5 rounded-full bg-acm-400 animate-pulse-slow" />
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/25 text-accent text-xs font-medium mb-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse-slow" />
           Step 6 of 6 — Export
         </div>
-        <h1 className="text-2xl font-display font-bold text-white">Export print-ready files</h1>
-        <p className="text-slate-400 text-sm mt-1">{exportPeople.length} {exportPeople.length === 1 ? 'card' : 'cards'} ready to export</p>
+        <h1 className="text-2xl sm:text-3xl font-heading font-normal text-ink">Export print-ready files</h1>
+        <p className="text-text text-sm mt-1">{exportPeople.length} {exportPeople.length === 1 ? 'card' : 'cards'} ready to export</p>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6">
@@ -132,13 +132,13 @@ export function ExportPage() {
                   onClick={() => setFormat(f.id)}
                   className={`p-4 rounded-xl border-2 text-left transition-all duration-200
                     ${format === f.id
-                      ? 'border-acm-500 bg-acm-600/20'
-                      : 'border-white/[0.08] hover:border-white/[0.2] bg-white/[0.02]'
+                      ? 'border-accent bg-accent/10'
+                      : 'border-line hover:border-line-strong bg-white'
                     }`}
                 >
                   <div className="text-2xl mb-2">{f.icon}</div>
-                  <div className="font-semibold text-white text-sm">{f.label}</div>
-                  <div className="text-xs text-slate-500 mt-0.5">{f.desc}</div>
+                  <div className="font-semibold text-ink text-sm">{f.label}</div>
+                  <div className="text-xs text-muted mt-0.5">{f.desc}</div>
                 </button>
               ))}
             </div>
@@ -155,13 +155,13 @@ export function ExportPage() {
                     id={`dpi-${d}`}
                     onClick={() => setDpi(d)}
                     className={`flex-1 py-3 rounded-xl border-2 text-center text-sm font-semibold transition-all
-                      ${dpi === d ? 'border-acm-500 bg-acm-600/20 text-white' : 'border-white/[0.08] text-slate-400 hover:border-white/[0.2]'}`}
+                      ${dpi === d ? 'border-accent bg-accent/10 text-accent' : 'border-line text-text hover:border-line-strong bg-white'}`}
                   >
                     {d} DPI
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-muted">
                 {dpi === 150 ? 'Screen quality' : dpi === 300 ? 'Print quality (recommended)' : 'High-res print (large files)'}
               </p>
             </div>
@@ -173,12 +173,12 @@ export function ExportPage() {
             <div className="space-y-3">
               <label className="flex items-center justify-between cursor-pointer">
                 <div>
-                  <span className="text-sm text-white font-medium">Include bleed area</span>
-                  <p className="text-xs text-slate-500 mt-0.5">Adds {cardSize.bleedMm}mm bleed + crop marks</p>
+                  <span className="text-sm text-ink font-medium">Include bleed area</span>
+                  <p className="text-xs text-muted mt-0.5">Adds {cardSize.bleedMm}mm bleed + crop marks</p>
                 </div>
                 <input
                   type="checkbox"
-                  className="w-4 h-4 accent-acm-500"
+                  className="w-4 h-4 accent-accent"
                   checked={includeBleed}
                   onChange={e => setIncludeBleed(e.target.checked)}
                 />
@@ -188,30 +188,30 @@ export function ExportPage() {
 
           {/* Summary */}
           <div className="glass-sm p-4">
-            <h3 className="text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">Export Summary</h3>
+            <h3 className="text-xs font-medium text-muted mb-3 uppercase tracking-wider">Export Summary</h3>
             <div className="space-y-1.5 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-500">Cards</span>
-                <span className="text-white font-medium">{exportPeople.length}</span>
+                <span className="text-muted">Cards</span>
+                <span className="text-ink font-medium">{exportPeople.length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Format</span>
-                <span className="text-white font-medium uppercase">{format}</span>
+                <span className="text-muted">Format</span>
+                <span className="text-ink font-medium uppercase">{format}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Card size</span>
-                <span className="text-white font-medium">{cardSize.widthMm} × {cardSize.heightMm} mm</span>
+                <span className="text-muted">Card size</span>
+                <span className="text-ink font-medium">{cardSize.widthMm} × {cardSize.heightMm} mm</span>
               </div>
               {includeBleed && (
                 <div className="flex justify-between">
-                  <span className="text-slate-500">With bleed</span>
-                  <span className="text-white font-medium">{cardSize.widthMm + cardSize.bleedMm * 2} × {cardSize.heightMm + cardSize.bleedMm * 2} mm</span>
+                  <span className="text-muted">With bleed</span>
+                  <span className="text-ink font-medium">{cardSize.widthMm + cardSize.bleedMm * 2} × {cardSize.heightMm + cardSize.bleedMm * 2} mm</span>
                 </div>
               )}
               {format === 'png' && (
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Output pixels</span>
-                  <span className="text-white font-medium">
+                  <span className="text-muted">Output pixels</span>
+                  <span className="text-ink font-medium">
                     {Math.round((cardSize.widthMm / 25.4) * dpi)} × {Math.round((cardSize.heightMm / 25.4) * dpi)} px
                   </span>
                 </div>
@@ -237,7 +237,7 @@ export function ExportPage() {
           </button>
 
           {done && (
-            <div className="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm text-center">
+            <div className="px-4 py-3 rounded-xl bg-accent/10 border border-accent/20 text-accent text-sm text-center">
               ✓ Export complete! Check your downloads.
             </div>
           )}

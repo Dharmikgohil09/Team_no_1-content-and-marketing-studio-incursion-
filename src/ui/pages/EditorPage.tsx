@@ -154,11 +154,11 @@ export function EditorPage() {
     <div className="animate-slide-up">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-acm-600/20 border border-acm-500/30 text-acm-300 text-xs font-medium mb-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-acm-400 animate-pulse-slow" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/25 text-accent text-xs font-medium mb-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse-slow" />
             Step 4 of 6 — Editor
           </div>
-          <h1 className="text-2xl font-display font-bold text-white">{template.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-heading font-normal text-ink">{template.name}</h1>
         </div>
         <div className="flex gap-2">
           <button onClick={undo} disabled={historyIdx <= 0} className="btn-ghost text-xs" title="Undo (Ctrl+Z)">↩ Undo</button>
@@ -179,22 +179,22 @@ export function EditorPage() {
                   id={`editor-role-${r.id}`}
                   onClick={() => setPreviewRole(r.id)}
                   style={{
-                    backgroundColor: previewRole === r.id ? r.palette.primary + '33' : undefined,
+                    backgroundColor: previewRole === r.id ? r.palette.primary + '22' : undefined,
                     borderColor:     previewRole === r.id ? r.palette.primary : undefined,
                   }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border
-                    ${previewRole === r.id ? 'text-white' : 'text-slate-400 border-white/[0.08] hover:text-white'}`}
+                    ${previewRole === r.id ? 'text-ink shadow-sm' : 'text-text border-line hover:text-ink hover:bg-hover-surface'}`}
                 >
                   {r.label}
                 </button>
               ))}
             </div>
 
-            <div className="flex items-center gap-1 p-1 bg-surface-900 rounded-lg border border-white/10 shrink-0">
+            <div className="flex items-center gap-1 p-1 bg-hover-surface rounded-lg border border-line shrink-0">
               <button
                 onClick={() => setFace('front')}
                 className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
-                  face === 'front' ? 'bg-acm-600 text-white shadow-glow-acm' : 'text-slate-400 hover:text-white'
+                  face === 'front' ? 'bg-accent text-white' : 'text-muted hover:text-ink'
                 }`}
               >
                 Front Face
@@ -202,7 +202,7 @@ export function EditorPage() {
               <button
                 onClick={() => setFace('back')}
                 className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
-                  face === 'back' ? 'bg-acm-600 text-white shadow-glow-acm' : 'text-slate-400 hover:text-white'
+                  face === 'back' ? 'bg-accent text-white' : 'text-muted hover:text-ink'
                 }`}
               >
                 Back Face
@@ -299,18 +299,18 @@ export function EditorPage() {
             </div>
 
             {/* Institute Logo */}
-            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-2">
+            <div className="p-3 rounded-xl bg-hover-surface/30 border border-line space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-300">Institute Logo</span>
+                <span className="text-xs font-medium text-ink">Institute Logo</span>
                 {instituteLogo === DEFAULT_SVNIT_LOGO ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-acm-600/20 text-acm-300 border border-acm-500/30">SVNIT Default</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">SVNIT Default</span>
                 ) : (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Custom Uploaded</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-700/15 text-emerald-800 border border-emerald-700/30">Custom Uploaded</span>
                 )}
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg bg-surface-900 border border-white/10 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                <div className="w-12 h-12 rounded-lg bg-white border border-line p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
                   <img src={instituteLogo} alt="Institute Logo" className="max-w-full max-h-full object-contain" />
                 </div>
                 <div className="flex flex-col gap-1.5 flex-1 min-w-0">
@@ -332,7 +332,7 @@ export function EditorPage() {
                     <button
                       type="button"
                       onClick={resetInstituteLogo}
-                      className="text-[11px] text-slate-400 hover:text-white underline text-left"
+                      className="text-[11px] text-muted hover:text-ink underline text-left"
                     >
                       Reset to SVNIT
                     </button>
@@ -342,18 +342,18 @@ export function EditorPage() {
             </div>
 
             {/* Club / Event Logo */}
-            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-2">
+            <div className="p-3 rounded-xl bg-hover-surface/30 border border-line space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-300">Club / Event Logo</span>
+                <span className="text-xs font-medium text-ink">Club / Event Logo</span>
                 {clubLogo === DEFAULT_ACM_LOGO ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-acm-600/20 text-acm-300 border border-acm-500/30">ACM Default</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">ACM Default</span>
                 ) : (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Custom Uploaded</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-700/15 text-emerald-800 border border-emerald-700/30">Custom Uploaded</span>
                 )}
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg bg-surface-900 border border-white/10 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                <div className="w-12 h-12 rounded-lg bg-white border border-line p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
                   <img src={clubLogo} alt="Club Logo" className="max-w-full max-h-full object-contain" />
                 </div>
                 <div className="flex flex-col gap-1.5 flex-1 min-w-0">
@@ -375,7 +375,7 @@ export function EditorPage() {
                     <button
                       type="button"
                       onClick={resetClubLogo}
-                      className="text-[11px] text-slate-400 hover:text-white underline text-left"
+                      className="text-[11px] text-muted hover:text-ink underline text-left"
                     >
                       Reset to ACM
                     </button>
@@ -389,7 +389,7 @@ export function EditorPage() {
           <div className="glass p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="section-heading text-sm">Elements ({face === 'front' ? 'Front' : 'Back'})</h3>
-              <span className="text-[10px] text-slate-400 font-mono">{activeElementList.length} items</span>
+              <span className="text-[10px] text-muted font-mono">{activeElementList.length} items</span>
             </div>
             <div className="space-y-1 max-h-64 overflow-y-auto">
               {activeElementList.map(el => (
@@ -398,11 +398,11 @@ export function EditorPage() {
                   onClick={() => setSelectedEl(el.id === selectedEl ? null : el.id)}
                   className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-150 flex items-center gap-2
                     ${el.id === selectedEl
-                      ? 'bg-acm-600/30 text-acm-300 border border-acm-500/30'
-                      : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                      ? 'bg-accent/15 text-accent border border-accent/30 font-medium'
+                      : 'text-text hover:text-ink hover:bg-hover-surface'
                     }`}
                 >
-                  <span className="text-[10px] uppercase tracking-wider text-slate-600 w-12 shrink-0">{el.type}</span>
+                  <span className="text-[10px] uppercase tracking-wider text-muted w-12 shrink-0">{el.type}</span>
                   <span className="truncate font-mono text-xs">{el.id}</span>
                 </button>
               ))}
@@ -420,23 +420,23 @@ export function EditorPage() {
 
           {/* Card size info */}
           <div className="glass-sm p-4">
-            <h3 className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Card Size</h3>
-            <div className="text-sm text-slate-300 space-y-1">
+            <h3 className="text-xs font-medium text-muted mb-2 uppercase tracking-wider">Card Size</h3>
+            <div className="text-sm text-text space-y-1">
               <div className="flex justify-between">
-                <span className="text-slate-500">Format</span>
-                <span>{template.size.name}</span>
+                <span className="text-muted">Format</span>
+                <span className="text-ink font-medium">{template.size.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Size</span>
-                <span>{template.size.widthMm} × {template.size.heightMm} mm</span>
+                <span className="text-muted">Size</span>
+                <span className="text-ink font-medium">{template.size.widthMm} × {template.size.heightMm} mm</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Bleed</span>
-                <span>{template.size.bleedMm} mm</span>
+                <span className="text-muted">Bleed</span>
+                <span className="text-ink font-medium">{template.size.bleedMm} mm</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Safe margin</span>
-                <span>{template.size.safeMarginMm} mm</span>
+                <span className="text-muted">Safe margin</span>
+                <span className="text-ink font-medium">{template.size.safeMarginMm} mm</span>
               </div>
             </div>
           </div>

@@ -503,12 +503,12 @@ export function DataPage() {
     <div className="animate-slide-up pb-12">
       {/* Page Title */}
       <div className="mb-6">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-acm-600/20 border border-acm-500/30 text-acm-300 text-xs font-medium mb-3">
-          <span className="w-1.5 h-1.5 rounded-full bg-acm-400 animate-pulse-slow" />
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/25 text-accent text-xs font-medium mb-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse-slow" />
           Step 5 of 6 — Dynamic Participant Data & Bulk Photo Matching
         </div>
-        <h1 className="text-2xl font-display font-bold text-white">Import Data & Match Photographs</h1>
-        <p className="text-slate-400 text-sm mt-1">
+        <h1 className="text-2xl sm:text-3xl font-heading font-normal text-ink">Import Data & Match Photographs</h1>
+        <p className="text-text text-sm mt-1">
           Upload any CSV format, drop bulk photos or ZIP archives, and match every participant accurately.
         </p>
       </div>

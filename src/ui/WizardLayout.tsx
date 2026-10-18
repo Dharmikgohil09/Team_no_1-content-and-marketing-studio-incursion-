@@ -19,26 +19,27 @@ export function WizardLayout() {
   const currentIdx = STEPS.findIndex(s => location.pathname.includes(s.id))
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-bg text-text font-sans">
       {/* Top bar */}
-      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-surface-900/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-6">
+      <header className="sticky top-0 z-50 border-b border-line bg-bg">
+        <div className="max-w-[1120px] mx-auto px-8 h-[76px] flex items-center gap-6">
           {/* Logo */}
           <button
             onClick={() => navigate('/')}
-            className="flex items-center gap-2.5 shrink-0 group"
+            className="flex items-center gap-3 shrink-0 group text-left"
           >
-            <div className="w-8 h-8 rounded-lg bg-acm-600 flex items-center justify-center
-                            group-hover:bg-acm-500 transition-colors shadow-glow-acm">
-              <span className="text-white font-bold text-xs">CMS</span>
+            <div className="w-[36px] h-[36px] rounded-[8px] bg-accent flex items-center justify-center shrink-0">
+              <span className="text-white font-semibold text-[12px] leading-none">CMS</span>
             </div>
-            <span className="font-display font-semibold text-sm text-white hidden sm:block">
-              Content Studio
-            </span>
+            <div className="flex flex-col leading-[1.15]">
+              <span className="font-semibold text-[17px] text-ink">Content</span>
+              <span className="font-semibold text-[17px] text-ink">Studio</span>
+            </div>
+            <span className="text-[14px] text-muted font-normal ml-4 hidden sm:inline">by ACM NIT Surat</span>
           </button>
 
           {/* Stepper */}
-          <nav className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto no-scrollbar py-1">
+          <nav className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto no-scrollbar py-1 justify-center">
             {STEPS.map((s, idx) => {
               const isActive   = idx === currentIdx
               const isComplete = idx < currentIdx
@@ -49,7 +50,7 @@ export function WizardLayout() {
                 <div key={s.id} className="flex items-center gap-1 shrink-0">
                   {/* Line before */}
                   {idx > 0 && (
-                    <div className={`w-6 h-px transition-all duration-500 ${isComplete ? 'bg-acm-500' : 'bg-white/10'}`} />
+                    <div className={`w-6 h-px transition-all duration-300 ${isComplete ? 'bg-accent' : 'bg-line'}`} />
                   )}
 
                   <button
@@ -58,14 +59,14 @@ export function WizardLayout() {
                     className={`
                       flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
                       ${isActive
-                        ? 'bg-acm-600/30 text-acm-300 border border-acm-500/40 shadow-glow-acm'
+                        ? 'bg-accent text-white shadow-none'
                         : isComplete
-                        ? 'text-acm-400 hover:text-acm-300 hover:bg-acm-600/20 cursor-pointer'
-                        : 'text-slate-600 cursor-not-allowed'
+                        ? 'text-ink hover:text-accent hover:bg-hover-surface cursor-pointer'
+                        : 'text-muted/60 cursor-not-allowed'
                       }
                     `}
                   >
-                    <span className="opacity-70">{s.icon}</span>
+                    <span className="opacity-80">{s.icon}</span>
                     <span className="hidden md:inline">{s.label}</span>
                   </button>
                 </div>
@@ -76,15 +77,15 @@ export function WizardLayout() {
           {/* Project name */}
           {project && (
             <div className="shrink-0 hidden lg:flex items-center gap-2">
-              <span className="text-xs text-slate-500">Project:</span>
-              <span className="text-xs font-medium text-slate-300 max-w-32 truncate">{project.name}</span>
+              <span className="text-xs text-muted">Project:</span>
+              <span className="text-xs font-medium text-ink max-w-32 truncate">{project.name}</span>
             </div>
           )}
         </div>
       </header>
 
       {/* Page content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8 animate-fade-in">
+      <main className="flex-1 max-w-[1120px] w-full mx-auto px-8 py-10 animate-fade-in">
         <Outlet />
       </main>
     </div>

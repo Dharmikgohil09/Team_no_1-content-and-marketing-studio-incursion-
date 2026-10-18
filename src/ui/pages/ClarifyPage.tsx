@@ -185,14 +185,14 @@ export function ClarifyPage() {
   return (
     <div className="max-w-2xl mx-auto animate-slide-up">
       <div className="mb-8 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-acm-600/20 border border-acm-500/30 text-acm-300 text-xs font-medium mb-4">
-          <span className="w-1.5 h-1.5 rounded-full bg-acm-400 animate-pulse-slow" />
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/25 text-accent text-xs font-medium mb-4">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse-slow" />
           Step 2 of 6 — Fill in Missing Details
         </div>
-        <h1 className="text-2xl font-display font-bold text-white mb-2">
+        <h1 className="text-2xl sm:text-3xl font-heading font-normal text-ink mb-2">
           Let's fill in the gaps
         </h1>
-        <p className="text-slate-400">
+        <p className="text-text">
           I extracted what I could. Answer only what's needed — skip anything optional.
         </p>
       </div>
@@ -201,35 +201,35 @@ export function ClarifyPage() {
       <div className="glass-sm p-4 mb-6">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Already detected by AI</p>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-medium">
+            <p className="text-xs text-muted uppercase tracking-wider font-semibold">Already detected by AI</p>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/10 border border-accent/30 text-accent font-medium">
               Editable
             </span>
           </div>
           {feedbackMsg && (
-            <span className="text-xs text-emerald-400 font-medium animate-fade-in flex items-center gap-1">
+            <span className="text-xs text-accent font-medium animate-fade-in flex items-center gap-1">
               ✓ {feedbackMsg}
             </span>
           )}
         </div>
 
-        <p className="text-[11px] text-slate-400 mb-3">
+        <p className="text-[11px] text-muted mb-3">
           Review what the AI understood. You can change the category, participant count, or description at any time:
         </p>
 
         <div className="space-y-2.5">
           {/* Category Dropdown Selector */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-hover-surface/40 border border-line gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-acm-400 font-bold">✓</span>
-              <span className="text-xs font-semibold text-slate-300">Category:</span>
-              <span className="text-[11px] text-slate-400 hidden sm:inline">(Controls card styling & visual motifs)</span>
+              <span className="text-accent font-bold">✓</span>
+              <span className="text-xs font-semibold text-ink">Category:</span>
+              <span className="text-[11px] text-muted hidden sm:inline">(Controls card styling & visual motifs)</span>
             </div>
             <select
               id="clarify-category-select"
               value={((project.eventContext as any).category?.value || 'general').toLowerCase()}
               onChange={e => handleCategoryChange(e.target.value)}
-              className="bg-surface-900 border border-white/20 text-white rounded-lg px-2.5 py-1 text-xs font-medium focus:border-acm-400 focus:outline-none cursor-pointer"
+              className="bg-white border border-line text-ink rounded-lg px-2.5 py-1 text-xs font-medium focus:border-accent focus:outline-none cursor-pointer"
             >
               {CATEGORY_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>
@@ -240,11 +240,11 @@ export function ClarifyPage() {
           </div>
 
           {/* Participant Count Selector */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-hover-surface/40 border border-line gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-acm-400 font-bold">✓</span>
-              <span className="text-xs font-semibold text-slate-300">Expected Participants:</span>
-              <span className="text-[11px] text-slate-400 hidden sm:inline">(Prepopulates roster count)</span>
+              <span className="text-accent font-bold">✓</span>
+              <span className="text-xs font-semibold text-ink">Expected Participants:</span>
+              <span className="text-[11px] text-muted hidden sm:inline">(Prepopulates roster count)</span>
             </div>
             <div className="flex items-center gap-1.5">
               <button
@@ -253,7 +253,7 @@ export function ClarifyPage() {
                   const curr = (project.eventContext as any).participantCount?.value || (project.roles.find(r => r.id === 'participant' || r.id === 'player')?.count) || 5
                   handleParticipantCountChange(Math.max(1, curr - 1))
                 }}
-                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs font-bold"
+                className="w-6 h-6 rounded bg-hover-surface hover:bg-line-strong text-ink border border-line-strong flex items-center justify-center text-xs font-bold transition-colors"
               >
                 -
               </button>
@@ -264,7 +264,7 @@ export function ClarifyPage() {
                 max="5000"
                 value={(project.eventContext as any).participantCount?.value || (project.roles.find(r => r.id === 'participant' || r.id === 'player')?.count) || ''}
                 onChange={e => handleParticipantCountChange(parseInt(e.target.value) || 1)}
-                className="w-16 bg-surface-900 border border-white/20 text-white text-center rounded px-2 py-1 text-xs font-bold focus:border-acm-400 focus:outline-none"
+                className="w-16 bg-white border border-line text-ink text-center rounded px-2 py-1 text-xs font-bold focus:border-accent focus:outline-none"
               />
               <button
                 type="button"
@@ -272,7 +272,7 @@ export function ClarifyPage() {
                   const curr = (project.eventContext as any).participantCount?.value || (project.roles.find(r => r.id === 'participant' || r.id === 'player')?.count) || 5
                   handleParticipantCountChange(curr + 1)
                 }}
-                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs font-bold"
+                className="w-6 h-6 rounded bg-hover-surface hover:bg-line-strong text-ink border border-line-strong flex items-center justify-center text-xs font-bold transition-colors"
               >
                 +
               </button>
@@ -280,17 +280,17 @@ export function ClarifyPage() {
           </div>
 
           {/* Description Editor */}
-          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+          <div className="p-3 rounded-xl bg-hover-surface/40 border border-line">
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2">
-                <span className="text-acm-400 font-bold">✓</span>
-                <span className="text-xs font-semibold text-slate-300">Description:</span>
+                <span className="text-accent font-bold">✓</span>
+                <span className="text-xs font-semibold text-ink">Description:</span>
               </div>
               <button
                 type="button"
                 id="clarify-edit-desc-btn"
                 onClick={() => editingDesc ? handleSaveDesc() : handleStartEditDesc()}
-                className="text-xs text-acm-400 hover:text-acm-300 font-medium flex items-center gap-1"
+                className="text-xs text-accent hover:text-accent-hover font-medium flex items-center gap-1"
               >
                 {editingDesc ? '✓ Save Changes' : '✏️ Edit Description'}
               </button>
@@ -302,14 +302,14 @@ export function ClarifyPage() {
                   value={descDraft}
                   onChange={e => setDescDraft(e.target.value)}
                   rows={3}
-                  className="w-full bg-surface-900 border border-white/20 text-white text-xs rounded-lg p-2.5 focus:border-acm-400 focus:outline-none"
+                  className="w-full bg-white border border-line text-ink text-xs rounded-lg p-2.5 focus:border-accent focus:outline-none"
                   placeholder="Describe your event..."
                 />
                 <div className="flex items-center justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setEditingDesc(false)}
-                    className="text-xs text-slate-400 hover:text-white px-2 py-1"
+                    className="text-xs text-muted hover:text-ink px-2 py-1"
                   >
                     Cancel
                   </button>
@@ -323,7 +323,7 @@ export function ClarifyPage() {
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-slate-300 italic bg-black/20 p-2.5 rounded-lg border border-white/5 line-clamp-3">
+              <p className="text-xs text-text italic bg-white p-2.5 rounded-lg border border-line line-clamp-3">
                 "{project.eventContext.description?.value || 'No description provided'}"
               </p>
             )}
@@ -331,11 +331,11 @@ export function ClarifyPage() {
 
           {/* Requested Fields and Optional Tags */}
           {(project.eventContext as any).requestedFields?.value && (
-            <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-400">
-              <span className="text-slate-400 font-medium">Requested fields:</span>
+            <div className="flex items-center gap-2 pt-1 text-[11px] text-muted">
+              <span className="text-muted font-medium">Requested fields:</span>
               <div className="flex flex-wrap gap-1.5">
                 {((project.eventContext as any).requestedFields.value as string[]).map(f => (
-                  <span key={f} className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300 font-mono text-[10px]">
+                  <span key={f} className="px-2 py-0.5 rounded bg-white border border-line text-ink font-mono text-[10px]">
                     {f}
                   </span>
                 ))}
@@ -349,8 +349,8 @@ export function ClarifyPage() {
       {questions.length === 0 ? (
         <div className="glass p-8 text-center">
           <div className="text-4xl mb-3">🎉</div>
-          <p className="text-white font-semibold mb-1">All details captured!</p>
-          <p className="text-slate-400 text-sm">No clarifying questions needed. Let's generate your drafts.</p>
+          <p className="text-ink font-semibold mb-1">All details captured!</p>
+          <p className="text-muted text-sm">No clarifying questions needed. Let's generate your drafts.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -370,21 +370,21 @@ export function ClarifyPage() {
       <div className="glass p-5 mt-6">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-sm font-semibold text-white">Event & Institute Logos</h3>
-            <p className="text-xs text-slate-400">SVNIT is used as default institute logo and ACM for club/event logo. You can upload custom logos anytime.</p>
+            <h3 className="text-sm font-semibold text-ink">Event & Institute Logos</h3>
+            <p className="text-xs text-muted">SVNIT is used as default institute logo and ACM for club/event logo. You can upload custom logos anytime.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Institute Logo */}
-          <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-surface-900 border border-white/10 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="p-3.5 rounded-xl bg-hover-surface/30 border border-line flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-white border border-line p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
               <img src={instituteLogo} alt="SVNIT Logo" className="max-w-full max-h-full object-contain" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-xs font-medium text-slate-200">Institute Logo</span>
-                <span className="text-[10px] text-slate-400">{instituteLogo === DEFAULT_SVNIT_LOGO ? 'SVNIT' : 'Custom'}</span>
+                <span className="text-xs font-medium text-ink">Institute Logo</span>
+                <span className="text-[10px] text-muted">{instituteLogo === DEFAULT_SVNIT_LOGO ? 'SVNIT' : 'Custom'}</span>
               </div>
               <input ref={instInputRef} type="file" accept="image/*" className="hidden" onChange={handleInstituteUpload} />
               <div className="flex items-center gap-2">
@@ -396,7 +396,7 @@ export function ClarifyPage() {
                   📁 Change Logo
                 </button>
                 {instituteLogo !== DEFAULT_SVNIT_LOGO && (
-                  <button type="button" onClick={resetInstituteLogo} className="text-[11px] text-slate-400 hover:text-white underline">
+                  <button type="button" onClick={resetInstituteLogo} className="text-[11px] text-muted hover:text-ink underline">
                     Reset
                   </button>
                 )}
@@ -405,14 +405,14 @@ export function ClarifyPage() {
           </div>
 
           {/* Club / Event Logo */}
-          <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-surface-900 border border-white/10 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="p-3.5 rounded-xl bg-hover-surface/30 border border-line flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-white border border-line p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
               <img src={clubLogo} alt="ACM Logo" className="max-w-full max-h-full object-contain" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-xs font-medium text-slate-200">Club / Event Logo</span>
-                <span className="text-[10px] text-slate-400">{clubLogo === DEFAULT_ACM_LOGO ? 'ACM' : 'Custom'}</span>
+                <span className="text-xs font-medium text-ink">Club / Event Logo</span>
+                <span className="text-[10px] text-muted">{clubLogo === DEFAULT_ACM_LOGO ? 'ACM' : 'Custom'}</span>
               </div>
               <input ref={clubInputRef} type="file" accept="image/*" className="hidden" onChange={handleClubUpload} />
               <div className="flex items-center gap-2">
@@ -424,7 +424,7 @@ export function ClarifyPage() {
                   📁 Change Logo
                 </button>
                 {clubLogo !== DEFAULT_ACM_LOGO && (
-                  <button type="button" onClick={resetClubLogo} className="text-[11px] text-slate-400 hover:text-white underline">
+                  <button type="button" onClick={resetClubLogo} className="text-[11px] text-muted hover:text-ink underline">
                     Reset
                   </button>
                 )}
@@ -472,19 +472,19 @@ function QuestionCard({
   const isAnswered  = value && value !== '__skipped__'
 
   return (
-    <div className={`glass p-5 transition-all duration-200 ${isAnswered ? 'border-acm-500/30' : ''} ${isSkipped ? 'opacity-50' : ''}`}>
+    <div className={`glass p-5 transition-all duration-200 ${isAnswered ? 'border-accent/40' : ''} ${isSkipped ? 'opacity-50' : ''}`}>
       <div className="flex items-start justify-between gap-4 mb-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
             {question.required ? (
               <span className="badge-red py-0.5 px-2 text-[10px]">Required</span>
             ) : (
-              <span className="badge py-0.5 px-2 text-[10px] bg-white/[0.04] text-slate-500 border border-white/[0.08]">Optional</span>
+              <span className="badge py-0.5 px-2 text-[10px] bg-hover-surface text-muted border border-line-strong">Optional</span>
             )}
             {isAnswered && <span className="badge-green py-0.5 px-2 text-[10px]">✓ Answered</span>}
           </div>
-          <label className="text-sm font-medium text-white">{question.label}</label>
-          {question.hint && <p className="text-xs text-slate-500 mt-0.5">{question.hint}</p>}
+          <label className="text-sm font-medium text-ink">{question.label}</label>
+          {question.hint && <p className="text-xs text-muted mt-0.5">{question.hint}</p>}
         </div>
         {!question.required && !isSkipped && (
           <button onClick={onSkip} className="btn-ghost text-xs shrink-0 py-1">
@@ -547,8 +547,8 @@ function QuestionInput({ question, value, onAnswer }: {
             }}
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 border
               ${selected.includes(opt.value)
-                ? 'bg-acm-600/30 text-acm-300 border-acm-500/50'
-                : 'bg-white/[0.04] text-slate-300 border-white/[0.08] hover:border-white/[0.2]'
+                ? 'bg-accent text-white border-accent'
+                : 'bg-white text-ink border-line hover:border-line-strong hover:bg-hover-surface'
               }`}
           >
             {opt.label}

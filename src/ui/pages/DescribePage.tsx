@@ -114,14 +114,14 @@ export function DescribePage() {
     <div className="max-w-3xl mx-auto animate-slide-up">
       {/* Page heading */}
       <div className="mb-10 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-acm-600/20 border border-acm-500/30 text-acm-300 text-xs font-medium mb-4">
-          <span className="w-1.5 h-1.5 rounded-full bg-acm-400 animate-pulse-slow" />
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/25 text-accent text-xs font-medium mb-4">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse-slow" />
           Step 1 of 6 — Describe Your Event
         </div>
-        <h1 className="text-3xl md:text-4xl font-display font-bold text-white mb-3">
+        <h1 className="text-3xl md:text-4xl font-heading font-normal text-ink mb-3">
           What are you designing today?
         </h1>
-        <p className="text-slate-400 text-lg">
+        <p className="text-text text-lg">
           Describe your event in natural language. The more detail you give, the fewer questions we'll ask.
         </p>
       </div>
@@ -149,14 +149,14 @@ export function DescribePage() {
         />
 
         {error && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm">
+          <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-sm">
             {error}
           </div>
         )}
 
         <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-500">
-            Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-slate-300 font-mono text-xs">Ctrl+↵</kbd> to continue
+          <span className="text-xs text-muted">
+            Press <kbd className="px-1.5 py-0.5 rounded bg-hover-surface text-ink border border-line-strong font-mono text-xs">Ctrl+↵</kbd> to continue
           </span>
           <button
             id="describe-next-btn"
@@ -178,18 +178,18 @@ export function DescribePage() {
 
       {/* Quick-start examples */}
       <div>
-        <p className="text-xs text-slate-500 mb-3 uppercase tracking-wider font-medium">Quick-start examples</p>
+        <p className="text-xs text-muted mb-3 uppercase tracking-wider font-medium">Quick-start examples</p>
         <div className="flex flex-col gap-2">
           {EXAMPLES.map((ex, i) => (
             <button
               key={i}
               id={`example-btn-${i}`}
               onClick={() => { setText(ex); textareaRef.current?.focus() }}
-              className="text-left px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06]
-                         hover:bg-white/[0.07] hover:border-acm-500/30 transition-all duration-150
-                         text-sm text-slate-300 group"
+              className="text-left px-4 py-3 rounded-xl bg-white border border-line
+                         hover:bg-hover-surface hover:border-accent/40 transition-all duration-150
+                         text-sm text-ink group"
             >
-              <span className="text-acm-500 mr-2 group-hover:text-acm-400">→</span>
+              <span className="text-accent mr-2 group-hover:text-accent-hover">→</span>
               {ex}
             </button>
           ))}
@@ -197,8 +197,8 @@ export function DescribePage() {
       </div>
 
       {/* Asset upload hint */}
-      <div className="mt-8 p-4 rounded-xl bg-white/[0.02] border border-white/[0.05] text-sm text-slate-500">
-        <span className="text-slate-400 font-medium">💡 Tip:</span>{' '}
+      <div className="mt-8 p-4 rounded-xl bg-hover-surface/40 border border-line text-sm text-text">
+        <span className="text-ink font-medium">💡 Tip:</span>{' '}
         You can upload logos, CSV participant data, and photos in later steps.
         We'll ask exactly the right follow-up questions.
       </div>

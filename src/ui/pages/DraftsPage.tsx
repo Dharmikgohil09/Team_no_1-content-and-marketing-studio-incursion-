@@ -141,14 +141,14 @@ export function DraftsPage() {
     <div className="animate-slide-up">
       {/* Page Header */}
       <div className="mb-6 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-acm-600/20 border border-acm-500/30 text-acm-300 text-xs font-medium mb-3">
-          <span className="w-1.5 h-1.5 rounded-full bg-acm-400 animate-pulse-slow" />
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/25 text-accent text-xs font-medium mb-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse-slow" />
           Step 3 of 6 — Choose a Design Draft
         </div>
-        <h1 className="text-3xl font-display font-bold text-white mb-2">
+        <h1 className="text-3xl sm:text-4xl font-heading font-normal text-ink mb-2">
           Pick your badge identity
         </h1>
-        <p className="text-slate-400 max-w-2xl mx-auto text-sm">
+        <p className="text-text max-w-2xl mx-auto text-sm">
           Three genuinely distinct design families inspired by professional event credentials.
           Switch roles or add custom communities to see how each design adapts.
         </p>
@@ -156,15 +156,15 @@ export function DraftsPage() {
 
       {loading ? (
         <div className="flex flex-col items-center gap-6 py-24">
-          <div className="w-12 h-12 border-3 border-acm-500/30 border-t-acm-500 rounded-full animate-spin" />
-          <p className="text-slate-300 text-sm font-medium">Generating 3 distinct role-tailored design drafts…</p>
+          <div className="w-12 h-12 border-3 border-accent/30 border-t-accent rounded-full animate-spin" />
+          <p className="text-text text-sm font-medium">Generating 3 distinct role-tailored design drafts…</p>
         </div>
       ) : (
         <>
           {/* Interactive Role Switcher Bar */}
           <div className="glass p-3.5 mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold text-slate-400 mr-1 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-muted mr-1 uppercase tracking-wider">
                 Preview Community:
               </span>
               {roles.map(role => {
@@ -176,16 +176,16 @@ export function DraftsPage() {
                     onClick={() => setPreviewRole(role.id)}
                     style={{
                       borderColor: isActive ? role.palette.accent : undefined,
-                      backgroundColor: isActive ? role.palette.primary + '33' : undefined,
+                      backgroundColor: isActive ? role.palette.primary + '22' : undefined,
                     }}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 border
                       ${isActive
-                        ? 'text-white shadow-glow-acm'
-                        : 'bg-white/[0.03] text-slate-400 border-white/[0.08] hover:text-white hover:bg-white/[0.07]'
+                        ? 'text-ink shadow-sm'
+                        : 'bg-hover-surface/60 text-text border-line hover:text-ink hover:bg-hover-surface'
                       }`}
                   >
                     <span
-                      className="w-2.5 h-2.5 rounded-full border border-white/20 shrink-0"
+                      className="w-2.5 h-2.5 rounded-full border border-black/10 shrink-0"
                       style={{ backgroundColor: role.palette.primary }}
                     />
                     {role.label}
@@ -222,7 +222,7 @@ export function DraftsPage() {
                 <button
                   id="add-custom-role-btn"
                   onClick={() => setShowAddRole(true)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-acm-300 bg-acm-600/10 border border-acm-500/30 hover:bg-acm-600/20 transition-colors"
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-accent bg-accent/10 border border-accent/30 hover:bg-accent/20 transition-colors"
                 >
                   + Custom Community
                 </button>
@@ -231,7 +231,7 @@ export function DraftsPage() {
 
             {/* Active role badge identity summary */}
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[11px] text-slate-500">Active Theme:</span>
+              <span className="text-[11px] text-muted">Active Theme:</span>
               <span
                 className="text-xs font-bold px-2.5 py-0.5 rounded-full border"
                 style={{
@@ -272,10 +272,10 @@ export function DraftsPage() {
           {/* Natural Language Refinement Bar */}
           <div className="glass p-5 mb-8">
             <div className="flex items-center justify-between mb-2">
-              <label className="label mb-0 text-white font-semibold">
+              <label className="label mb-0 text-ink font-semibold">
                 Refine Selected Design ({drafts[selectedIdx]?.name || 'Current'})
               </label>
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-muted">
                 AI / Rule-based interactive micro-edits
               </span>
             </div>
@@ -310,7 +310,7 @@ export function DraftsPage() {
                   onClick={() => {
                     setNlInput(s)
                   }}
-                  className="text-xs px-3 py-1 rounded-full bg-white/[0.04] text-slate-400 border border-white/[0.06] hover:border-acm-500/40 hover:text-white transition-colors"
+                  className="text-xs px-3 py-1 rounded-full bg-hover-surface text-ink border border-line hover:border-line-strong transition-colors"
                 >
                   ⚡ {s}
                 </button>
@@ -332,7 +332,7 @@ export function DraftsPage() {
               id="drafts-use-btn"
               onClick={handleContinue}
               disabled={drafts.length === 0}
-              className="btn-primary text-sm px-6 py-3 shadow-glow-acm"
+              className="btn-primary text-sm px-6 py-3"
             >
               Use Selected Design ({drafts[selectedIdx]?.name?.split('—')[0]?.trim() || 'Selected'}) →
             </button>
@@ -526,15 +526,15 @@ function DraftCard({
       className={`
         relative cursor-pointer rounded-2xl p-4 transition-all duration-300 border-2 flex flex-col justify-between
         ${isSelected
-          ? 'border-acm-500 bg-acm-600/10 shadow-glow-acm'
-          : 'border-white/[0.08] bg-white/[0.02] hover:border-white/[0.2] hover:bg-white/[0.05]'
+          ? 'border-accent bg-accent/5 shadow-sm'
+          : 'border-line bg-white hover:border-line-strong hover:bg-hover-surface/30'
         }
       `}
     >
       {/* Selected Badge */}
       {isSelected && (
         <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10">
-          <div className="badge-blue text-xs px-3.5 py-0.5 shadow-glow-acm font-semibold flex items-center gap-1.5">
+          <div className="bg-accent text-white text-xs px-3.5 py-0.5 rounded-full shadow-sm font-semibold flex items-center gap-1.5">
             <span>✓</span> Selected Layout
           </div>
         </div>
@@ -544,10 +544,10 @@ function DraftCard({
         {/* Card Header & Title */}
         <div className="mb-2 flex items-start justify-between gap-2">
           <div>
-            <div className="text-[10px] font-mono text-acm-400 font-semibold uppercase tracking-wider mb-0.5">
+            <div className="text-[10px] font-mono text-accent font-semibold uppercase tracking-wider mb-0.5">
               Draft {index + 1} — {draft.tags?.[0]?.toUpperCase() || styleNames[index] || 'STYLE'}
             </div>
-            <h3 className="font-display font-bold text-base text-white">
+            <h3 className="font-heading font-normal text-xl text-ink">
               {draft.name.split('—')[0]?.trim()}
             </h3>
           </div>
@@ -555,7 +555,7 @@ function DraftCard({
             {draft.tags?.slice(0, 2).map(t => (
               <span
                 key={t}
-                className="text-[9px] px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-300 font-medium"
+                className="text-[9px] px-2 py-0.5 rounded-full bg-hover-surface text-text font-medium border border-line"
               >
                 {t}
               </span>
@@ -564,7 +564,7 @@ function DraftCard({
         </div>
 
         {/* Dynamic Event-Specific Description */}
-        <p className="text-[11px] text-slate-400 mb-2 italic leading-tight">
+        <p className="text-[11px] text-muted mb-2 italic leading-tight">
           {draft.description}
         </p>
 
@@ -574,8 +574,8 @@ function DraftCard({
             <span
               className={`px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1 ${
                 isAiGenerated
-                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                  : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                  ? 'bg-accent/15 text-accent border border-accent/30'
+                  : 'bg-amber-700/15 text-amber-800 border border-amber-700/30'
               }`}
               title={
                 isAiGenerated
@@ -583,11 +583,11 @@ function DraftCard({
                   : 'Event concept generative artwork fallback (Gemini free tier quota limit: 0)'
               }
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${isAiGenerated ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+              <span className={`w-1.5 h-1.5 rounded-full ${isAiGenerated ? 'bg-accent' : 'bg-amber-600'}`} />
               {isAiGenerated ? '✨ AI Artwork' : '🎨 Event Visual Concept'}
             </span>
           ) : (
-            <span className="text-slate-500 italic">Theme background</span>
+            <span className="text-muted italic">Theme background</span>
           )}
 
           <button
@@ -597,12 +597,12 @@ function DraftCard({
               e.stopPropagation()
               onRegenerateArtwork()
             }}
-            className="text-acm-300 hover:text-white px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors flex items-center gap-1 font-medium disabled:opacity-50"
+            className="text-accent hover:text-accent-hover px-2 py-0.5 rounded bg-hover-surface border border-line hover:border-line-strong transition-colors flex items-center gap-1 font-medium disabled:opacity-50"
             title="Generate a fresh background artwork for this draft"
           >
             {isRegenerating ? (
               <>
-                <span className="w-2.5 h-2.5 border-2 border-acm-400 border-t-transparent rounded-full animate-spin inline-block" />
+                <span className="w-2.5 h-2.5 border-2 border-accent border-t-transparent rounded-full animate-spin inline-block" />
                 Generating…
               </>
             ) : (
@@ -612,7 +612,7 @@ function DraftCard({
         </div>
 
         {/* Card Preview Container */}
-        <div className="relative group rounded-xl overflow-hidden card-preview-wrapper max-w-[270px] mx-auto shadow-2xl bg-surface-950/40 p-1.5 border border-white/5">
+        <div className="relative group rounded-xl overflow-hidden card-preview-wrapper max-w-[270px] mx-auto shadow-sm bg-hover-surface/30 p-2 border border-line">
           <CardPreview
             template={draft}
             role={role}
