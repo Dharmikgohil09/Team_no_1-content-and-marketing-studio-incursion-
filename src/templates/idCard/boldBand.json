@@ -276,7 +276,7 @@
       "type": "text",
       "id": "footer-branding",
       "anchor": { "x": 2, "y": 84.4, "w": 50, "h": 2.4 },
-      "content": "ACM NIT SURAT - SVNIT SURAT",
+      "content": "{{event.organizer.value}}",
       "fontFamily": "Hanken Grotesk",
       "fontSize": 2.2,
       "fontWeight": "600",

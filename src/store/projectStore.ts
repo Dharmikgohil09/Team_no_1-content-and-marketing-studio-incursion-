@@ -20,7 +20,6 @@ interface ProjectState {
   // Brand / Event Logos
   instituteLogo: string
   clubLogo:      string
-  samplePhotoUrl?: string
 
   // Actions
   newProject: (name?: string) => DesignProject
@@ -35,7 +34,6 @@ interface ProjectState {
   setWizardStep: (step: number) => void
   addNlMessage: (role: 'user' | 'assistant', content: string) => void
   setPeople: (people: Person[]) => void
-  setSamplePhotoUrl: (url: string) => void
 
   setInstituteLogo: (dataUrl: string) => void
   setClubLogo: (dataUrl: string) => void
@@ -52,7 +50,6 @@ export const useProjectStore = create<ProjectState>()(
   people:  [],
   instituteLogo: DEFAULT_SVNIT_LOGO,
   clubLogo:      DEFAULT_ACM_LOGO,
-  samplePhotoUrl: '',
 
   newProject(name = 'Untitled Project') {
     const project: DesignProject = {
@@ -70,7 +67,7 @@ export const useProjectStore = create<ProjectState>()(
       nlHistory:   [],
       versions:    [],
     }
-    set({ project, people: [], samplePhotoUrl: '' })
+    set({ project, people: [] })
     return project
   },
 
@@ -165,10 +162,6 @@ export const useProjectStore = create<ProjectState>()(
       }
       saveProject({ ...project, people, updatedAt: new Date().toISOString() }).catch(() => {})
     }
-  },
-
-  setSamplePhotoUrl(url: string) {
-    set({ samplePhotoUrl: url })
   },
 
   setInstituteLogo(dataUrl: string) {
@@ -291,7 +284,26 @@ export const useProjectStore = create<ProjectState>()(
         instituteLogo: state.instituteLogo,
         clubLogo: state.clubLogo,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state && 'samplePhotoUrl' in (state as any)) {
+          delete (state as any).samplePhotoUrl
+        }
+      },
     }
   )
 )
+
+// Purge any legacy samplePhotoUrl stored in browser localStorage
+if (typeof window !== 'undefined' && window.localStorage) {
+  try {
+    const raw = localStorage.getItem('cms_project_store')
+    if (raw && raw.includes('samplePhotoUrl')) {
+      const parsed = JSON.parse(raw)
+      if (parsed?.state?.samplePhotoUrl) {
+        delete parsed.state.samplePhotoUrl
+        localStorage.setItem('cms_project_store', JSON.stringify(parsed))
+      }
+    }
+  } catch {}
+}
 

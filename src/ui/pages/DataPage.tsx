@@ -107,9 +107,6 @@ export function DataPage() {
   const [modalParticipant, setModalParticipant] = useState<{ name: string; id: string; rowIndex: number; currentPhoto?: string } | null>(null)
   const [confirmedSuccess, setConfirmedSuccess] = useState(false)
 
-  const samplePhotoUrl    = useProjectStore(s => s.samplePhotoUrl)
-  const setSamplePhotoUrl = useProjectStore(s => s.setSamplePhotoUrl)
-
   const brandKit = getDefaultBrandKit()
   const roles    = project?.roles ?? DEFAULT_ROLES.slice(0, 3)
   const template = project?.activeTemplate
@@ -412,7 +409,27 @@ export function DataPage() {
 
   // ── Manual Assignment Handlers ───────────────────────────────────────────
   function handleManualSelectImage(selectedImage: UploadedImage | null) {
-    if (!modalParticipant || !matchResult) return
+    if (!modalParticipant) return
+    if (!matchResult) {
+      if (people.length > 0) {
+        const updated = people.map((p, idx) =>
+          idx === modalParticipant.rowIndex
+            ? { ...p, photoUrl: selectedImage?.dataUrl || '' }
+            : p
+        )
+        setPeople(updated)
+      } else {
+        setPeople([{
+          id: modalParticipant.id || 'P001',
+          name: modalParticipant.name || 'Participant Name',
+          role: 'participant',
+          team: 'Team Alpha',
+          photoUrl: selectedImage?.dataUrl || '',
+          extra: {},
+        }])
+      }
+      return
+    }
     const updated = applyManualAssignment(
       matchResult.matches,
       uploadedImages,
@@ -421,6 +438,27 @@ export function DataPage() {
     )
     setMatchResult(updated)
     setConfirmedSuccess(false)
+  }
+
+  function handleRemovePhoto(idx: number) {
+    if (people.length > 0) {
+      const updated = people.map((p, i) => i === idx ? { ...p, photoUrl: '' } : p)
+      setPeople(updated)
+    }
+    if (matchResult && matchResult.matches[idx]) {
+      const updatedMatches = matchResult.matches.map((m, i) =>
+        i === idx ? { ...m, assignedImage: undefined, status: 'missing_photo' as MatchStatus } : m
+      )
+      setMatchResult({
+        ...matchResult,
+        matches: updatedMatches,
+        counts: {
+          ...matchResult.counts,
+          matched: Math.max(0, matchResult.counts.matched - 1),
+          missingPhoto: matchResult.counts.missingPhoto + 1,
+        },
+      })
+    }
   }
 
   async function handleUploadCustomPhoto(file: File) {
@@ -485,7 +523,7 @@ export function DataPage() {
         name: (row[inverseMap.name] ?? 'Participant Name').trim(),
         role: (row[inverseMap.role] ?? 'participant').toLowerCase(),
         team: row[inverseMap.team] ?? '',
-        photoUrl: activeMatch.assignedImage?.dataUrl || samplePhotoUrl || '',
+        photoUrl: activeMatch.assignedImage?.dataUrl || '',
         extra: {},
       }
     }
@@ -494,10 +532,10 @@ export function DataPage() {
       name: 'Participant Name',
       role: 'participant',
       team: 'Team Alpha',
-      photoUrl: samplePhotoUrl || '',
+      photoUrl: '',
       extra: {},
     }
-  }, [people, activeMatch, previewIdx, columnMap, samplePhotoUrl])
+  }, [people, activeMatch, previewIdx, columnMap])
 
   return (
     <div className="animate-slide-up pb-12">
@@ -1271,20 +1309,31 @@ export function DataPage() {
               {/* Single photo override for this preview person */}
               <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-white/5">
                 <span className="text-[11px] text-slate-400">Photo:</span>
-                <button
-                  onClick={() => {
-                    setModalParticipant({
-                      name: previewPerson.name,
-                      id: previewPerson.id,
-                      rowIndex: previewIdx,
-                      currentPhoto: previewPerson.photoUrl,
-                    })
-                  }}
-                  className="btn-secondary text-[11px] py-1 px-3 flex items-center gap-1.5"
-                >
-                  <span>📷</span>
-                  <span>{previewPerson.photoUrl ? 'Change Photo' : 'Upload Photo'}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {previewPerson.photoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePhoto(previewIdx)}
+                      className="btn-ghost text-[11px] py-1 px-2.5 text-rose-400 hover:text-rose-300 border border-rose-500/30 rounded-lg hover:bg-rose-500/10"
+                    >
+                      ✕ Remove
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setModalParticipant({
+                        name: previewPerson.name,
+                        id: previewPerson.id,
+                        rowIndex: previewIdx,
+                        currentPhoto: previewPerson.photoUrl,
+                      })
+                    }}
+                    className="btn-secondary text-[11px] py-1 px-3 flex items-center gap-1.5"
+                  >
+                    <span>📷</span>
+                    <span>{previewPerson.photoUrl ? 'Change Photo' : 'Upload Photo'}</span>
+                  </button>
+                </div>
               </div>
             </div>
           ) : (

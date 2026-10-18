@@ -78,7 +78,7 @@
       "type": "text",
       "id": "header-acm-label",
       "anchor": { "x": 12.5, "y": 9.8, "w": 29, "h": 3 },
-      "content": "ACM NIT SURAT",
+      "content": "{{event.organizer.value}}",
       "fontFamily": "Hanken Grotesk",
       "fontSize": 2.6,
       "fontWeight": "600",
