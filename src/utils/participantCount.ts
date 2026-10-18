@@ -115,7 +115,7 @@ export function getExpectedParticipantCount(project: any): number | null {
 
   let storedDesc = ''
   try {
-    storedDesc = localStorage.getItem('cms_event_description') || ''
+    storedDesc = sessionStorage.getItem('cms_event_description') || ''
   } catch {}
 
   const nlText = Array.isArray(project?.nlHistory)
@@ -128,9 +128,9 @@ export function getExpectedParticipantCount(project: any): number | null {
     return fromDesc
   }
 
-  // 2. Check localStorage expected participants
+  // 2. Check sessionStorage expected participants
   try {
-    const storedCount = localStorage.getItem('cms_expected_participants')
+    const storedCount = sessionStorage.getItem('cms_expected_participants')
     if (storedCount) {
       const parsed = parseInt(storedCount, 10)
       if (!isNaN(parsed) && parsed > 0) return parsed

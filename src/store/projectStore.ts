@@ -285,17 +285,40 @@ export const useProjectStore = create<ProjectState>()(
         clubLogo: state.clubLogo,
       }),
       onRehydrateStorage: () => (state) => {
-        if (state && 'samplePhotoUrl' in (state as any)) {
-          delete (state as any).samplePhotoUrl
+        if (typeof window !== 'undefined') {
+          if (state && 'samplePhotoUrl' in (state as any)) {
+            delete (state as any).samplePhotoUrl
+          }
+          const isSessionActive = Boolean(sessionStorage.getItem('cms_session_active'))
+          if (!isSessionActive) {
+            // New login / fresh browser visit: reset event context so description is clean
+            if (state?.project) {
+              state.project.eventContext = makeEmptyEventContext()
+              state.project.wizardStep = 0
+              state.project.people = []
+              state.project.drafts = []
+            }
+            if (state) {
+              state.people = []
+            }
+            try {
+              localStorage.removeItem('cms_event_description')
+              localStorage.removeItem('cms_expected_participants')
+              sessionStorage.removeItem('cms_event_description')
+              sessionStorage.removeItem('cms_expected_participants')
+            } catch {}
+          }
         }
       },
     }
   )
 )
 
-// Purge any legacy samplePhotoUrl stored in browser localStorage
+// Purge any legacy samplePhotoUrl and persistent event descriptions stored in browser localStorage
 if (typeof window !== 'undefined' && window.localStorage) {
   try {
+    localStorage.removeItem('cms_event_description')
+    localStorage.removeItem('cms_expected_participants')
     const raw = localStorage.getItem('cms_project_store')
     if (raw && raw.includes('samplePhotoUrl')) {
       const parsed = JSON.parse(raw)

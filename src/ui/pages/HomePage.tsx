@@ -42,6 +42,13 @@ export function HomePage() {
 
   function handleStart() {
     newProject()
+    try {
+      sessionStorage.removeItem('cms_event_description')
+      sessionStorage.removeItem('cms_expected_participants')
+      localStorage.removeItem('cms_event_description')
+      localStorage.removeItem('cms_expected_participants')
+      sessionStorage.setItem('cms_session_active', 'true')
+    } catch {}
     navigate('/studio/describe')
   }
 

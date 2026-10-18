@@ -20,9 +20,12 @@ export function DescribePage() {
 
   const storeDesc = useProjectStore(s => s.project?.eventContext?.description?.value) || ''
   const [text, setText] = useState(() => {
-    if (storeDesc) return storeDesc
     try {
-      return sessionStorage.getItem('cms_event_description') || localStorage.getItem('cms_event_description') || ''
+      const isSessionActive = Boolean(sessionStorage.getItem('cms_session_active'))
+      if (!isSessionActive) {
+        return ''
+      }
+      return storeDesc || sessionStorage.getItem('cms_event_description') || ''
     } catch {
       return ''
     }
@@ -31,8 +34,13 @@ export function DescribePage() {
   const [error, setError]       = useState('')
   const textareaRef             = useRef<HTMLTextAreaElement>(null)
 
-  // Synchronize text if stored description changes or loads
+  // Synchronize text if stored description changes or loads during active session
   useEffect(() => {
+    const isSessionActive = Boolean(sessionStorage.getItem('cms_session_active'))
+    if (!isSessionActive) {
+      if (text !== '') setText('')
+      return
+    }
     if (storeDesc && (!text || text !== storeDesc)) {
       setText(storeDesc)
     }
@@ -84,12 +92,13 @@ export function DescribePage() {
       useProjectStore.getState().setRoles(parsedRoles)
 
       try {
+        sessionStorage.setItem('cms_session_active', 'true')
         sessionStorage.setItem('cms_event_description', text)
-        localStorage.setItem('cms_event_description', text)
         if (pCount && pCount > 0) {
           sessionStorage.setItem('cms_expected_participants', String(pCount))
-          localStorage.setItem('cms_expected_participants', String(pCount))
         }
+        localStorage.removeItem('cms_event_description')
+        localStorage.removeItem('cms_expected_participants')
       } catch {}
 
       useProjectStore.getState().saveProject().catch(() => {})
@@ -133,8 +142,8 @@ export function DescribePage() {
             const val = e.target.value
             setText(val)
             try {
+              sessionStorage.setItem('cms_session_active', 'true')
               sessionStorage.setItem('cms_event_description', val)
-              localStorage.setItem('cms_event_description', val)
             } catch {}
           }}
           onKeyDown={e => {

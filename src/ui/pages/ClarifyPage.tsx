@@ -69,7 +69,6 @@ export function ClarifyPage() {
 
     try {
       sessionStorage.setItem('cms_expected_participants', String(count))
-      localStorage.setItem('cms_expected_participants', String(count))
     } catch {}
 
     setFeedbackMsg(`Participant count set to ${count}`)
@@ -91,7 +90,6 @@ export function ClarifyPage() {
     setEventContext(updatedCtx)
     try {
       sessionStorage.setItem('cms_event_description', val)
-      localStorage.setItem('cms_event_description', val)
     } catch {}
     setEditingDesc(false)
     setFeedbackMsg('Event description updated')
@@ -210,7 +208,6 @@ export function ClarifyPage() {
       const descVal = project?.eventContext?.description?.value
       if (descVal) {
         sessionStorage.setItem('cms_event_description', descVal)
-        localStorage.setItem('cms_event_description', descVal)
       }
     } catch {}
     setWizardStep(2)
