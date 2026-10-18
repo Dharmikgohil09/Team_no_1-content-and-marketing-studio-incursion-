@@ -463,5 +463,67 @@ describe('Dynamic Photo Matching & Extraction Engine Tests', () => {
       expect(warningText).toContain('Considering the top 5 participants from the CSV')
     })
   })
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 10. Robust ID Token and Format Conflict Matching
+  // ───────────────────────────────────────────────────────────────────────────
+  describe('Robust ID Token and Format Conflict Matching', () => {
+    it('matches participant ID when filename has tokens or prefixes e.g. P001_Aarav.jpg', () => {
+      const records = [
+        { 'id': 'P001', 'name': 'Aarav Sharma' },
+        { 'id': 'P002', 'name': 'Priya Mehta' },
+        { 'id': 'P003', 'name': 'Dr. Rahul Patel' },
+      ]
+
+      const images = [
+        makeUploadedImage('P001_Aarav.jpg'),
+        makeUploadedImage('photo_P002.png'),
+        makeUploadedImage('random_unrelated.jpg'),
+      ]
+
+      const result = matchPhotosToParticipants(records, images)
+
+      expect(result.counts.matched).toBe(2)
+      expect(result.matches[0].assignedImage?.filename).toBe('P001_Aarav.jpg')
+      expect(result.matches[1].assignedImage?.filename).toBe('photo_P002.png')
+      expect(result.matches[2].status).toBe('missing_photo')
+      expect(result.unmatchedImages[0].filename).toBe('random_unrelated.jpg')
+    })
+
+    it('matches delimiter-agnostic IDs e.g. P-001 vs p001.jpg and auto-detects Participant ID column', () => {
+      const records = [
+        { 'Participant ID': 'P-001', 'Name': 'Alice' },
+        { 'Participant ID': 'P-002', 'Name': 'Bob' },
+      ]
+
+      const images = [
+        makeUploadedImage('p001.jpg'),
+        makeUploadedImage('P_002.png'),
+      ]
+
+      // Note: identifierColumn not passed, engine auto-detects 'Participant ID'
+      const result = matchPhotosToParticipants(records, images)
+
+      expect(result.counts.matched).toBe(2)
+      expect(result.matches[0].assignedImage?.filename).toBe('p001.jpg')
+      expect(result.matches[1].assignedImage?.filename).toBe('P_002.png')
+    })
+
+    it('falls back to participant name in auto mode if image filename matches name', () => {
+      const records = [
+        { 'id': 'P999', 'name': 'Aarav Sharma' },
+      ]
+
+      const images = [
+        makeUploadedImage('aarav_sharma.jpg'),
+      ]
+
+      const result = matchPhotosToParticipants(records, images, { matchingMethod: 'auto' })
+
+      expect(result.counts.matched).toBe(1)
+      expect(result.matches[0].assignedImage?.filename).toBe('aarav_sharma.jpg')
+    })
+  })
 })
+
 

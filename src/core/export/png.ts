@@ -21,14 +21,17 @@ export interface PngExportOptions {
  * Rasterize a card to PNG at the specified DPI.
  * Uses an off-screen canvas to render the SVG.
  */
+import { sanitizeSvgForExport } from './svgSanitizer'
+
 export async function exportPng(opts: PngExportOptions): Promise<Blob> {
   const { template, role, person, event, brandKit, dpi, includeBleed, face } = opts
   const size  = template.size
-  const w     = template.orientation === 'portrait' ? size.heightMm : size.widthMm
-  const h     = template.orientation === 'portrait' ? size.widthMm  : size.heightMm
+  const isPortrait = template.orientation === 'portrait'
+  const cardW = isPortrait ? Math.min(size.widthMm, size.heightMm) : Math.max(size.widthMm, size.heightMm)
+  const cardH = isPortrait ? Math.max(size.widthMm, size.heightMm) : Math.min(size.widthMm, size.heightMm)
   const bleed = includeBleed ? size.bleedMm : 0
-  const totalW = w + bleed * 2
-  const totalH = h + bleed * 2
+  const totalW = cardW + bleed * 2
+  const totalH = cardH + bleed * 2
 
   const { svg } = renderCard({ template, role, person, event, brandKit, face, includeBleed })
 
@@ -39,30 +42,74 @@ export async function exportPng(opts: PngExportOptions): Promise<Blob> {
 }
 
 async function svgToPng(svgString: string, width: number, height: number): Promise<Blob> {
+  const cleanSvg = sanitizeSvgForExport(svgString)
+
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas')
     canvas.width  = width
     canvas.height = height
     const ctx = canvas.getContext('2d')!
 
+    let resolved = false
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true
+        reject(new Error('PNG export timed out'))
+      }
+    }, 5000)
+
+    function renderImageToCanvas(imgElem: HTMLImageElement) {
+      if (resolved) return
+      resolved = true
+      clearTimeout(timeout)
+      try {
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, width, height)
+        ctx.drawImage(imgElem, 0, 0, width, height)
+        canvas.toBlob(blob => {
+          if (blob) resolve(blob)
+          else reject(new Error('Canvas toBlob returned null'))
+        }, 'image/png')
+      } catch (err) {
+        reject(err)
+      }
+    }
+
     const img = new Image()
-    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+    img.crossOrigin = 'anonymous'
+    const svgBlob = new Blob([cleanSvg], { type: 'image/svg+xml;charset=utf-8' })
     const url = URL.createObjectURL(svgBlob)
 
     img.onload = () => {
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, width, height)
-      ctx.drawImage(img, 0, 0, width, height)
       URL.revokeObjectURL(url)
-      canvas.toBlob(blob => {
-        if (blob) resolve(blob)
-        else reject(new Error('Canvas toBlob returned null'))
-      }, 'image/png')
+      renderImageToCanvas(img)
     }
+
     img.onerror = () => {
       URL.revokeObjectURL(url)
-      reject(new Error('Failed to load SVG for PNG export'))
+      // Fallback: data URI
+      try {
+        const dataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(cleanSvg)
+        const fallbackImg = new Image()
+        fallbackImg.crossOrigin = 'anonymous'
+        fallbackImg.onload = () => renderImageToCanvas(fallbackImg)
+        fallbackImg.onerror = (e) => {
+          if (!resolved) {
+            resolved = true
+            clearTimeout(timeout)
+            reject(new Error('Failed to load SVG for PNG export'))
+          }
+        }
+        fallbackImg.src = dataUri
+      } catch (err) {
+        if (!resolved) {
+          resolved = true
+          clearTimeout(timeout)
+          reject(err)
+        }
+      }
     }
+
     img.src = url
   })
 }

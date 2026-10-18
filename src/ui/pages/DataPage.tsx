@@ -100,6 +100,14 @@ export function DataPage() {
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false)
   const [photoError, setPhotoError]         = useState('')
 
+  // Ensure photo matching result is always initialized for the participant table
+  useEffect(() => {
+    const records = rawRows.length > 0 ? rawRows : allParsedRows
+    if (records.length > 0 && !matchResult) {
+      runPhotoMatching(records, uploadedImages)
+    }
+  }, [rawRows.length, allParsedRows.length, uploadedImages.length])
+
   // UI / Preview state
   const [previewIdx, setPreviewIdx]         = useState(0)
   const [statusFilter, setStatusFilter]     = useState<string>('all')
@@ -215,14 +223,22 @@ export function DataPage() {
     setPhotoError('')
     try {
       const res = await extractImagesFromFiles(files)
+      let combinedImages: UploadedImage[] = []
       setUploadedImages(prev => {
         // Deduplicate by filename
         const existingNames = new Set(prev.map(i => i.normalizedName))
         const newImages = res.images.filter(i => !existingNames.has(i.normalizedName))
-        return [...prev, ...newImages]
+        combinedImages = [...prev, ...newImages]
+        return combinedImages
       })
       if (res.invalidFiles.length > 0) {
         setInvalidFiles(prev => [...prev, ...res.invalidFiles])
+      }
+
+      // Automatically trigger photo matching immediately
+      const recordsToMatch = rawRows.length > 0 ? rawRows : allParsedRows
+      if (recordsToMatch.length > 0) {
+        runPhotoMatching(recordsToMatch, combinedImages)
       }
     } catch (err: any) {
       setPhotoError(`Photo processing failed: ${err?.message || 'Unknown error'}`)
@@ -238,13 +254,21 @@ export function DataPage() {
     setPhotoError('')
     try {
       const res = await extractImagesFromZip(file, file.name)
+      let combinedImages: UploadedImage[] = []
       setUploadedImages(prev => {
         const existingNames = new Set(prev.map(i => i.normalizedName))
         const newImages = res.images.filter(i => !existingNames.has(i.normalizedName))
-        return [...prev, ...newImages]
+        combinedImages = [...prev, ...newImages]
+        return combinedImages
       })
       if (res.invalidFiles.length > 0) {
         setInvalidFiles(prev => [...prev, ...res.invalidFiles])
+      }
+
+      // Automatically trigger photo matching immediately
+      const recordsToMatch = rawRows.length > 0 ? rawRows : allParsedRows
+      if (recordsToMatch.length > 0) {
+        runPhotoMatching(recordsToMatch, combinedImages)
       }
     } catch (err: any) {
       setPhotoError(`Failed to extract ZIP: ${err?.message || 'Corrupt archive'}`)
@@ -264,13 +288,20 @@ export function DataPage() {
 
   // ── Run / Re-run Photo Matching ──────────────────────────────────────────
   function runPhotoMatching(currentRecords = rawRows, imagesToUse = uploadedImages) {
-    if (currentRecords.length === 0) {
+    const recordsToMatch = currentRecords.length > 0 ? currentRecords : (allParsedRows.length > 0 ? allParsedRows : rawRows)
+    if (recordsToMatch.length === 0) {
       setCsvError('Please import participant data first before matching photos.')
       return
     }
 
-    const res = matchPhotosToParticipants(currentRecords, imagesToUse, {
-      identifierColumn: identifierCol || undefined,
+    const inverseMap: Record<string, string> = {}
+    for (const [col, field] of Object.entries(columnMap)) {
+      inverseMap[field] = col
+    }
+    const resolvedIdCol = identifierCol || inverseMap.id || rawColumns.find(c => /^(?:id|participant\s*id|roll\s*no|uid|student\s*id)$/i.test(c.trim()))
+
+    const res = matchPhotosToParticipants(recordsToMatch, imagesToUse, {
+      identifierColumn: resolvedIdCol || undefined,
       filenameColumn: filenameCol || undefined,
       matchingMethod,
       allowDuplicateImageUsage: allowDuplicateImages,
@@ -279,6 +310,21 @@ export function DataPage() {
 
     setMatchResult(res)
     setConfirmedSuccess(false)
+
+    // Sync matched photos to people state
+    if (people.length > 0 && res.matches) {
+      const matchMap = new Map<number, string>()
+      for (const m of res.matches) {
+        if (m.assignedImage?.dataUrl) {
+          matchMap.set(m.rowIndex, m.assignedImage.dataUrl)
+        }
+      }
+      const updatedPeople = people.map((p, idx) => ({
+        ...p,
+        photoUrl: matchMap.get(idx) ?? p.photoUrl ?? '',
+      }))
+      setPeople(updatedPeople)
+    }
   }
 
   // ── Apply Mappings and Build Base Rows ────────────────────────────────────
@@ -321,7 +367,7 @@ export function DataPage() {
       if (currentMatchMap.size === 0 && uploadedImages.length > 0 && targetRows.length > 0) {
         try {
           const freshRes = matchPhotosToParticipants(targetRows, uploadedImages, {
-            identifierColumn: identifierCol || undefined,
+            identifierColumn: identifierCol || effectiveIdCol || undefined,
             filenameColumn: filenameCol || undefined,
             matchingMethod,
             allowDuplicateImageUsage: allowDuplicateImages,
@@ -410,10 +456,12 @@ export function DataPage() {
   // ── Manual Assignment Handlers ───────────────────────────────────────────
   function handleManualSelectImage(selectedImage: UploadedImage | null) {
     if (!modalParticipant) return
+    const targetIdx = modalParticipant.rowIndex
+
     if (!matchResult) {
       if (people.length > 0) {
         const updated = people.map((p, idx) =>
-          idx === modalParticipant.rowIndex
+          idx === targetIdx
             ? { ...p, photoUrl: selectedImage?.dataUrl || '' }
             : p
         )
@@ -430,13 +478,42 @@ export function DataPage() {
       }
       return
     }
+
     const updated = applyManualAssignment(
       matchResult.matches,
       uploadedImages,
-      modalParticipant.rowIndex,
+      targetIdx,
       selectedImage
     )
     setMatchResult(updated)
+
+    if (people.length > targetIdx) {
+      const updatedPeople = people.map((p, idx) =>
+        idx === targetIdx
+          ? { ...p, photoUrl: selectedImage?.dataUrl || '' }
+          : p
+      )
+      setPeople(updatedPeople)
+    }
+    setConfirmedSuccess(false)
+  }
+
+  function handleAssignUnmatchedImage(img: UploadedImage, targetRowIndex = previewIdx) {
+    if (matchResult && matchResult.matches[targetRowIndex]) {
+      const updated = applyManualAssignment(
+        matchResult.matches,
+        uploadedImages,
+        targetRowIndex,
+        img
+      )
+      setMatchResult(updated)
+    }
+    if (people.length > targetRowIndex) {
+      const updatedPeople = people.map((p, idx) =>
+        idx === targetRowIndex ? { ...p, photoUrl: img.dataUrl } : p
+      )
+      setPeople(updatedPeople)
+    }
     setConfirmedSuccess(false)
   }
 
@@ -1199,11 +1276,7 @@ export function DataPage() {
                     {matchResult.unmatchedImages.map(img => (
                       <div
                         key={img.id}
-                        onClick={() => {
-                          if (matchResult && matchResult.matches[previewIdx]) {
-                            handleManualSelectImage(img)
-                          }
-                        }}
+                        onClick={() => handleAssignUnmatchedImage(img, previewIdx)}
                         className="group flex-shrink-0 w-20 p-1 rounded-xl bg-surface-800 border border-white/10 hover:border-acm-500/60 cursor-pointer transition-all text-center"
                         title={`Click to assign "${img.filename}" to participant #${previewIdx + 1}`}
                       >

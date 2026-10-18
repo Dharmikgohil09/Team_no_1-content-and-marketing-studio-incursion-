@@ -7,6 +7,7 @@ import { DEFAULT_ROLES } from '../../core/schema/Role'
 import { exportSvg, downloadSvg } from '../../core/export/svg'
 import { exportPdf, downloadPdf } from '../../core/export/pdf'
 import { exportPng, downloadPng } from '../../core/export/png'
+import JSZip from 'jszip'
 import { listTemplates } from '../../templates/registry'
 
 const SAMPLE_PERSON = {
@@ -58,11 +59,28 @@ export function ExportPage() {
       const filename = `${((eventCtx.name as any)?.value ?? 'cards').replace(/\s+/g, '_')}`
 
       if (format === 'svg') {
-        // Export first person as sample SVG
-        const person = exportPeople[0]
-        const role   = roles.find(r => r.id === person.role) ?? roles[0] ?? DEFAULT_ROLES[0]
-        const svg    = exportSvg({ template, role, person, event: eventCtx as any, brandKit, includeBleed, face: exportFace })
-        downloadSvg(svg, `${filename}_${person.name.replace(/\s+/g, '_')}_${exportFace}.svg`)
+        if (exportPeople.length === 1) {
+          const person = exportPeople[0]
+          const role   = roles.find(r => r.id === person.role) ?? roles[0] ?? DEFAULT_ROLES[0]
+          const svg    = exportSvg({ template, role, person, event: eventCtx as any, brandKit, includeBleed, face: exportFace })
+          downloadSvg(svg, `${filename}_${person.name.replace(/\s+/g, '_')}_${exportFace}.svg`)
+        } else {
+          const zip = new JSZip()
+          for (let i = 0; i < exportPeople.length; i++) {
+            const person = exportPeople[i]
+            const role = roles.find(r => r.id === person.role) ?? roles[0] ?? DEFAULT_ROLES[0]
+            const svg = exportSvg({ template, role, person, event: eventCtx as any, brandKit, includeBleed, face: exportFace })
+            const safeName = `${i + 1}_${person.name.replace(/\s+/g, '_')}_${person.id || 'card'}_${exportFace}.svg`
+            zip.file(safeName, svg)
+          }
+          const content = await zip.generateAsync({ type: 'blob' })
+          const url = URL.createObjectURL(content)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `${filename}_cards_svg.zip`
+          a.click()
+          URL.revokeObjectURL(url)
+        }
 
       } else if (format === 'pdf') {
         const pdfBytes = await exportPdf({
@@ -78,10 +96,28 @@ export function ExportPage() {
         downloadPdf(pdfBytes, `${filename}_cards.pdf`)
 
       } else if (format === 'png') {
-        const person = exportPeople[0]
-        const role   = roles.find(r => r.id === person.role) ?? roles[0] ?? DEFAULT_ROLES[0]
-        const blob   = await exportPng({ template, role, person, event: eventCtx as any, brandKit, dpi, includeBleed, face: exportFace })
-        downloadPng(blob, `${filename}_${person.name.replace(/\s+/g, '_')}_${exportFace}_${dpi}dpi.png`)
+        if (exportPeople.length === 1) {
+          const person = exportPeople[0]
+          const role   = roles.find(r => r.id === person.role) ?? roles[0] ?? DEFAULT_ROLES[0]
+          const blob   = await exportPng({ template, role, person, event: eventCtx as any, brandKit, dpi, includeBleed, face: exportFace })
+          downloadPng(blob, `${filename}_${person.name.replace(/\s+/g, '_')}_${exportFace}_${dpi}dpi.png`)
+        } else {
+          const zip = new JSZip()
+          for (let i = 0; i < exportPeople.length; i++) {
+            const person = exportPeople[i]
+            const role = roles.find(r => r.id === person.role) ?? roles[0] ?? DEFAULT_ROLES[0]
+            const blob = await exportPng({ template, role, person, event: eventCtx as any, brandKit, dpi, includeBleed, face: exportFace })
+            const safeName = `${i + 1}_${person.name.replace(/\s+/g, '_')}_${person.id || 'card'}_${exportFace}_${dpi}dpi.png`
+            zip.file(safeName, blob)
+          }
+          const content = await zip.generateAsync({ type: 'blob' })
+          const url = URL.createObjectURL(content)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `${filename}_cards_png.zip`
+          a.click()
+          URL.revokeObjectURL(url)
+        }
       }
 
       setDone(true)

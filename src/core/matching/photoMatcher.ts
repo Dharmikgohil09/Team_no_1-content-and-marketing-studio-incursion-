@@ -93,11 +93,32 @@ export function matchPhotosToParticipants(
     warnings.push(`${invalidImages.length} uploaded image(s) are invalid or unsupported.`)
   }
 
-  // 1. Build indexes of uploaded images
+  // 1. Resolve effective identifier and name columns if not explicitly provided
+  let effectiveIdColumn = identifierColumn
+  if (!effectiveIdColumn && records.length > 0) {
+    const firstRow = records[0]
+    effectiveIdColumn = Object.keys(firstRow).find(col =>
+      /^(?:id|participant\s*id|roll\s*no|roll\s*number|uid|student\s*id|reg(?:istration)?\s*(?:no|number|id)?|ticket\s*id|code)$/i.test(col.trim())
+    )
+  }
+
+  let effectiveNameColumn: string | undefined
+  if (records.length > 0) {
+    const firstRow = records[0]
+    effectiveNameColumn = Object.keys(firstRow).find(col =>
+      /^(?:name|full\s*name|participant\s*name|student\s*name)$/i.test(col.trim())
+    )
+  }
+
+  // 2. Build indexes of uploaded images
   // Index by full normalized filename (e.g. "john.png") -> UploadedImage[]
   const filenameIndex = new Map<string, UploadedImage[]>()
   // Index by stem without extension (e.g. "john") -> UploadedImage[]
   const stemIndex = new Map<string, UploadedImage[]>()
+  // Index by clean alphanumeric stem (e.g. "p001" for "p-001.jpg") -> UploadedImage[]
+  const cleanStemIndex = new Map<string, UploadedImage[]>()
+  // Index by tokens in stem separated by delimiter (e.g. "p001" and "aarav" for "p001_aarav.jpg")
+  const tokenIndex = new Map<string, UploadedImage[]>()
 
   for (const img of validImages) {
     // Exact normalized filename
@@ -109,6 +130,25 @@ export function matchPhotosToParticipants(
     const stemKey = normalizeKey(img.stem)
     if (!stemIndex.has(stemKey)) stemIndex.set(stemKey, [])
     stemIndex.get(stemKey)!.push(img)
+
+    // Clean alphanumeric stem
+    const cleanStem = stemKey.replace(/[^a-z0-9]/g, '')
+    if (cleanStem) {
+      if (!cleanStemIndex.has(cleanStem)) cleanStemIndex.set(cleanStem, [])
+      cleanStemIndex.get(cleanStem)!.push(img)
+    }
+
+    // Delimited tokens in stem (e.g., "p001_aarav" -> ["p001", "aarav"])
+    const tokens = stemKey.split(/[-_\s.]+/)
+    for (const tok of tokens) {
+      const cleanTok = tok.replace(/[^a-z0-9]/g, '')
+      if (cleanTok.length >= 1) {
+        if (!tokenIndex.has(cleanTok)) tokenIndex.set(cleanTok, [])
+        if (!tokenIndex.get(cleanTok)!.some(i => i.id === img.id)) {
+          tokenIndex.get(cleanTok)!.push(img)
+        }
+      }
+    }
   }
 
   // Detect ambiguous files among uploaded images (same filename uploaded multiple times or duplicate stems)
@@ -119,13 +159,13 @@ export function matchPhotosToParticipants(
     }
   }
 
-  // 2. Analyze CSV records for duplicate identifiers
+  // 3. Analyze CSV records for duplicate identifiers
   const idCounts = new Map<string, number>()
   const duplicateIdentifiers: string[] = []
 
-  if (identifierColumn) {
+  if (effectiveIdColumn) {
     for (const row of records) {
-      const rawId = row[identifierColumn]
+      const rawId = row[effectiveIdColumn]
       const normId = normalizeKey(rawId)
       if (normId) {
         idCounts.set(normId, (idCounts.get(normId) || 0) + 1)
@@ -139,23 +179,25 @@ export function matchPhotosToParticipants(
     }
 
     if (duplicateIdentifiers.length > 0) {
-      warnings.push(`Detected ${duplicateIdentifiers.length} duplicate identifier(s) in CSV column "${identifierColumn}". Duplicate records will be flagged.`)
+      warnings.push(`Detected ${duplicateIdentifiers.length} duplicate identifier(s) in CSV column "${effectiveIdColumn}". Duplicate records will be flagged.`)
     }
   }
 
-  // 3. Match records
+  // 4. Match records
   const matches: ParticipantMatch[] = []
   const assignedImageIds = new Set<string>()
   const imageAssignmentCounts = new Map<string, number>()
 
   for (let idx = 0; idx < records.length; idx++) {
     const row = records[idx]
-    const rawId = identifierColumn ? (row[identifierColumn] ?? '').trim() : ''
+    const rawId = effectiveIdColumn ? (row[effectiveIdColumn] ?? '').trim() : ''
     const normId = normalizeKey(rawId)
+    const cleanId = normId.replace(/[^a-z0-9]/g, '')
     const rawFilename = filenameColumn ? (row[filenameColumn] ?? '').trim() : ''
+    const rawName = effectiveNameColumn ? (row[effectiveNameColumn] ?? '').trim() : (row['name'] ?? row['Name'] ?? '').trim()
 
     // Check duplicate ID
-    if (identifierColumn && normId && (idCounts.get(normId) ?? 0) > 1) {
+    if (effectiveIdColumn && normId && (idCounts.get(normId) ?? 0) > 1) {
       matches.push({
         rowIndex: idx,
         record: row,
@@ -167,21 +209,21 @@ export function matchPhotosToParticipants(
       continue
     }
 
-    // Check missing ID if identifier matching is required and no filename is provided
-    if (identifierColumn && !normId && (matchingMethod === 'identifier' || (!rawFilename && matchingMethod === 'auto'))) {
+    // Check missing ID if identifier matching is strictly required and no filename is provided
+    if (effectiveIdColumn && !normId && (matchingMethod === 'identifier' || (!rawFilename && matchingMethod === 'auto'))) {
       matches.push({
         rowIndex: idx,
         record: row,
         identifier: '',
         explicitFilename: rawFilename || undefined,
         status: 'missing_id',
-        statusReason: `Row ${idx + 1} is missing a unique identifier in column "${identifierColumn}"`,
+        statusReason: `Row ${idx + 1} is missing a unique identifier in column "${effectiveIdColumn}"`,
       })
       continue
     }
 
     let candidateImages: UploadedImage[] = []
-    let matchStrategyUsed: 'filename' | 'identifier' | null = null
+    let matchStrategyUsed: 'filename' | 'identifier' | 'name' | null = null
 
     // Strategy A: Explicit Filename Matching
     if ((matchingMethod === 'filename' || matchingMethod === 'auto') && rawFilename) {
@@ -194,12 +236,11 @@ export function matchPhotosToParticipants(
         candidateImages = filenameIndex.get(normFilename)!
         matchStrategyUsed = 'filename'
       } else if (parsed.extension === '' && stemIndex.has(fnStem)) {
-        // If filename in CSV didn't have an extension (e.g. "photo12"), check stem index
         candidateImages = stemIndex.get(fnStem)!
         matchStrategyUsed = 'filename'
       } else {
         // Explicit filename specified in CSV was NOT found among uploaded images
-        if (matchingMethod === 'filename' || !fallbackToId || !identifierColumn || !normId) {
+        if (matchingMethod === 'filename' || !fallbackToId || !effectiveIdColumn || !normId) {
           matches.push({
             rowIndex: idx,
             record: row,
@@ -213,19 +254,62 @@ export function matchPhotosToParticipants(
       }
     }
 
-    // Strategy B: Unique Identifier Matching (Stem Matching)
+    // Strategy B: Unique Identifier Matching (Stem, Sanitized Alphanumeric, and Token Matching)
     if (
       candidateImages.length === 0 &&
       (matchingMethod === 'identifier' || (matchingMethod === 'auto' && fallbackToId)) &&
-      identifierColumn &&
       normId
     ) {
+      // 1. Exact stem or filename match (e.g. "p001" === "p001")
       if (stemIndex.has(normId)) {
         candidateImages = stemIndex.get(normId)!
         matchStrategyUsed = 'identifier'
       } else if (filenameIndex.has(normId)) {
         candidateImages = filenameIndex.get(normId)!
         matchStrategyUsed = 'identifier'
+      }
+
+      // 2. Clean alphanumeric match (e.g. ID "P-001" matches "p001.jpg" or "P_001.png")
+      if (candidateImages.length === 0 && cleanId.length >= 2 && cleanStemIndex.has(cleanId)) {
+        candidateImages = cleanStemIndex.get(cleanId)!
+        matchStrategyUsed = 'identifier'
+      }
+
+      // 3. Delimited token match (e.g. ID "P001" matches "P001_Aarav.jpg" or "student-P001.png")
+      if (candidateImages.length === 0 && cleanId.length >= 2 && tokenIndex.has(cleanId)) {
+        candidateImages = tokenIndex.get(cleanId)!
+        matchStrategyUsed = 'identifier'
+      }
+
+      // 4. Numeric token match with leading zeroes removed (e.g. ID "1" or "001" matches "1.jpg" or "001.jpg")
+      if (candidateImages.length === 0 && /^\d+$/.test(cleanId)) {
+        const numVal = parseInt(cleanId, 10).toString()
+        for (const [tok, imgs] of tokenIndex.entries()) {
+          if (/^\d+$/.test(tok) && parseInt(tok, 10).toString() === numVal) {
+            candidateImages = imgs
+            matchStrategyUsed = 'identifier'
+            break
+          }
+        }
+      }
+    }
+
+    // Strategy C: Participant Name Matching (Fallback in auto mode if ID did not match)
+    if (
+      candidateImages.length === 0 &&
+      matchingMethod === 'auto' &&
+      rawName
+    ) {
+      const normName = normalizeKey(rawName)
+      const cleanName = normName.replace(/[^a-z0-9]/g, '')
+      if (cleanName.length >= 3) {
+        if (cleanStemIndex.has(cleanName)) {
+          candidateImages = cleanStemIndex.get(cleanName)!
+          matchStrategyUsed = 'name'
+        } else if (stemIndex.has(normName)) {
+          candidateImages = stemIndex.get(normName)!
+          matchStrategyUsed = 'name'
+        }
       }
     }
 
@@ -239,7 +323,7 @@ export function matchPhotosToParticipants(
         status: 'missing_photo',
         statusReason: rawFilename
           ? `Image "${rawFilename}" not found`
-          : (identifierColumn && rawId ? `No image matching identifier "${rawId}"` : 'No matching photograph'),
+          : (rawId ? `No image matching identifier "${rawId}"` : 'No matching photograph'),
       })
       continue
     }
@@ -287,7 +371,9 @@ export function matchPhotosToParticipants(
       status: 'matched',
       statusReason: matchStrategyUsed === 'filename'
         ? `Matched via filename "${rawFilename}"`
-        : `Matched via identifier "${rawId}"`,
+        : (matchStrategyUsed === 'name'
+          ? `Matched via participant name "${rawName}"`
+          : `Matched via identifier "${rawId}"`),
     })
   }
 

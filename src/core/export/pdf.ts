@@ -28,8 +28,12 @@ export interface PdfExportOptions {
  * For production, svg2pdf.js would be used for true vector embedding.
  * Here we create properly-sized pages with SVG data.
  */
+import { sanitizeSvgForExport } from './svgSanitizer'
+
 async function svgToPngBytes(svgString: string, width: number, height: number): Promise<Uint8Array | null> {
   if (typeof document === 'undefined') return null
+  const cleanSvg = sanitizeSvgForExport(svgString)
+
   return new Promise((resolve) => {
     try {
       const canvas = document.createElement('canvas')
@@ -38,26 +42,71 @@ async function svgToPngBytes(svgString: string, width: number, height: number): 
       const ctx = canvas.getContext('2d')
       if (!ctx) return resolve(null)
 
-      const img = new Image()
-      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+      let resolved = false
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true
+          resolve(null)
+        }
+      }, 5000)
+
+      function renderImageToCanvas(imgElem: HTMLImageElement) {
+        if (resolved) return
+        resolved = true
+        clearTimeout(timeout)
+        try {
+          ctx!.fillStyle = '#ffffff'
+          ctx!.fillRect(0, 0, width, height)
+          ctx!.drawImage(imgElem, 0, 0, width, height)
+          canvas.toBlob((blob) => {
+            if (!blob) return resolve(null)
+            blob.arrayBuffer()
+              .then(buf => resolve(new Uint8Array(buf)))
+              .catch(() => resolve(null))
+          }, 'image/png')
+        } catch (e) {
+          console.warn('Canvas toBlob failed during PDF export', e)
+          resolve(null)
+        }
+      }
+
+      // Try Blob URL first
+      const svgBlob = new Blob([cleanSvg], { type: 'image/svg+xml;charset=utf-8' })
       const url = URL.createObjectURL(svgBlob)
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
 
       img.onload = () => {
-        ctx.fillStyle = '#ffffff'
-        ctx.fillRect(0, 0, width, height)
-        ctx.drawImage(img, 0, 0, width, height)
         URL.revokeObjectURL(url)
-        canvas.toBlob((blob) => {
-          if (!blob) return resolve(null)
-          blob.arrayBuffer()
-            .then(buf => resolve(new Uint8Array(buf)))
-            .catch(() => resolve(null))
-        }, 'image/png')
+        renderImageToCanvas(img)
       }
+
       img.onerror = () => {
         URL.revokeObjectURL(url)
-        resolve(null)
+        // Fallback: try data URI encoding if Blob URL fails
+        try {
+          const dataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(cleanSvg)
+          const fallbackImg = new Image()
+          fallbackImg.crossOrigin = 'anonymous'
+          fallbackImg.onload = () => renderImageToCanvas(fallbackImg)
+          fallbackImg.onerror = (err) => {
+            if (!resolved) {
+              resolved = true
+              clearTimeout(timeout)
+              console.warn('SVG image load error during PDF export', err)
+              resolve(null)
+            }
+          }
+          fallbackImg.src = dataUri
+        } catch {
+          if (!resolved) {
+            resolved = true
+            clearTimeout(timeout)
+            resolve(null)
+          }
+        }
       }
+
       img.src = url
     } catch {
       resolve(null)
@@ -68,11 +117,12 @@ async function svgToPngBytes(svgString: string, width: number, height: number): 
 export async function exportPdf(opts: PdfExportOptions): Promise<Uint8Array> {
   const { template, roles, people, event, brandKit, includeBleed, dpi = 300 } = opts
   const size = template.size
-  const w    = template.orientation === 'portrait' ? size.heightMm : size.widthMm
-  const h    = template.orientation === 'portrait' ? size.widthMm  : size.heightMm
+  const isPortrait = template.orientation === 'portrait'
+  const cardW = isPortrait ? Math.min(size.widthMm, size.heightMm) : Math.max(size.widthMm, size.heightMm)
+  const cardH = isPortrait ? Math.max(size.widthMm, size.heightMm) : Math.min(size.widthMm, size.heightMm)
   const bleed = includeBleed ? size.bleedMm : 0
-  const totalW = w + bleed * 2
-  const totalH = h + bleed * 2
+  const totalW = cardW + bleed * 2
+  const totalH = cardH + bleed * 2
 
   const pdf = await PDFDocument.create()
   const pxW = Math.round(mmToPxAtDpi(totalW, dpi))
