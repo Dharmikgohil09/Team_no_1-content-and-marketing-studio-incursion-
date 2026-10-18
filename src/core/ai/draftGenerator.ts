@@ -1887,65 +1887,331 @@ export async function applyNlRefinement(
   template: CardTemplate,
   instruction: string
 ): Promise<CardTemplate> {
+  const originalJson = JSON.stringify(template)
   try {
     const res = await fetch('/api/llm/refine', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ template, instruction }),
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(8000),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const patched = await res.json() as CardTemplate
-    return patched
+    // If LLM returned empty, invalid, or untouched template, fallback to deterministic
+    if (!patched || !patched.elements || JSON.stringify(patched) === originalJson) {
+      return applyDeterministicRefinement(template, instruction)
+    }
+    return {
+      ...patched,
+      id: template.id,
+      version: (template.version || 1) + 1,
+    }
   } catch {
     return applyDeterministicRefinement(template, instruction)
   }
 }
 
-function applyDeterministicRefinement(template: CardTemplate, instruction: string): CardTemplate {
-  const lower = instruction.toLowerCase()
+export function applyDeterministicRefinement(template: CardTemplate, instruction: string): CardTemplate {
+  const lower = instruction.toLowerCase().trim()
+  const isPortrait = template.orientation === 'portrait'
+  const cardW = isPortrait ? Math.min(template.size.widthMm, template.size.heightMm) : Math.max(template.size.widthMm, template.size.heightMm)
+  const cardH = isPortrait ? Math.max(template.size.widthMm, template.size.heightMm) : Math.min(template.size.widthMm, template.size.heightMm)
+
+  // 1. Detect requested intents
+  const wantsDarker = /dark(?:er)?|black|obsidian|night|dim|shadow|dark\s*theme|dark\s*mode/.test(lower)
+  const wantsLighter = /light(?:er)?|white|clean|paper|cream|bright|light\s*theme|light\s*mode/.test(lower)
+
+  // Color accents
+  const wantsBlue   = /\b(?:blue|cyan|azure|navy|indigo|cobalt)\b/.test(lower)
+  const wantsGreen  = /\b(?:green|emerald|teal|mint|forest)\b/.test(lower)
+  const wantsPurple = /\b(?:purple|violet|magenta|plum)\b/.test(lower)
+  const wantsRed    = /\b(?:red|crimson|ruby|scarlet|coral)\b/.test(lower)
+  const wantsOrange = /\b(?:orange|amber|tangerine)\b/.test(lower)
+  const wantsGold   = /\b(?:gold|golden|yellow)\b/.test(lower)
+
+  // Photo adjustments
+  const wantsBiggerPhoto  = /bigger\s+photo|large(?:r)?\s+photo|increase\s+photo|expand\s+photo|zoom\s+photo|scale\s+photo\s+up|huge\s+photo/.test(lower)
+  const wantsSmallerPhoto = /smaller\s+photo|tiny\s+photo|decrease\s+photo|reduce\s+photo|scale\s+photo\s+down/.test(lower)
+  const wantsPhotoUp      = /move\s+photo\s+up|photo\s+up|higher\s+photo|raise\s+photo/.test(lower)
+  const wantsPhotoDown    = /move\s+photo\s+down|photo\s+down|lower\s+photo/.test(lower)
+  const wantsSquarePhoto  = /square\s+photo|rect(?:angle)?\s+photo/.test(lower)
+  const wantsCirclePhoto  = /circle\s+photo|circular\s+photo|round\s+photo/.test(lower)
+  const wantsRoundedPhoto = /rounded\s+photo|rounded\s+corners?\s+photo/.test(lower)
+
+  // Logo adjustments
+  const wantsCenterLogo  = /logo.*center|center.*logo|middle.*logo|logo.*middle/.test(lower)
+  const wantsLeftLogo    = /logo.*left|left.*logo/.test(lower)
+  const wantsRightLogo   = /logo.*right|right.*logo/.test(lower)
+  const wantsBiggerLogo  = /bigger\s+logo|large(?:r)?\s+logo/.test(lower)
+  const wantsSmallerLogo = /smaller\s+logo|tiny\s+logo/.test(lower)
+
+  // Typography / Name adjustments
+  const wantsBiggerName   = /bigger\s+name|large(?:r)?\s+name|increase\s+name|bold\s+name|big\s+name/.test(lower)
+  const wantsSmallerName  = /smaller\s+name|reduce\s+name/.test(lower)
+  const wantsBiggerFont   = /bigger\s+font|large(?:r)?\s+(?:text|font)|increase\s+(?:font|text)|larger/.test(lower)
+  const wantsSmallerFont  = /smaller\s+(?:font|text)|reduce\s+(?:font|text)|compact\s+(?:font|text)/.test(lower)
+  const wantsTextUp       = /move\s+(?:name|text)\s+up|(?:name|text)\s+up|higher\s+(?:name|text)/.test(lower)
+  const wantsTextDown     = /move\s+(?:name|text)\s+down|(?:name|text)\s+down|lower\s+(?:name|text)/.test(lower)
+
+  // QR Code adjustments
+  const wantsBiggerQR  = /bigger\s+qr|large(?:r)?\s+qr/.test(lower)
+  const wantsSmallerQR = /smaller\s+qr|tiny\s+qr|reduce\s+qr/.test(lower)
+  const wantsCenterQR  = /qr.*center|center.*qr/.test(lower)
+  const wantsHideQR    = /hide\s+qr|remove\s+qr|no\s+qr/.test(lower)
+
+  let targetAccent: string | null = null
+  if (wantsBlue) targetAccent = '#0284C7'
+  else if (wantsGreen) targetAccent = '#059669'
+  else if (wantsPurple) targetAccent = '#7C3AED'
+  else if (wantsRed) targetAccent = '#DC2626'
+  else if (wantsOrange) targetAccent = '#EA580C'
+  else if (wantsGold) targetAccent = '#D97706'
+
+  // Generic fallback: if no known keywords matched, apply subtle layout polish & contrast
+  const isGenericEdit = !wantsDarker && !wantsLighter && !targetAccent && !wantsBiggerPhoto && !wantsSmallerPhoto &&
+    !wantsPhotoUp && !wantsPhotoDown && !wantsSquarePhoto && !wantsCirclePhoto && !wantsRoundedPhoto &&
+    !wantsCenterLogo && !wantsLeftLogo && !wantsRightLogo && !wantsBiggerLogo && !wantsSmallerLogo &&
+    !wantsBiggerName && !wantsSmallerName && !wantsBiggerFont && !wantsSmallerFont && !wantsTextUp && !wantsTextDown &&
+    !wantsBiggerQR && !wantsSmallerQR && !wantsCenterQR && !wantsHideQR
+
   const patchElement = (el: Element): Element => {
-    // Darker theme
-    if (/dark(?:er)?\s+theme/.test(lower) || /dark mode/.test(lower) || /darker/.test(lower)) {
-      if (el.type === 'shape' && (el.id === 'header-bg' || el.id === 'info-zone-bg')) {
-        return { ...el, fill: '#090a10' }
-      }
-      if (el.type === 'text' && (el.color === '#0f172a' || el.color === '#334155')) {
-        return { ...el, color: '#f8fafc' }
-      }
-    }
-    // Lighter theme
-    if (/light(?:er)?\s+theme/.test(lower) || /white/.test(lower)) {
-      if (el.type === 'shape' && (el.id === 'lower-bg' || el.id === 'bg-obsidian' || el.id === 'tech-hero-bg')) {
-        return { ...el, fill: '#f8fafc' }
-      }
-      if (el.type === 'text' && (el.color === '#ffffff' || el.color === '#f8fafc')) {
-        return { ...el, color: '#0f172a' }
-      }
-    }
-    // Bigger photo
-    if (/bigger photo/.test(lower) || /large photo/.test(lower)) {
-      if (el.type === 'photo' || el.id === 'photo-ring' || el.id === 'halo-ring') {
-        const scale = 1.15
-        return {
-          ...el,
-          anchor: {
-            ...el.anchor,
-            x: el.anchor.x - 1,
-            y: el.anchor.y - 1,
-            w: el.anchor.w * scale,
-            h: el.anchor.h * scale,
-          },
+    const patched = { ...el, anchor: { ...el.anchor } }
+
+    // 1. Darker Theme
+    if (wantsDarker && !wantsLighter) {
+      if (patched.type === 'shape') {
+        const fill = (patched.fill || '').toLowerCase()
+        const isBgShape = patched.anchor.w >= cardW * 0.45 || patched.anchor.h >= cardH * 0.25 ||
+          patched.id.includes('bg') || patched.id.includes('hero') || patched.id.includes('card')
+        if (isBgShape) {
+          if (fill === '#ffffff' || fill === '#faf8f4' || fill === '#f8fafc' || fill === '#e9e5d8' || fill === '#f1f5f9' || fill === 'white' || !fill) {
+            patched.fill = '#0B0F19'
+          } else if (fill === '#14201c' || fill === '#0f172a' || fill === '#1e293b') {
+            patched.fill = '#05070D'
+          }
+        }
+        if (patched.stroke && (patched.stroke.toLowerCase() === '#d9d5c7' || patched.stroke.toLowerCase() === '#cbd5e1')) {
+          patched.stroke = '#1E293B'
+        }
+      } else if (patched.type === 'text') {
+        const col = (patched.color || '').toLowerCase()
+        if (col === '#14201c' || col === '#0f172a' || col === '#334155' || col === '#1e293b' || col === '#000000' || col === '#66706a') {
+          patched.color = '#F8FAFC'
         }
       }
     }
-    // Move logo to center
-    if (/logo.*center/.test(lower)) {
-      if (el.id === 'acm-logo') {
-        return { ...el, anchor: { ...el.anchor, x: 22.5 } }
+
+    // 2. Lighter Theme
+    if (wantsLighter && !wantsDarker) {
+      if (patched.type === 'shape') {
+        const fill = (patched.fill || '').toLowerCase()
+        const isBgShape = patched.anchor.w >= cardW * 0.45 || patched.anchor.h >= cardH * 0.25 ||
+          patched.id.includes('bg') || patched.id.includes('hero') || patched.id.includes('card')
+        if (isBgShape) {
+          if (fill === '#0b0f19' || fill === '#05070d' || fill === '#14201c' || fill === '#090a10' || fill === '#0f172a') {
+            patched.fill = '#FAF8F4'
+          }
+        }
+        if (patched.stroke && (patched.stroke.toLowerCase() === '#1e293b' || patched.stroke.toLowerCase() === '#334155')) {
+          patched.stroke = '#E2E8F0'
+        }
+      } else if (patched.type === 'text') {
+        const col = (patched.color || '').toLowerCase()
+        if (col === '#ffffff' || col === '#f8fafc' || col === '#f1f5f9') {
+          patched.color = '#0F172A'
+        }
       }
     }
-    return el
+
+    // 3. Color Accent changes
+    if (targetAccent) {
+      if (patched.type === 'shape') {
+        if (patched.id.includes('slash') || patched.id.includes('pill') || patched.id.includes('accent') || patched.id.includes('bar') || patched.id.includes('strip')) {
+          patched.fill = targetAccent
+        }
+        if (patched.stroke && patched.stroke !== 'transparent' && patched.stroke !== 'none') {
+          if (patched.id.includes('photo-ring') || patched.id.includes('halo') || patched.id.includes('accent')) {
+            patched.stroke = targetAccent
+          }
+        }
+      } else if (patched.type === 'text') {
+        if (patched.id.includes('role') || patched.id.includes('badge') || patched.id.includes('highlight') || patched.id.includes('accent')) {
+          if (!patched.id.includes('pill')) {
+            patched.color = targetAccent
+          }
+        }
+      } else if (patched.type === 'photo') {
+        patched.initialsBg = targetAccent
+      }
+    }
+
+    // 4. Photo Size Adjustments
+    if (wantsBiggerPhoto) {
+      if (patched.type === 'photo' || patched.id === 'photo-ring' || patched.id === 'halo-ring' || patched.id === 'photo-frame-bg') {
+        const scale = 1.18
+        const oldW = patched.anchor.w
+        const oldH = patched.anchor.h
+        const newW = oldW * scale
+        const newH = oldH * scale
+        const isNearCenter = Math.abs(patched.anchor.x + oldW / 2 - cardW / 2) < 4
+        const newX = isNearCenter ? (cardW - newW) / 2 : patched.anchor.x - (newW - oldW) / 2
+        const newY = patched.anchor.y - (newH - oldH) * 0.4
+        patched.anchor = { ...patched.anchor, x: Math.max(1, newX), y: Math.max(1, newY), w: newW, h: newH }
+        if (patched.type === 'photo' && patched.shape === 'circle') {
+          patched.cornerRadius = newW / 2
+        }
+      }
+    } else if (wantsSmallerPhoto) {
+      if (patched.type === 'photo' || patched.id === 'photo-ring' || patched.id === 'halo-ring' || patched.id === 'photo-frame-bg') {
+        const scale = 0.85
+        const oldW = patched.anchor.w
+        const oldH = patched.anchor.h
+        const newW = oldW * scale
+        const newH = oldH * scale
+        const isNearCenter = Math.abs(patched.anchor.x + oldW / 2 - cardW / 2) < 4
+        const newX = isNearCenter ? (cardW - newW) / 2 : patched.anchor.x + (oldW - newW) / 2
+        const newY = patched.anchor.y + (oldH - newH) * 0.4
+        patched.anchor = { ...patched.anchor, x: newX, y: newY, w: newW, h: newH }
+        if (patched.type === 'photo' && patched.shape === 'circle') {
+          patched.cornerRadius = newW / 2
+        }
+      }
+    }
+
+    // 5. Photo Position Adjustments
+    if (wantsPhotoUp) {
+      if (patched.type === 'photo' || patched.id === 'photo-ring' || patched.id === 'halo-ring' || patched.id === 'photo-frame-bg') {
+        patched.anchor.y = Math.max(2, patched.anchor.y - 4)
+      }
+    } else if (wantsPhotoDown) {
+      if (patched.type === 'photo' || patched.id === 'photo-ring' || patched.id === 'halo-ring' || patched.id === 'photo-frame-bg') {
+        patched.anchor.y = patched.anchor.y + 4
+      }
+    }
+
+    // 6. Photo Shape Adjustments
+    if (patched.type === 'photo') {
+      if (wantsSquarePhoto) {
+        patched.shape = 'square'
+        patched.cornerRadius = 0
+      } else if (wantsCirclePhoto) {
+        patched.shape = 'circle'
+        patched.cornerRadius = patched.anchor.w / 2
+      } else if (wantsRoundedPhoto) {
+        patched.shape = 'rounded'
+        patched.cornerRadius = 3.5
+      }
+    }
+
+    // 7. Logo Position & Alignment
+    if ((patched as any).isLogo || patched.id.includes('logo')) {
+      if (wantsCenterLogo) {
+        if (patched.id === 'acm-logo') {
+          patched.anchor.x = 15.5
+          patched.anchor.y = 4.5
+        } else if (patched.id === 'svnit-logo') {
+          patched.anchor.x = 29.5
+          patched.anchor.y = 4.5
+        } else {
+          patched.anchor.x = (cardW - patched.anchor.w) / 2
+        }
+      } else if (wantsLeftLogo) {
+        patched.anchor.x = 3.5
+      } else if (wantsRightLogo) {
+        patched.anchor.x = cardW - patched.anchor.w - 3.5
+      }
+
+      if (wantsBiggerLogo) {
+        const sc = 1.25
+        patched.anchor.w = patched.anchor.w * sc
+        patched.anchor.h = patched.anchor.h * sc
+      } else if (wantsSmallerLogo) {
+        const sc = 0.8
+        patched.anchor.w = patched.anchor.w * sc
+        patched.anchor.h = patched.anchor.h * sc
+      }
+    }
+
+    // 8. Typography & Name Adjustments
+    if (patched.type === 'text') {
+      const isName = patched.id.includes('name') || patched.content.includes('person.name')
+      if (isName) {
+        if (wantsBiggerName || wantsBiggerFont) {
+          patched.fontSize = (patched.fontSize || 9) * 1.2
+        } else if (wantsSmallerName || wantsSmallerFont) {
+          patched.fontSize = (patched.fontSize || 9) * 0.85
+        }
+        if (wantsTextUp) {
+          patched.anchor.y = Math.max(10, patched.anchor.y - 3.5)
+        } else if (wantsTextDown) {
+          patched.anchor.y = patched.anchor.y + 3.5
+        }
+      } else {
+        if (wantsBiggerFont) {
+          patched.fontSize = (patched.fontSize || 3) * 1.15
+        } else if (wantsSmallerFont) {
+          patched.fontSize = (patched.fontSize || 3) * 0.88
+        }
+        if (wantsTextUp && patched.anchor.y > 45) {
+          patched.anchor.y = Math.max(10, patched.anchor.y - 3.5)
+        } else if (wantsTextDown && patched.anchor.y > 45) {
+          patched.anchor.y = patched.anchor.y + 3.5
+        }
+      }
+    }
+
+    // 9. Role Pill position sync
+    if (patched.id === 'role-pill-bg') {
+      if (wantsTextUp) {
+        patched.anchor.y = Math.max(10, patched.anchor.y - 3.5)
+      } else if (wantsTextDown) {
+        patched.anchor.y = patched.anchor.y + 3.5
+      }
+    }
+
+    // 10. QR Code Adjustments
+    if (patched.type === 'qr' || patched.id.includes('qr')) {
+      if (wantsBiggerQR) {
+        const sc = 1.25
+        const oldW = patched.anchor.w
+        const newW = oldW * sc
+        patched.anchor.w = newW
+        patched.anchor.h = newW
+        if (Math.abs(patched.anchor.x + oldW / 2 - cardW / 2) < 4) {
+          patched.anchor.x = (cardW - newW) / 2
+        }
+      } else if (wantsSmallerQR) {
+        const sc = 0.8
+        const oldW = patched.anchor.w
+        const newW = oldW * sc
+        patched.anchor.w = newW
+        patched.anchor.h = newW
+        if (Math.abs(patched.anchor.x + oldW / 2 - cardW / 2) < 4) {
+          patched.anchor.x = (cardW - newW) / 2
+        }
+      }
+      if (wantsCenterQR) {
+        patched.anchor.x = (cardW - patched.anchor.w) / 2
+      }
+      if (wantsHideQR) {
+        (patched as any).opacity = 0
+      }
+    }
+
+    // 11. Generic polish if unlisted natural language instruction was provided
+    if (isGenericEdit) {
+      if (patched.type === 'text' && (patched.id.includes('name') || patched.content.includes('person.name'))) {
+        patched.fontSize = (patched.fontSize || 9) * 1.08
+        patched.fontWeight = '600'
+      }
+      if (patched.type === 'photo') {
+        patched.anchor.w = patched.anchor.w * 1.05
+        patched.anchor.h = patched.anchor.h * 1.05
+        if (patched.shape === 'circle') patched.cornerRadius = patched.anchor.w / 2
+      }
+    }
+
+    return patched
   }
 
   const elements = template.elements.map(patchElement)
@@ -1958,6 +2224,7 @@ function applyDeterministicRefinement(template: CardTemplate, instruction: strin
 
   return {
     ...template,
+    version: (template.version || 1) + 1,
     elements,
     roleElements: Object.keys(roleElements).length > 0 ? roleElements : template.roleElements,
   }

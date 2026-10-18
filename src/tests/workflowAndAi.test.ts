@@ -690,6 +690,64 @@ describe('Workflow & AI Improvements — Tests 1 to 7', () => {
       expect(enrichedDraft.tokens?.isGeneratedArtwork).toBe('true')
     })
   })
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // TEST: Natural Language Refinement & Micro-Adjustments Engine
+  // ───────────────────────────────────────────────────────────────────────────
+  describe('Natural Language Refinement & Micro-Adjustments Engine', () => {
+    it('applies "Darker theme" micro adjustment to draft elements', async () => {
+      const { applyDeterministicRefinement } = await import('../core/ai/draftGenerator')
+      const result = parseIntentDeterministic('Shark Tank business startup summit')
+      const drafts = generateDraftsDeterministic(result.eventContext, [getRoleOrDefault('participant')])
+      const draft = drafts[0]
+
+      const refined = applyDeterministicRefinement(draft, 'Darker theme')
+      expect(refined).toBeDefined()
+      expect(refined.version).toBeGreaterThan(draft.version || 1)
+
+      // Background shapes should be inverted to dark fill
+      const bgShapes = refined.elements.filter(e => e.type === 'shape' && (e.id.includes('bg') || e.anchor.w >= 27))
+      const darkFills = bgShapes.map(s => (s as any).fill?.toLowerCase())
+      expect(darkFills.some(f => f === '#0b0f19' || f === '#05070d' || f === '#090a10' || f?.startsWith('#0'))).toBe(true)
+    })
+
+    it('applies "Bigger photo" micro adjustment and scales photo symmetrically', async () => {
+      const { applyDeterministicRefinement } = await import('../core/ai/draftGenerator')
+      const result = parseIntentDeterministic('Shark Tank business startup summit')
+      const drafts = generateDraftsDeterministic(result.eventContext, [getRoleOrDefault('participant')])
+      const draft = drafts[0]
+
+      const origPhoto = draft.elements.find(e => e.type === 'photo')!
+      const refined = applyDeterministicRefinement(draft, 'Bigger photo')
+      const refinedPhoto = refined.elements.find(e => e.type === 'photo')!
+
+      expect(refinedPhoto.anchor.w).toBeGreaterThan(origPhoto.anchor.w)
+      expect(refinedPhoto.anchor.h).toBeGreaterThan(origPhoto.anchor.h)
+    })
+
+    it('applies "Move logo to center" micro adjustment', async () => {
+      const { applyDeterministicRefinement } = await import('../core/ai/draftGenerator')
+      const result = parseIntentDeterministic('Tech Symposium at SVNIT')
+      const drafts = generateDraftsDeterministic(result.eventContext, [getRoleOrDefault('participant')])
+      const draft = drafts[0]
+
+      const refined = applyDeterministicRefinement(draft, 'Move logo to center')
+      const acmLogo = refined.elements.find(e => e.id === 'acm-logo')!
+      // Center placement is around 15.5mm (or cardW/2)
+      expect(acmLogo.anchor.x).toBeGreaterThan(10)
+    })
+
+    it('applies custom color accent micro adjustment', async () => {
+      const { applyDeterministicRefinement } = await import('../core/ai/draftGenerator')
+      const result = parseIntentDeterministic('Hackathon with 100 participants')
+      const drafts = generateDraftsDeterministic(result.eventContext, [getRoleOrDefault('participant')])
+      const draft = drafts[0]
+
+      const refined = applyDeterministicRefinement(draft, 'Change accent to emerald green')
+      const accentEl = refined.elements.find(e => e.id.includes('pill') || e.id.includes('slash'))
+      expect((accentEl as any)?.fill).toBe('#059669')
+    })
+  })
 })
 
 

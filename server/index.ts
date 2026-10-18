@@ -534,21 +534,21 @@ app.post('/api/llm/refine', async (req, res) => {
   try {
     const { template, instruction } = req.body
     if (!process.env.GEMINI_API_KEY) {
-      return res.status(200).json(template)
+      return res.status(422).json({ error: 'GEMINI_API_KEY not configured' })
     }
 
     const genAI = getGenAI()
     const prompt = `
-Modify this card template JSON according to user instruction: "${instruction}"
-Return ONLY updated valid JSON template.
+You are an expert card designer. Modify this card template JSON according to user instruction: "${instruction}"
+Return ONLY updated valid JSON template matching the input schema.
 Template JSON: ${JSON.stringify(template)}
 `
     const raw = await generateWithGemini(genAI, prompt)
-    const json = JSON.parse(raw.replace(/```json?\n?/g, '').replace(/```/g, ''))
+    const json = JSON.parse(raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim())
     res.json(json)
   } catch (err: any) {
     console.error('LLM refine error:', err.message)
-    res.status(200).json(req.body.template)
+    res.status(422).json({ error: err.message || 'LLM refinement error' })
   }
 })
 

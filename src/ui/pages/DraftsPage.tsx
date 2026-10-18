@@ -103,16 +103,21 @@ export function DraftsPage() {
     navigate('/studio/editor')
   }
 
-  async function handleRefine() {
-    if (!nlInput.trim()) return
+  async function handleRefine(instructionOverride?: string) {
+    const text = (instructionOverride || nlInput).trim()
+    if (!text || !drafts[selectedIdx]) return
     setRefining(true)
-    const refined = await applyNlRefinement(drafts[selectedIdx], nlInput)
-    const newDrafts = [...drafts]
-    newDrafts[selectedIdx] = refined
-    setLocalDrafts(newDrafts)
-    setDrafts(newDrafts)
-    setNlInput('')
-    setRefining(false)
+    try {
+      const refined = await applyNlRefinement(drafts[selectedIdx], text)
+      const newDrafts = [...drafts]
+      newDrafts[selectedIdx] = refined
+      setLocalDrafts(newDrafts)
+      setDrafts(newDrafts)
+      setActiveTemplate(refined)
+      setNlInput('')
+    } finally {
+      setRefining(false)
+    }
   }
 
   function handleAddCustomRole() {
@@ -291,9 +296,9 @@ export function DraftsPage() {
               />
               <button
                 id="nl-refine-btn"
-                onClick={handleRefine}
+                onClick={() => handleRefine()}
                 disabled={refining || !nlInput.trim()}
-                className="btn-secondary shrink-0"
+                className="btn-secondary shrink-0 cursor-pointer"
               >
                 {refining ? 'Applying…' : 'Apply Refinement'}
               </button>
@@ -309,8 +314,9 @@ export function DraftsPage() {
                   key={s}
                   onClick={() => {
                     setNlInput(s)
+                    handleRefine(s)
                   }}
-                  className="text-xs px-3 py-1 rounded-full bg-hover-surface text-ink border border-line hover:border-line-strong transition-colors"
+                  className="text-xs px-3 py-1 rounded-full bg-hover-surface text-ink border border-line hover:border-line-strong transition-colors cursor-pointer"
                 >
                   ⚡ {s}
                 </button>
