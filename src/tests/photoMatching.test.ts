@@ -498,6 +498,18 @@ describe('Dynamic Photo Matching & Extraction Engine Tests', () => {
       expect(extractCountFromDescription('panch logo')).toBe(5)
       expect(extractCountFromDescription('Participants: Aarav, Rohan, Sneha, Priya, Amit')).toBe(5)
       expect(extractCountFromDescription('1. Aarav\n2. Rohan\n3. Sneha\n4. Priya\n5. Amit')).toBe(5)
+
+      // User's specific scenario: "the number of participants to be 10"
+      expect(extractCountFromDescription('the number of participants to be 10')).toBe(10)
+      expect(extractCountFromDescription('number of participants to be 10')).toBe(10)
+      expect(extractCountFromDescription('number of participants should be 10')).toBe(10)
+      expect(extractCountFromDescription('number of participants is 10')).toBe(10)
+      expect(extractCountFromDescription('participants to be 10')).toBe(10)
+      expect(extractCountFromDescription('participant count to be 10')).toBe(10)
+      expect(extractCountFromDescription('take first 10 participants mentioned in the list')).toBe(10)
+      expect(extractCountFromDescription('only take first 10 participants')).toBe(10)
+      expect(extractCountFromDescription('Garba festival on 19 October at SVNIT. The number of participants to be 10.')).toBe(10)
+      expect(extractCountFromDescription('Garba night 2024 at SVNIT on 20th Oct. The number of participants to be 10.')).toBe(10)
     })
 
     it('slices CSV data to top N participants when CSV contains more records than specified', () => {

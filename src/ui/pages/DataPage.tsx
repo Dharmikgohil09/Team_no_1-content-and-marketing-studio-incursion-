@@ -70,9 +70,11 @@ export function DataPage() {
       setTargetCount(expectedParticipantCount)
       if (allParsedRows.length > expectedParticipantCount) {
         setRawRows(allParsedRows.slice(0, expectedParticipantCount))
+      } else if (rawRows.length > expectedParticipantCount) {
+        setRawRows(rawRows.slice(0, expectedParticipantCount))
       }
     }
-  }, [expectedParticipantCount, allParsedRows.length])
+  }, [expectedParticipantCount, allParsedRows.length, rawRows.length])
 
   // If people already exist in store and no CSV parsed yet in current view, load and adapt to expectedParticipantCount
   useEffect(() => {
@@ -351,7 +353,11 @@ export function DataPage() {
         nameCol ||
         'id'
 
-      const targetRows = rawRows.length > 0 ? rawRows : allParsedRows
+      const effectiveCount = expectedParticipantCount || (targetCount > 0 ? targetCount : null)
+      const baseRows = rawRows.length > 0 ? rawRows : allParsedRows
+      const targetRows = (effectiveCount && effectiveCount > 0 && baseRows.length > effectiveCount)
+        ? baseRows.slice(0, effectiveCount)
+        : baseRows
 
       // Pre-compute photo match map if images were uploaded
       let currentMatchMap = new Map<number, UploadedImage>()
@@ -875,6 +881,13 @@ export function DataPage() {
                     </div>
                   ))}
                 </div>
+
+                {allParsedRows.length > rawRows.length && (
+                  <div className="text-[11px] text-acm-300 flex items-center gap-1.5 pt-1">
+                    <span>ℹ</span>
+                    <span>Taking first {rawRows.length} of {allParsedRows.length} participants from file as specified in description.</span>
+                  </div>
+                )}
 
                 <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2">
                   <button

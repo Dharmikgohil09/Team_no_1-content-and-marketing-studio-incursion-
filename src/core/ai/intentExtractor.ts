@@ -198,7 +198,7 @@ export function parseIntentDeterministic(text: string): IntentResult {
   // 7. Roles + counts
   for (const { pattern, id, label } of ROLE_KEYWORDS) {
     if (pattern.test(text)) {
-      const countMatch = text.match(new RegExp(`(?:approximately\\s+|about\\s+)?(\\d+)\\s+${label.toLowerCase()}s?|${label.toLowerCase()}s?\\s*(?:count\s*)?[:=]?\\s*(\\d+)`, 'i'))
+      const countMatch = text.match(new RegExp(`(?:approximately\\s+|about\\s+)?(\\d+)\\s+${label.toLowerCase()}s?|${label.toLowerCase()}s?\\s*(?:count\\s*)?(?:[:=]|to\\s+be|should\\s+be|is|are|will\\s+be)?\\s*(\\d+)`, 'i'))
       const count = countMatch ? parseInt(countMatch[1] || countMatch[2]) : undefined
       detectedRoles.push({ id, label, count })
     }

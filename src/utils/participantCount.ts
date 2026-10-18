@@ -8,8 +8,8 @@ export function extractCountFromDescription(text: string): number | null {
   if (!text || typeof text !== 'string') return null
 
   // 1. Number + noun variants (Hindi/Hinglish/English):
-  // e.g. "5 participants", "5 participant", "5 logo", "5 log", "5 bando", "5 bande", "5 ka naam", "5 ke naam", "5 ke liye", "5 cards", "5 ids"
-  const p1 = /\b(\d+)\s*(?:(?:ke|ka|ki|keliye|ke\s*liye)\s+)?(?:participants?|attendees?|players?|people|persons?|candidates?|students?|members?|entries|records?|cards?|ids?|id\s*cards?|passes?|badges?|tickets?|logo?|log|bande|bando|jan|jana|names?|naam)\b/i
+  // e.g. "5 participants", "take first 10 participants", "first 10 participants", "only 5 participants", "5 logo", "5 log", "5 bando", "5 bande", "5 ka naam", "5 ke naam", "5 ke liye", "5 cards", "5 ids"
+  const p1 = /\b(?:(?:first|top|only|just|take|initial)\s+)?(\d+)\s*(?:(?:ke|ka|ki|keliye|ke\s*liye)\s+)?(?:participants?|attendees?|players?|people|persons?|candidates?|students?|members?|entries|records?|cards?|ids?|id\s*cards?|passes?|badges?|tickets?|logo?|log|bande|bando|jan|jana|names?|naam)\b/i
   const m1 = text.match(p1)
   if (m1) {
     const n = parseInt(m1[1], 10)
@@ -32,9 +32,9 @@ export function extractCountFromDescription(text: string): number | null {
     if (!isNaN(n) && n > 0) return n
   }
 
-  // 2. Explicit key-value pairs:
-  // e.g. "participants: 5", "participant count: 5", "total participants = 5", "number of participants: 5"
-  const p2 = /(?:number\s+of\s+(?:participants?|people|attendees?|cards?|ids?|logo?|persons?)|participants?\s*count|participant|attendees?|total\s*participants?|total|count|quantity)\s*[:=]?\s*(\d+)/i
+  // 2. Explicit key-value pairs and verb phrases:
+  // e.g. "number of participants to be 10", "participants: 5", "participant count is 5", "total participants = 5", "number of participants should be 10"
+  const p2 = /(?:number\s+of\s+(?:participants?|people|attendees?|cards?|ids?|logo?|persons?|entries|records?|candidates?|students?|members?)|participants?\s*count|participants?|attendees?|total\s*participants?|total|count|quantity)\s*(?:[:=]|to\s+be|should\s+be|will\s+be|must\s+be|is|are|around|about|approximately|set\s+to|equal\s+to|as|-)?\s*(\d+)/i
   const m2 = text.match(p2)
   if (m2) {
     const n = parseInt(m2[1], 10)
@@ -42,8 +42,8 @@ export function extractCountFromDescription(text: string): number | null {
   }
 
   // 3. Action phrases:
-  // e.g. "for 5", "make 5", "create 5", "generate 5", "give 5", "having 5", "with 5", "only 5", "just 5", "total 5"
-  const p3 = /\b(?:for|make|create|generate|give|get|with|having|only|just|total)\s+(\d+)\b/i
+  // e.g. "for 5", "make 5", "create 5", "generate 5", "give 5", "having 5", "with 5", "only 5", "just 5", "total 5", "take 5", "first 5", "top 5", "limit 5"
+  const p3 = /\b(?:for|make|create|generate|give|get|with|having|only|just|total|take|first|top|limit|limit\s+to)\s+(\d+)\b/i
   const m3 = text.match(p3)
   if (m3) {
     const n = parseInt(m3[1], 10)
@@ -93,12 +93,25 @@ export function extractCountFromDescription(text: string): number | null {
     }
   }
 
-  // 7. Look for any number 1-999 in the text (excluding common event years like 2024-2035 or 24/18/12 hours or dates)
+  // Helper to check if a number is part of a date/time phrase (e.g. 19 Oct, 7 pm, etc.)
+  function isDateOrTime(t: string, numStr: string): boolean {
+    const patterns = [
+      new RegExp(`\\b${numStr}(?:st|nd|rd|th)?\\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)`, 'i'),
+      new RegExp(`(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\\s+${numStr}\\b`, 'i'),
+      new RegExp(`\\b${numStr}\\s*(?:am|pm|hrs?|hours?)\\b`, 'i'),
+      new RegExp(`\\b(?:at|on|dated?|time)\\s+${numStr}\\b`, 'i'),
+      new RegExp(`\\b${numStr}\\s*[/\\-]\\s*\\d{1,2}\\b`, 'i'),
+      new RegExp(`\\b\\d{1,2}\\s*[/\\-]\\s*${numStr}\\b`, 'i'),
+    ]
+    return patterns.some(p => p.test(t))
+  }
+
+  // 7. Look for any number 1-999 in the text (excluding common event years and dates/times)
   const allNums = text.match(/\b(\d{1,3})\b/g)
   if (allNums && allNums.length > 0) {
     for (const numStr of allNums) {
       const num = parseInt(numStr, 10)
-      if (num > 0 && num < 1000 && num !== 24 && num !== 18 && num !== 12 && num !== 30 && num !== 31 && num !== 365) {
+      if (num > 0 && num < 1000 && num !== 24 && num !== 18 && num !== 30 && num !== 31 && num !== 365 && !isDateOrTime(text, numStr)) {
         return num
       }
     }
@@ -118,14 +131,16 @@ export function getExpectedParticipantCount(project: any): number | null {
     storedDesc = sessionStorage.getItem('cms_event_description') || ''
   } catch {}
 
-  const nlText = Array.isArray(project?.nlHistory)
-    ? project.nlHistory.filter((m: any) => m.role === 'user').map((m: any) => m.content).join(' ')
-    : ''
+  // Check explicit description text directly
+  if (descText) {
+    const fromDesc = extractCountFromDescription(descText)
+    if (fromDesc && fromDesc > 0) return fromDesc
+  }
 
-  const combinedDesc = `${descText} ${storedDesc} ${nlText}`.trim()
-  const fromDesc = extractCountFromDescription(combinedDesc)
-  if (fromDesc && fromDesc > 0) {
-    return fromDesc
+  // Check stored description from describe session
+  if (storedDesc) {
+    const fromStored = extractCountFromDescription(storedDesc)
+    if (fromStored && fromStored > 0) return fromStored
   }
 
   // 2. Check sessionStorage expected participants
@@ -143,7 +158,16 @@ export function getExpectedParticipantCount(project: any): number | null {
     return ctxVal
   }
 
-  // 4. Roles: participant / player count or sum of role counts
+  // 4. Check natural language prompt history
+  const nlText = Array.isArray(project?.nlHistory)
+    ? project.nlHistory.filter((m: any) => m.role === 'user').map((m: any) => m.content).join(' ')
+    : ''
+  if (nlText) {
+    const fromNl = extractCountFromDescription(nlText)
+    if (fromNl && fromNl > 0) return fromNl
+  }
+
+  // 5. Roles: participant / player count or sum of role counts
   const participantRole = project?.roles?.find((r: any) => r.id === 'participant' || r.id === 'player')
   if (typeof participantRole?.count === 'number' && participantRole.count > 0) {
     return participantRole.count
