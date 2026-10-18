@@ -98,6 +98,50 @@ export function ClarifyPage() {
     setTimeout(() => setFeedbackMsg(''), 3000)
   }
 
+  function handleEventNameChange(name: string) {
+    if (!project) return
+    const updatedCtx = {
+      ...project.eventContext,
+      name: { value: name, status: name.trim() ? ('confirmed' as const) : ('missing' as const) }
+    }
+    setEventContext(updatedCtx)
+    setFeedbackMsg('Event name updated')
+    setTimeout(() => setFeedbackMsg(''), 2500)
+  }
+
+  function handleDateChange(date: string) {
+    if (!project) return
+    const updatedCtx = {
+      ...project.eventContext,
+      dateStart: { value: date, status: date.trim() ? ('confirmed' as const) : ('missing' as const) }
+    }
+    setEventContext(updatedCtx)
+    setFeedbackMsg('Date updated')
+    setTimeout(() => setFeedbackMsg(''), 2500)
+  }
+
+  function handleVenueChange(venue: string) {
+    if (!project) return
+    const updatedCtx = {
+      ...project.eventContext,
+      venue: { value: venue, status: venue.trim() ? ('confirmed' as const) : ('missing' as const) }
+    }
+    setEventContext(updatedCtx)
+    setFeedbackMsg('Venue updated')
+    setTimeout(() => setFeedbackMsg(''), 2500)
+  }
+
+  function handleOrganizerChange(organizer: string) {
+    if (!project) return
+    const updatedCtx = {
+      ...project.eventContext,
+      organizer: { value: organizer, status: organizer.trim() ? ('confirmed' as const) : ('missing' as const) }
+    }
+    setEventContext(updatedCtx)
+    setFeedbackMsg('Organizer updated')
+    setTimeout(() => setFeedbackMsg(''), 2500)
+  }
+
   function handleInstituteUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -148,6 +192,7 @@ export function ClarifyPage() {
       if (q.field === 'category')  (ctx as any).category = { value: String(val), status: 'confirmed' }
       if (q.field === 'dateStart') ctx.dateStart  = { value: String(val), status: 'confirmed' }
       if (q.field === 'venue')     ctx.venue      = { value: String(val), status: 'confirmed' }
+      if (q.field === 'organizer') ctx.organizer  = { value: String(val), status: 'confirmed' }
       if (q.field === 'tagline')   ctx.tagline    = { value: String(val), status: 'confirmed' }
       if (q.field === 'contact')   ctx.contact    = { value: String(val), status: 'confirmed' }
       if (q.field === 'website')   ctx.website    = { value: String(val) as any, status: 'confirmed' }
@@ -175,7 +220,8 @@ export function ClarifyPage() {
   // Count answered required questions
   const requiredQs  = questions.filter(q => q.required)
   const answeredReq = requiredQs.filter(q => answers[q.id] && answers[q.id] !== '__skipped__').length
-  const canContinue = answeredReq === requiredQs.length || requiredQs.length === 0
+  const hasEventName = Boolean(project.eventContext.name?.value?.trim() || answers['q-event-name'])
+  const canContinue = hasEventName && (answeredReq === requiredQs.length || requiredQs.length === 0)
 
   // Show already-known info as chips (excluding date and venue)
   const knownFields = Object.entries(project.eventContext)
@@ -218,6 +264,90 @@ export function ClarifyPage() {
         </p>
 
         <div className="space-y-2.5">
+          {/* Event Name */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-hover-surface/40 border border-line gap-2">
+            <div className="flex items-center gap-2">
+              <span className={project.eventContext.name?.value?.trim() ? "text-accent font-bold" : "text-amber-500 font-bold"}>
+                {project.eventContext.name?.value?.trim() ? "✓" : "⚠️"}
+              </span>
+              <span className="text-xs font-semibold text-ink">Event Name:</span>
+              <span className="text-[11px] text-muted hidden sm:inline">
+                {project.eventContext.name?.value?.trim() ? "(Printed on cards & badges)" : "(Required for card identity)"}
+              </span>
+            </div>
+            <input
+              id="clarify-event-name"
+              type="text"
+              value={project.eventContext.name?.value || ''}
+              onChange={e => handleEventNameChange(e.target.value)}
+              placeholder="e.g. InCursion 2026"
+              className="w-full sm:w-64 bg-white border border-line text-ink rounded-lg px-2.5 py-1 text-xs font-medium focus:border-accent focus:outline-none"
+            />
+          </div>
+
+          {/* Event Date */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-hover-surface/40 border border-line gap-2">
+            <div className="flex items-center gap-2">
+              <span className={project.eventContext.dateStart?.value?.trim() ? "text-accent font-bold" : "text-amber-500 font-bold"}>
+                {project.eventContext.dateStart?.value?.trim() ? "✓" : "⚠️"}
+              </span>
+              <span className="text-xs font-semibold text-ink">Event Date:</span>
+              <span className="text-[11px] text-muted hidden sm:inline">
+                {project.eventContext.dateStart?.value?.trim() ? "(Credential validity date)" : "(Optional — appears on badge verification)"}
+              </span>
+            </div>
+            <input
+              id="clarify-event-date"
+              type="text"
+              value={project.eventContext.dateStart?.value || ''}
+              onChange={e => handleDateChange(e.target.value)}
+              placeholder="e.g. 24 October 2026"
+              className="w-full sm:w-64 bg-white border border-line text-ink rounded-lg px-2.5 py-1 text-xs font-medium focus:border-accent focus:outline-none"
+            />
+          </div>
+
+          {/* Event Venue */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-hover-surface/40 border border-line gap-2">
+            <div className="flex items-center gap-2">
+              <span className={project.eventContext.venue?.value?.trim() ? "text-accent font-bold" : "text-amber-500 font-bold"}>
+                {project.eventContext.venue?.value?.trim() ? "✓" : "⚠️"}
+              </span>
+              <span className="text-xs font-semibold text-ink">Venue / Location:</span>
+              <span className="text-[11px] text-muted hidden sm:inline">
+                {project.eventContext.venue?.value?.trim() ? "(Location accreditation)" : "(Optional — e.g. SVNIT Surat)"}
+              </span>
+            </div>
+            <input
+              id="clarify-event-venue"
+              type="text"
+              value={project.eventContext.venue?.value || ''}
+              onChange={e => handleVenueChange(e.target.value)}
+              placeholder="e.g. Main Auditorium, SVNIT"
+              className="w-full sm:w-64 bg-white border border-line text-ink rounded-lg px-2.5 py-1 text-xs font-medium focus:border-accent focus:outline-none"
+            />
+          </div>
+
+          {/* Organizer */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-hover-surface/40 border border-line gap-2">
+            <div className="flex items-center gap-2">
+              <span className={project.eventContext.organizer?.value?.trim() ? "text-accent font-bold" : "text-amber-500 font-bold"}>
+                {project.eventContext.organizer?.value?.trim() ? "✓" : "⚠️"}
+              </span>
+              <span className="text-xs font-semibold text-ink">Organizer:</span>
+              <span className="text-[11px] text-muted hidden sm:inline">
+                {project.eventContext.organizer?.value?.trim() ? "(Hosting body)" : "(Optional — e.g. ACM NIT Surat)"}
+              </span>
+            </div>
+            <input
+              id="clarify-event-organizer"
+              type="text"
+              value={project.eventContext.organizer?.value || ''}
+              onChange={e => handleOrganizerChange(e.target.value)}
+              placeholder="e.g. ACM NIT Surat"
+              className="w-full sm:w-64 bg-white border border-line text-ink rounded-lg px-2.5 py-1 text-xs font-medium focus:border-accent focus:outline-none"
+            />
+          </div>
+
           {/* Category Dropdown Selector */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-hover-surface/40 border border-line gap-2">
             <div className="flex items-center gap-2">

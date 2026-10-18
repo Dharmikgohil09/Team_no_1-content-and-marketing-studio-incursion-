@@ -593,56 +593,17 @@ export function buildThemeElementsDraft1(category: EventCategory, pal: ThemeColo
 
     case 'cultural':
       return [
-        // Theatre drapery arcs
         {
           type: 'shape',
-          id: 'cultural-swag-left',
-          anchor: { x: 0, y: 0, w: 22, h: 18 },
+          id: 'bg-wireframe',
+          anchor: { x: 0, y: 64, w: 54, h: 21 },
           shape: 'polygon',
-          points: '0,0 22,0 12,18 0,14',
-          fill: pal.d1Accent,
-          stroke: 'transparent',
-          strokeWidth: 0,
+          points: '0,21 12,0 24,21 36,0 48,21 54,10',
+          fill: 'transparent',
+          stroke: pal.d1Accent,
+          strokeWidth: 0.35,
           cornerRadius: 0,
-          opacity: 0.16,
-        },
-        {
-          type: 'shape',
-          id: 'cultural-swag-right',
-          anchor: { x: 32, y: 0, w: 22, h: 18 },
-          shape: 'polygon',
-          points: '0,0 22,0 22,14 10,18',
-          fill: '#fbbf24',
-          stroke: 'transparent',
-          strokeWidth: 0,
-          cornerRadius: 0,
-          opacity: 0.16,
-        },
-        // Dancer in leap silhouette
-        {
-          type: 'shape',
-          id: 'cultural-dancer-silhouette',
-          anchor: { x: 2, y: 18, w: 18, h: 20 },
-          shape: 'path',
-          d: PATH_DANCER_PERFORMER,
-          fill: pal.d1Accent,
-          stroke: 'transparent',
-          strokeWidth: 0,
-          cornerRadius: 0,
-          opacity: 0.32,
-        },
-        // Festive crowd audience silhouette
-        {
-          type: 'shape',
-          id: 'cultural-crowd-silhouette',
-          anchor: { x: 0, y: 70, w: 54, h: 15.6 },
-          shape: 'path',
-          d: PATH_CONCERT_CROWD,
-          fill: '#15031f',
-          stroke: 'transparent',
-          strokeWidth: 0,
-          cornerRadius: 0,
-          opacity: 0.45,
+          opacity: 0.18,
         },
       ]
 
@@ -935,43 +896,30 @@ export function buildThemeElementsDraft2(category: EventCategory, pal: ThemeColo
 
     case 'cultural':
       return [
-        // Festive star diamonds
+        // Clean geometric hexagon cluster motifs from Creative Tech Pass template
         {
           type: 'shape',
-          id: 'festive-star-1',
-          anchor: { x: 3, y: 14, w: 8, h: 8 },
+          id: 'hex-cluster-1',
+          anchor: { x: 2, y: 13, w: 9, h: 9 },
           shape: 'polygon',
-          points: '4,0 5.2,2.8 8,4 5.2,5.2 4,8 2.8,5.2 0,4 2.8,2.8',
-          fill: pal.d2Accent,
-          stroke: 'transparent',
-          strokeWidth: 0,
+          points: '4.5,0 9,2.6 9,7.8 4.5,10.4 0,7.8 0,2.6',
+          fill: 'transparent',
+          stroke: pal.d2Accent,
+          strokeWidth: 0.45,
           cornerRadius: 0,
-          opacity: 0.5,
+          opacity: 0.38,
         },
         {
           type: 'shape',
-          id: 'festive-star-2',
-          anchor: { x: 43, y: 14, w: 8, h: 8 },
+          id: 'hex-cluster-3',
+          anchor: { x: 42, y: 14, w: 8, h: 8 },
           shape: 'polygon',
-          points: '4,0 5.2,2.8 8,4 5.2,5.2 4,8 2.8,5.2 0,4 2.8,2.8',
-          fill: pal.d2Accent,
-          stroke: 'transparent',
-          strokeWidth: 0,
+          points: '4,0 8,2.3 8,6.9 4,9.2 0,6.9 0,2.3',
+          fill: 'transparent',
+          stroke: pal.d2Accent,
+          strokeWidth: 0.4,
           cornerRadius: 0,
-          opacity: 0.5,
-        },
-        // Dancer watermark
-        {
-          type: 'shape',
-          id: 'cultural-dancer-d2',
-          anchor: { x: 2, y: 12, w: 14, h: 16 },
-          shape: 'path',
-          d: PATH_DANCER_PERFORMER,
-          fill: pal.d2Accent,
-          stroke: 'transparent',
-          strokeWidth: 0,
-          cornerRadius: 0,
-          opacity: 0.35,
+          opacity: 0.4,
         },
       ]
 
@@ -1184,7 +1132,7 @@ export function buildThemeElementsDraft3(category: EventCategory, pal: ThemeColo
 
     case 'cultural':
       return [
-        // Stage lighting cone
+        // Clean editorial accent lines matching Editorial Asymmetric Pass template
         {
           type: 'shape',
           id: 'editorial-cultural-spotlight',
@@ -1195,20 +1143,7 @@ export function buildThemeElementsDraft3(category: EventCategory, pal: ThemeColo
           stroke: 'transparent',
           strokeWidth: 0,
           cornerRadius: 0,
-          opacity: 0.14,
-        },
-        // Dancer performer watermark
-        {
-          type: 'shape',
-          id: 'editorial-cultural-dancer-watermark',
-          anchor: { x: 26, y: 54, w: 22, h: 28 },
-          shape: 'path',
-          d: PATH_DANCER_PERFORMER,
-          fill: pal.d3Accent,
-          stroke: 'transparent',
-          strokeWidth: 0,
-          cornerRadius: 0,
-          opacity: 0.22,
+          opacity: 0.08,
         },
       ]
 

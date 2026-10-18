@@ -183,53 +183,8 @@ export async function generateDrafts(
     console.warn('generate-drafts fetch failed:', err)
   }
 
-  const drafts = generateDraftsDeterministic(event, roles, logos, llmData)
-
-  // Generate and attach background artwork for all drafts via backend
-  try {
-    const eventName = event.name?.value || 'Event'
-    const eventDesc = (event as any).description?.value || ''
-    const category = llmData?.category || detectEventCategory(event)
-
-    const finalizedDrafts: CardTemplate[] = []
-    for (let i = 0; i < drafts.length; i++) {
-      const draft = drafts[i]
-      const llmDraft = llmData?.drafts?.[i]
-      const prompt = llmDraft?.artworkPrompt || (llmData?.visualDirection ? `${llmData.visualDirection} (Concept ${i + 1})` : `${eventName}: ${eventDesc}`)
-      try {
-        const artRes = await fetch('/api/image/generate-background', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt,
-            eventName,
-            eventDescription: eventDesc,
-            category,
-            primaryColor: llmDraft?.primaryColor || draft.tokens?.primaryColor,
-            accentColor: llmDraft?.accentColor || draft.tokens?.accentColor,
-            backgroundColor: llmDraft?.backgroundColor || draft.tokens?.backgroundColor,
-            draftId: draft.id,
-          }),
-          signal: AbortSignal.timeout(25000),
-        })
-        if (artRes.ok) {
-          const artData = await artRes.json()
-          if (artData.imageUrl) {
-            finalizedDrafts.push(attachArtworkToDraft(draft, artData.imageUrl, !!artData.isGenerated, prompt))
-            continue
-          }
-        }
-      } catch (artErr) {
-        console.warn(`Artwork generation failed for draft ${draft.id}:`, artErr)
-      }
-      finalizedDrafts.push(draft)
-    }
-
-    return finalizedDrafts
-  } catch (err) {
-    console.warn('Background artwork attachment failed:', err)
-    return drafts
-  }
+  // Generate drafts based directly on the three registered template design families from the first page
+  return generateDraftsDeterministic(event, roles, logos, llmData)
 }
 
 

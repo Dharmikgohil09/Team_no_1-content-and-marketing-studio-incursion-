@@ -94,15 +94,9 @@ export function DescribePage() {
 
       useProjectStore.getState().saveProject().catch(() => {})
 
-      const remainingQuestions = generateQuestions(intent.eventContext, parsedRoles)
-      const hasBlockingQuestions = remainingQuestions.some(q => q.required)
-      if (!hasBlockingQuestions) {
-        setWizardStep(2)
-        navigate('/studio/drafts')
-      } else {
-        setWizardStep(1)
-        navigate('/studio/clarify')
-      }
+      // Always advance to Clarify step so the user can review detected details and fill in missing information
+      setWizardStep(1)
+      navigate('/studio/clarify')
     } catch (err) {
       setError('Something went wrong. Please try again.')
     } finally {
