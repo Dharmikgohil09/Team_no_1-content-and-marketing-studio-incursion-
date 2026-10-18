@@ -163,9 +163,9 @@ function generateEventSpecificFallbackArtwork(options: {
   backgroundColor?: string
   concept?: string
 }): string {
-  const p = options.primaryColor || '#6366f1'
-  const a = options.accentColor || '#ec4899'
-  const bg = options.backgroundColor || '#090d16'
+  const p = options.primaryColor || '#0F5C4D'
+  const a = options.accentColor || '#14201C'
+  const bg = options.backgroundColor || '#FAF8F4'
   const seedText = `${options.eventName || ''} ${options.eventDescription || ''} ${options.concept || ''}`.trim()
 
   // Compute a 32-bit polynomial hash from the event text for dynamic procedural variation
@@ -192,9 +192,9 @@ function generateEventSpecificFallbackArtwork(options: {
     dynamicLayers = `
       <defs>
         <radialGradient id="dynHalo1" cx="${cx1}%" cy="${cy1}%" r="60%">
-          <stop offset="0%" stop-color="${a}" stop-opacity="0.45"/>
-          <stop offset="50%" stop-color="${p}" stop-opacity="0.2"/>
-          <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+          <stop offset="0%" stop-color="${a}" stop-opacity="0.25"/>
+          <stop offset="50%" stop-color="${p}" stop-opacity="0.12"/>
+          <stop offset="100%" stop-color="${bg}" stop-opacity="0"/>
         </radialGradient>
       </defs>
       <circle cx="${cx1}" cy="${cy1}" r="32" fill="url(#dynHalo1)" />
@@ -222,15 +222,15 @@ function generateEventSpecificFallbackArtwork(options: {
     dynamicLayers = `
       <defs>
         <radialGradient id="prismGlow" cx="${cx2}%" cy="${cy2}%" r="65%">
-          <stop offset="0%" stop-color="${p}" stop-opacity="0.4"/>
-          <stop offset="60%" stop-color="${a}" stop-opacity="0.15"/>
-          <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+          <stop offset="0%" stop-color="${p}" stop-opacity="0.25"/>
+          <stop offset="60%" stop-color="${a}" stop-opacity="0.1"/>
+          <stop offset="100%" stop-color="${bg}" stop-opacity="0"/>
         </radialGradient>
       </defs>
       <circle cx="${cx2}" cy="${cy2}" r="35" fill="url(#prismGlow)"/>
       <polyline points="0,${cy1} ${cx1},${cy1 - 5} 54,${cy1 + 8}" fill="none" stroke="${a}" stroke-width="0.6" opacity="0.5"/>
-      <circle cx="8" cy="18" r="1.5" fill="#ffffff" opacity="0.85"/>
-      <circle cx="46" cy="72" r="1.5" fill="#ffffff" opacity="0.85"/>
+      <circle cx="8" cy="18" r="1.5" fill="#FAF8F4" opacity="0.85"/>
+      <circle cx="46" cy="72" r="1.5" fill="#FAF8F4" opacity="0.85"/>
     `
   }
 
@@ -273,9 +273,9 @@ async function generateAiSvgArtworkWithGemini(
   }
 ): Promise<{ url: string; modelName: string } | null> {
   const CANDIDATES = ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-flash-latest']
-  const p = options.primaryColor || '#6366f1'
-  const a = options.accentColor || '#ec4899'
-  const bg = options.backgroundColor || '#090d16'
+  const p = options.primaryColor || '#0F5C4D'
+  const a = options.accentColor || '#14201C'
+  const bg = options.backgroundColor || '#FAF8F4'
 
   const prompt = `
 You are an expert generative graphics and vector artist creating an original vertical background artwork SVG for an official event ID card.
@@ -475,10 +475,14 @@ You are a world-class art director and identity designer creating 3 distinct, ev
 Event: ${JSON.stringify(event)}
 Roles: ${JSON.stringify(roles)}
 
-CRITICAL INSTRUCTIONS:
-1. Examine the ACTUAL event description and context deeply. Derive authentic visual aesthetics tailored specifically to this unique event.
-2. Formulate 3 genuinely distinct design concepts for this event, extracting harmonious color palettes (primary, accent, background) and bespoke visual motifs.
-3. For each proposal, provide an artworkPrompt suitable for an image generator capturing the atmosphere, lighting, and composition (portrait 3:4, clean negative space in the center, absolutely NO text or letters).
+CRITICAL DESIGN SYSTEM GUIDELINES:
+1. DESIGN AESTHETICS: The overall design system is an elegant, editorial warm-paper aesthetic. Backgrounds should generally be warm off-white / ivory (#FAF8F4, #FFFFFF) or deep ink (#14201C).
+2. COLOR PALETTES: Use sophisticated, curated palettes tailored to the event (e.g., deep forest green #0F5C4D, deep ink #14201C, warm gold, terracotta, deep sage, indigo). Do NOT suggest neon cyberpunk, saturated hot pink, or raw pitch-black backgrounds.
+3. THREE DISTINCT DESIGN FAMILIES:
+   - Draft 1 ("modern-minimal"): Dual-tone or clean split layout with white header and deep ink / paper lower base.
+   - Draft 2 ("creative-tech"): Geometric chevron apex / crest layout on clean warm paper (#FAF8F4) with refined event accent colors.
+   - Draft 3 ("premium-editorial"): Editorial paper pass (#FAF8F4) with asymmetric framing and elegant hairline borders (#D9D5C7).
+4. For each proposal, provide an artworkPrompt suitable for an image generator capturing the atmosphere, lighting, and composition (portrait 3:4, clean negative space in the center, absolutely NO text or letters).
 
 Return ONLY a valid JSON object matching this exact shape (no markdown, no backticks):
 {

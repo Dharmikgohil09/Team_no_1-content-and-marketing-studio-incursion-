@@ -305,13 +305,13 @@ describe('Role-Specific Rendering Regression', () => {
     }
   );
 
-  it('should render organizer with premium dark styling and gold accent', () => {
+  it('should render organizer with premium dark styling and accent', () => {
     const role = getRoleOrDefault('organizer');
     const person: Person = { id: 'ORG-001', name: 'Raj Patel', role: 'organizer', team: 'Core Org', extra: {} };
     const drafts = generateDraftsDeterministic(dummyEvent, ['organizer']);
     const result = renderCard({ template: drafts[0], role, person, event: dummyEvent, face: 'front' });
-    // Organizer should have gold accent (#f59e0b) somewhere in SVG
-    expect(result.svg).toContain('#f59e0b');
+    // Organizer should have forest accent (#0F5C4D) somewhere in SVG
+    expect(result.svg).toContain('#0F5C4D');
     // Should contain person name
     expect(result.svg).toContain('Raj Patel');
     // Should contain event name

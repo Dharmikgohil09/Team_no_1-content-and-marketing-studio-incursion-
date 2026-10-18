@@ -62,11 +62,11 @@ export function attachArtworkToDraft(
     id: 'bg-contrast-overlay',
     anchor: { x: 0, y: 0, w: 54, h: 85.6 },
     shape: 'rect',
-    fill: '#080d1a',
+    fill: '#14201C',
     stroke: 'transparent',
     strokeWidth: 0,
     cornerRadius: 0,
-    opacity: 0.25,
+    opacity: 0.15,
   }
 
   const OPAQUE_BG_IDS = new Set(['header-bg', 'lower-bg', 'tech-hero-bg', 'tech-lower-bg', 'bg-obsidian', 'back-bg'])
@@ -252,14 +252,12 @@ function buildModernMinimalFront(
   const isPlayer = roleId === 'player' || roleId === 'artist' || roleId === 'gamer'
 
   const pal = THEME_COLOR_PALETTES[category] || THEME_COLOR_PALETTES.general
-  const isDarkCategory = ['music', 'business', 'sports', 'cultural', 'robotics', 'gaming'].includes(category)
-
-  const headerBg = isDarkCategory ? pal.d1HeaderBg : (isOrganizer ? '#f8fafc' : pal.d1HeaderBg)
-  const headerTextColor = isDarkCategory ? pal.d1HeaderTextColor : '#0f172a'
-  const badgeTypeColor = pal.d1BadgeColor
-  const lowerBg = pal.d1LowerBg
-  const accentColor = pal.d1Accent
-  const ringStroke = isOrganizer ? '#f59e0b' : isJudge ? '#e2e8f0' : pal.d1RingStroke
+  const headerBg = '#ffffff'
+  const headerTextColor = '#14201C'
+  const badgeTypeColor = '#66706A'
+  const lowerBg = role.palette?.secondary || pal.d1LowerBg || '#14201C'
+  const accentColor = role.palette?.primary || pal.d1Accent || '#0F5C4D'
+  const ringStroke = '#D9D5C7'
 
   const badgeTypeLabel = category === 'music'
     ? (isSpeaker ? 'HEADLINE VOCALIST' : isOrganizer ? 'CONCERT DIRECTOR' : isJudge ? 'MUSIC EVALUATOR' : isVolunteer ? 'STAGE & SOUND CREW' : 'LIVE CONCERT PASS')
@@ -310,8 +308,8 @@ function buildModernMinimalFront(
       id: 'lanyard-slot',
       anchor: { x: 22, y: 2.2, w: 10, h: 2.6 },
       shape: 'rect',
-      fill: isDarkCategory ? '#1e293b' : '#e2e8f0',
-      stroke: isDarkCategory ? '#334155' : '#cbd5e1',
+      fill: '#E9E5D8',
+      stroke: '#D9D5C7',
       strokeWidth: 0.35,
       cornerRadius: 1.3,
       opacity: 1,
@@ -346,7 +344,7 @@ function buildModernMinimalFront(
       id: 'badge-type-label',
       anchor: { x: 13, y: 6.8, w: 28, h: 3.2 },
       content: badgeTypeLabel,
-      fontFamily: 'Space Grotesk',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 2.7,
       fontWeight: '700',
       color: badgeTypeColor,
@@ -363,14 +361,29 @@ function buildModernMinimalFront(
       content: event.name?.value
         ? (event.name.value === event.name.value.toLowerCase() ? event.name.value.replace(/\b\w/g, l => l.toUpperCase()) : event.name.value)
         : 'Event Name',
-      fontFamily: 'Outfit',
-      fontSize: 6.0,
-      fontWeight: '800',
+      fontFamily: 'Instrument Serif',
+      fontSize: 6.5,
+      fontWeight: '400',
       color: headerTextColor,
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
       minFontSize: 4.5,
+    },
+    // 7. Badge Serial
+    {
+      type: 'text',
+      id: 'badge-serial',
+      anchor: { x: 13, y: 15.5, w: 28, h: 3 },
+      content: 'No. {{person.id}}',
+      fontFamily: 'Hanken Grotesk',
+      fontSize: 2.7,
+      fontWeight: '500',
+      color: '#66706A',
+      align: 'center',
+      verticalAlign: 'middle',
+      maxLines: 1,
+      minFontSize: 2,
     },
     // 8. Lower Deep Credential Section
     {
@@ -384,18 +397,18 @@ function buildModernMinimalFront(
       cornerRadius: 0,
       opacity: 1,
     },
-    // 9. Diagonal Geometric Slashes flanking the boundary (Ref 1 signature)
+    // 9. Diagonal Geometric Slashes flanking the boundary
     {
       type: 'shape',
       id: 'split-slash-left',
       anchor: { x: 3, y: 36.5, w: 10, h: 3 },
       shape: 'polygon',
       points: '0,0 8,0 6,3 0,3',
-      fill: role.palette.primary,
+      fill: role.palette?.primary || accentColor,
       stroke: 'transparent',
       strokeWidth: 0,
       cornerRadius: 0,
-      opacity: 0.9,
+      opacity: 0.95,
     },
     {
       type: 'shape',
@@ -403,15 +416,15 @@ function buildModernMinimalFront(
       anchor: { x: 41, y: 36.5, w: 10, h: 3 },
       shape: 'polygon',
       points: '2,0 10,0 10,3 4,3',
-      fill: role.palette.primary,
+      fill: role.palette?.primary || accentColor,
       stroke: 'transparent',
       strokeWidth: 0,
       cornerRadius: 0,
-      opacity: 0.9,
+      opacity: 0.95,
     },
-    // 10. Thematic Background Scene Motifs (Concert crowd & singer, pitch curve, stadium runner, etc.)
+    // 10. Thematic Background Scene Motifs
     ...themeMotifs,
-    // 11. Circular Photo Ring Border (intersecting split cleanly)
+    // 11. Circular Photo Ring Border
     {
       type: 'shape',
       id: 'photo-ring',
@@ -434,7 +447,7 @@ function buildModernMinimalFront(
       fallback: 'initials',
       initialsBinding: '{{person.name}}',
       initialsColor: '#ffffff',
-      initialsBg: role.palette.primary,
+      initialsBg: role.palette?.primary || accentColor,
     },
     // 13. Participant Name Typography
     {
@@ -442,14 +455,14 @@ function buildModernMinimalFront(
       id: 'person-name',
       anchor: { x: 2, y: 52, w: 50, h: 7.8 },
       content: '{{person.name}}',
-      fontFamily: 'Space Grotesk',
-      fontSize: 8.5,
-      fontWeight: '700',
+      fontFamily: 'Instrument Serif',
+      fontSize: 9.0,
+      fontWeight: '400',
       color: '#ffffff',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 2,
-      minFontSize: 5.5,
+      minFontSize: 6.0,
     },
     // 14. Role Pill Badge
     {
@@ -458,9 +471,9 @@ function buildModernMinimalFront(
       anchor: { x: 13, y: 60.5, w: 28, h: 5.5 },
       shape: 'rect',
       cornerRadius: 2.75,
-      fill: role.palette.primary,
-      stroke: isOrganizer ? '#f59e0b' : 'transparent',
-      strokeWidth: isOrganizer ? 0.4 : 0,
+      fill: role.palette?.primary || accentColor,
+      stroke: 'transparent',
+      strokeWidth: 0,
       opacity: 1,
     },
     {
@@ -468,10 +481,10 @@ function buildModernMinimalFront(
       id: 'role-label',
       anchor: { x: 13, y: 60.5, w: 28, h: 5.5 },
       content: role.label.toUpperCase(),
-      fontFamily: 'Space Grotesk',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 4.2,
-      fontWeight: '700',
-      color: isOrganizer && role.palette.primary === '#0f172a' ? '#f59e0b' : '#ffffff',
+      fontWeight: '600',
+      color: '#ffffff',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -483,10 +496,10 @@ function buildModernMinimalFront(
       id: 'person-detail',
       anchor: { x: 2, y: 66.5, w: 50, h: 4 },
       content: '{{person.team}}',
-      fontFamily: 'Space Grotesk',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 3.5,
       fontWeight: '500',
-      color: pal.d1Accent,
+      color: '#D9D5C7',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -510,10 +523,10 @@ function buildModernMinimalFront(
       content: event.organizer?.value
         ? event.organizer.value.toUpperCase()
         : (category === 'music' ? 'LIVE CONCERT ARENA' : category === 'business' ? 'STARTUP PITCH SUMMIT' : category === 'cultural' ? 'CULTURAL FESTIVAL · OFFICIAL PASS' : category === 'sports' ? 'ATHLETIC CHAMPIONSHIP PASS' : (event.name?.value ? `${event.name.value.toUpperCase()} · OFFICIAL PASS` : 'OFFICIAL EVENT PASS')),
-      fontFamily: 'Space Grotesk',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 2.2,
       fontWeight: '600',
-      color: pal.d1Accent,
+      color: '#66706A',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -924,9 +937,9 @@ function buildCreativeTechFront(
       content: event.name?.value
         ? (event.name.value === event.name.value.toLowerCase() ? event.name.value.replace(/\b\w/g, l => l.toUpperCase()) : event.name.value)
         : 'Event Title',
-      fontFamily: 'Outfit',
-      fontSize: 6.0,
-      fontWeight: '800',
+      fontFamily: 'Instrument Serif',
+      fontSize: 6.5,
+      fontWeight: '400',
       color: '#ffffff',
       align: 'center',
       verticalAlign: 'middle',
@@ -939,10 +952,10 @@ function buildCreativeTechFront(
       id: 'org-subtitle',
       anchor: { x: 12, y: 9.8, w: 30, h: 3.5 },
       content: orgSubtitle,
-      fontFamily: 'Space Grotesk',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 3.2,
       fontWeight: '600',
-      color: accentColor,
+      color: '#D9D5C7',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -955,7 +968,7 @@ function buildCreativeTechFront(
       anchor: { x: 15, y: 14.5, w: 24, h: 24 },
       shape: 'circle',
       fill: 'transparent',
-      stroke: accentColor,
+      stroke: '#D9D5C7',
       strokeWidth: 0.85,
       cornerRadius: 12,
       opacity: 0.9,
@@ -970,7 +983,7 @@ function buildCreativeTechFront(
       fallback: 'initials',
       initialsBinding: '{{person.name}}',
       initialsColor: '#ffffff',
-      initialsBg: role.palette.primary,
+      initialsBg: role.palette?.primary || accentColor,
     },
     // 8. Lower Zone
     {
@@ -1004,9 +1017,9 @@ function buildCreativeTechFront(
       anchor: { x: 13, y: 39, w: 28, h: 6 },
       shape: 'rect',
       cornerRadius: 3,
-      fill: role.palette.primary,
-      stroke: isOrganizer ? '#f59e0b' : 'transparent',
-      strokeWidth: isOrganizer ? 0.4 : 0,
+      fill: role.palette?.primary || accentColor,
+      stroke: 'transparent',
+      strokeWidth: 0,
       opacity: 1,
     },
     {
@@ -1014,10 +1027,10 @@ function buildCreativeTechFront(
       id: 'role-label',
       anchor: { x: 13, y: 39, w: 28, h: 6 },
       content: roleBadgeLabel,
-      fontFamily: 'Space Grotesk',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 4.4,
-      fontWeight: '700',
-      color: isOrganizer && role.palette.primary === '#0f172a' ? '#f59e0b' : '#ffffff',
+      fontWeight: '600',
+      color: '#ffffff',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -1029,10 +1042,10 @@ function buildCreativeTechFront(
       id: 'person-name',
       anchor: { x: 2, y: 47, w: 50, h: 7.2 },
       content: '{{person.name}}',
-      fontFamily: 'Space Grotesk',
-      fontSize: 8,
-      fontWeight: '700',
-      color: pal.d2NameColor,
+      fontFamily: 'Instrument Serif',
+      fontSize: 8.8,
+      fontWeight: '400',
+      color: '#14201C',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -1044,10 +1057,10 @@ function buildCreativeTechFront(
       id: 'person-team',
       anchor: { x: 2, y: 55, w: 50, h: 4 },
       content: '{{person.team}}',
-      fontFamily: 'Space Grotesk',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 3.5,
       fontWeight: '500',
-      color: accentColor,
+      color: '#4B5651',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -1059,7 +1072,7 @@ function buildCreativeTechFront(
       id: 'person-qr',
       anchor: { x: 21, y: 61, w: 12, h: 12 },
       urlPattern: event.website?.value ? `${event.website.value.replace(/\/$/, '')}/verify/{{person.id}}` : `https://verify.eventpass.live/{{person.id}}`,
-      fgColor: pal.d2BarcodeFg,
+      fgColor: '#14201C',
       bgColor: 'transparent',
       errorCorrection: 'M',
     },
@@ -1069,10 +1082,10 @@ function buildCreativeTechFront(
       id: 'footer-validity',
       anchor: { x: 2, y: 82.5, w: 50, h: 2.4 },
       content: footerText,
-      fontFamily: 'Space Grotesk',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 2.2,
       fontWeight: '600',
-      color: accentColor,
+      color: '#66706A',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -1155,19 +1168,19 @@ function buildPremiumEditorialFront(
     ? 'Technical Advisory'
     : '{{person.team}}'
 
-  const roleTextHighlight = isOrganizer ? '#f59e0b' : isJudge ? '#f8fafc' : pal.d3RoleHighlight
+  const roleTextHighlight = role.palette?.primary || accentColor
   const themeMotifs = buildThemeElementsDraft3(category, pal)
 
   const elements: Element[] = [
-    // 1. Matte Obsidian Full Background
+    // 1. Warm Editorial Paper Full Background
     {
       type: 'shape',
       id: 'bg-obsidian',
       anchor: { x: 0, y: 0, w: 54, h: 85.6 },
       shape: 'rect',
-      fill: obsidianBg,
-      stroke: 'transparent',
-      strokeWidth: 0,
+      fill: '#FAF8F4',
+      stroke: '#D9D5C7',
+      strokeWidth: 0.45,
       cornerRadius: 0,
       opacity: 1,
     },
@@ -1179,8 +1192,8 @@ function buildPremiumEditorialFront(
       id: 'lanyard-slot',
       anchor: { x: 22, y: 2, w: 10, h: 2.5 },
       shape: 'rect',
-      fill: '#1a1d29',
-      stroke: '#2e354a',
+      fill: '#E9E5D8',
+      stroke: '#D9D5C7',
       strokeWidth: 0.35,
       cornerRadius: 1.25,
       opacity: 1,
@@ -1191,9 +1204,9 @@ function buildPremiumEditorialFront(
       id: 'photo-frame-bg',
       anchor: { x: 4, y: 7.5, w: 31, h: 42 },
       shape: 'rect',
-      fill: '#151924',
-      stroke: 'transparent',
-      strokeWidth: 0,
+      fill: '#E9E5D8',
+      stroke: '#D9D5C7',
+      strokeWidth: 0.35,
       cornerRadius: 1.2,
       opacity: 1,
     },
@@ -1207,7 +1220,7 @@ function buildPremiumEditorialFront(
       fallback: 'initials',
       initialsBinding: '{{person.name}}',
       initialsColor: '#ffffff',
-      initialsBg: role.palette.primary,
+      initialsBg: role.palette?.primary || accentColor,
     },
     // 4. Striking Solid Vertical Role Accent Block
     {
@@ -1227,10 +1240,10 @@ function buildPremiumEditorialFront(
       id: 'header-category',
       anchor: { x: 36.5, y: 6.2, w: 13.5, h: 3 },
       content: headerCategoryText,
-      fontFamily: 'Space Grotesk',
-      fontSize: 2.6,
-      fontWeight: '700',
-      color: '#94a3b8',
+      fontFamily: 'Instrument Serif',
+      fontSize: 5.5,
+      fontWeight: '400',
+      color: '#14201C',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -1242,7 +1255,7 @@ function buildPremiumEditorialFront(
       id: 'block-qr',
       anchor: { x: 38.5, y: 44.5, w: 9.5, h: 9.5 },
       urlPattern: event.website?.value ? `${event.website.value.replace(/\/$/, '')}/verify/{{person.id}}` : `https://verify.eventpass.live/{{person.id}}`,
-      fgColor: isJudge ? '#0f172a' : '#ffffff',
+      fgColor: '#ffffff',
       bgColor: 'transparent',
       errorCorrection: 'M',
     },
@@ -1252,14 +1265,14 @@ function buildPremiumEditorialFront(
       id: 'person-name',
       anchor: { x: 4, y: 51.5, w: 46, h: 8.2 },
       content: '{{person.name}}',
-      fontFamily: 'Space Grotesk',
-      fontSize: 8.8,
-      fontWeight: '700',
-      color: '#ffffff',
+      fontFamily: 'Instrument Serif',
+      fontSize: 9.2,
+      fontWeight: '400',
+      color: '#14201C',
       align: 'left',
       verticalAlign: 'middle',
       maxLines: 2,
-      minFontSize: 6,
+      minFontSize: 6.5,
     },
     // 9. Role Title
     {
@@ -1267,9 +1280,9 @@ function buildPremiumEditorialFront(
       id: 'role-label',
       anchor: { x: 4, y: 60.5, w: 46, h: 4.5 },
       content: role.label,
-      fontFamily: 'Space Grotesk',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 4.8,
-      fontWeight: '600',
+      fontWeight: '700',
       color: roleTextHighlight,
       align: 'left',
       verticalAlign: 'middle',
@@ -1282,10 +1295,10 @@ function buildPremiumEditorialFront(
       id: 'person-team',
       anchor: { x: 4, y: 65.2, w: 46, h: 3.8 },
       content: '{{person.team}}',
-      fontFamily: 'Inter',
-      fontSize: 3.2,
+      fontFamily: 'Hanken Grotesk',
+      fontSize: 3.5,
       fontWeight: '500',
-      color: pal.d3Accent,
+      color: '#4B5651',
       align: 'left',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -1299,14 +1312,14 @@ function buildPremiumEditorialFront(
       content: event.name?.value
         ? (event.name.value === event.name.value.toLowerCase() ? event.name.value.replace(/\b\w/g, l => l.toUpperCase()) : event.name.value)
         : 'Event Name',
-      fontFamily: 'Outfit',
-      fontSize: 4.8,
-      fontWeight: '700',
-      color: '#cbd5e1',
+      fontFamily: 'Hanken Grotesk',
+      fontSize: 3.3,
+      fontWeight: '400',
+      color: '#66706A',
       align: 'left',
       verticalAlign: 'middle',
       maxLines: 1,
-      minFontSize: 3.6,
+      minFontSize: 2.5,
     },
     // 12. Minimalist Horizontal Line Divider
     {
@@ -1315,7 +1328,7 @@ function buildPremiumEditorialFront(
       anchor: { x: 4, y: 75, w: 46, h: 0.35 },
       shape: 'line',
       fill: 'transparent',
-      stroke: '#1e2436',
+      stroke: '#D9D5C7',
       strokeWidth: 0.35,
       cornerRadius: 0,
       opacity: 1,
@@ -1375,15 +1388,13 @@ function buildCardBackElements(
   style: 'modern-minimal' | 'creative-tech' | 'premium-editorial',
   category: EventCategory = 'general'
 ): Element[] {
-  const isDark = style !== 'modern-minimal' || ['music', 'business', 'gaming', 'sports', 'cultural', 'robotics'].includes(category)
+  const isDark = style === 'creative-tech'
   const pal = THEME_COLOR_PALETTES[category] || THEME_COLOR_PALETTES.general
   const bgFill = style === 'creative-tech'
-    ? pal.d2HeroBg
-    : style === 'premium-editorial'
-    ? pal.d3ObsidianBg
-    : (isDark ? pal.d1LowerBg : '#ffffff')
-  const textColor = isDark ? '#ffffff' : '#0f172a'
-  const subtextColor = isDark ? '#94a3b8' : '#64748b'
+    ? (role.palette?.secondary || pal.d2HeroBg || '#14201C')
+    : '#FAF8F4'
+  const textColor = isDark ? '#ffffff' : '#14201C'
+  const subtextColor = isDark ? '#D9D5C7' : '#66706A'
 
   const rule1 = category === 'music'
     ? '1. Pass grants admission to concert arena, stage pit, and soundboard areas.'
@@ -1451,8 +1462,8 @@ function buildCardBackElements(
       id: 'back-lanyard-slot',
       anchor: { x: 22, y: 2.2, w: 10, h: 2.5 },
       shape: 'rect',
-      fill: isDark ? '#1e2230' : '#e2e8f0',
-      stroke: isDark ? '#333b52' : '#cbd5e1',
+      fill: '#E9E5D8',
+      stroke: '#D9D5C7',
       strokeWidth: 0.35,
       cornerRadius: 1.25,
       opacity: 1,
@@ -1486,9 +1497,9 @@ function buildCardBackElements(
       id: 'back-title',
       anchor: { x: 13, y: 6.5, w: 28, h: 4 },
       content: event.name?.value || 'EVENT PASS',
-      fontFamily: 'Space Grotesk',
-      fontSize: 4,
-      fontWeight: '700',
+      fontFamily: 'Instrument Serif',
+      fontSize: 4.5,
+      fontWeight: '400',
       color: textColor,
       align: 'center',
       verticalAlign: 'middle',
@@ -1500,10 +1511,10 @@ function buildCardBackElements(
       id: 'back-guidelines-heading',
       anchor: { x: 4, y: 17, w: 46, h: 3.5 },
       content: 'TERMS & EVENT GUIDELINES',
-      fontFamily: 'Space Grotesk',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 2.8,
       fontWeight: '700',
-      color: role.palette.primary,
+      color: role.palette?.primary || '#0F5C4D',
       align: 'left',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -1514,7 +1525,7 @@ function buildCardBackElements(
       id: 'back-rule-1',
       anchor: { x: 4, y: 21.5, w: 46, h: 7 },
       content: rule1,
-      fontFamily: 'Inter',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 2.4,
       fontWeight: '400',
       color: subtextColor,
@@ -1528,7 +1539,7 @@ function buildCardBackElements(
       id: 'back-rule-2',
       anchor: { x: 4, y: 29, w: 46, h: 7 },
       content: rule2,
-      fontFamily: 'Inter',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 2.4,
       fontWeight: '400',
       color: subtextColor,
@@ -1542,7 +1553,7 @@ function buildCardBackElements(
       id: 'back-rule-3',
       anchor: { x: 4, y: 36.5, w: 46, h: 7 },
       content: rule3,
-      fontFamily: 'Inter',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 2.4,
       fontWeight: '400',
       color: subtextColor,
@@ -1557,7 +1568,7 @@ function buildCardBackElements(
       id: 'back-large-qr',
       anchor: { x: 19, y: 46, w: 16, h: 16 },
       urlPattern: event.website?.value ? `${event.website.value.replace(/\/$/, '')}/verify/{{person.id}}` : `https://verify.eventpass.live/{{person.id}}`,
-      fgColor: isDark ? '#ffffff' : '#0f172a',
+      fgColor: isDark ? '#ffffff' : '#14201C',
       bgColor: 'transparent',
       errorCorrection: 'M',
     },
@@ -1567,10 +1578,10 @@ function buildCardBackElements(
       id: 'back-scan-hint',
       anchor: { x: 4, y: 63, w: 46, h: 3 },
       content: 'SCAN TO VERIFY CREDENTIALS',
-      fontFamily: 'Space Grotesk',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 2.5,
       fontWeight: '600',
-      color: role.palette.primary,
+      color: role.palette?.primary || '#0F5C4D',
       align: 'center',
       verticalAlign: 'middle',
       maxLines: 1,
@@ -1582,7 +1593,7 @@ function buildCardBackElements(
       id: 'back-emergency-header',
       anchor: { x: 4, y: 67.5, w: 46, h: 3 },
       content: 'EMERGENCY / HELPDESK',
-      fontFamily: 'Space Grotesk',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 2.4,
       fontWeight: '700',
       color: subtextColor,
@@ -1596,7 +1607,7 @@ function buildCardBackElements(
       id: 'back-emergency-val',
       anchor: { x: 4, y: 70.8, w: 46, h: 3.5 },
       content: event.contact?.value || (event.organizer?.value ? `contact@${event.organizer.value.toLowerCase().replace(/[^a-z0-9]/g, '')}.org` : 'helpdesk@eventpass.live'),
-      fontFamily: 'Inter',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 2.5,
       fontWeight: '500',
       color: textColor,
@@ -1612,7 +1623,7 @@ function buildCardBackElements(
       anchor: { x: 8, y: 75, w: 38, h: 7 },
       valueBinding: '{{person.id}}',
       format: 'CODE128',
-      fgColor: isDark ? '#ffffff' : '#0f172a',
+      fgColor: isDark ? '#ffffff' : '#14201C',
       bgColor: 'transparent',
     },
     // Copyright
@@ -1621,7 +1632,7 @@ function buildCardBackElements(
       id: 'back-copyright',
       anchor: { x: 2, y: 83, w: 50, h: 2.2 },
       content: `© ${new Date().getFullYear()} ${event.organizer?.value || (event.name?.value ? `${event.name.value} Organizing Team` : 'Event Organizing Committee')}`,
-      fontFamily: 'Inter',
+      fontFamily: 'Hanken Grotesk',
       fontSize: 1.9,
       fontWeight: '400',
       color: subtextColor,
@@ -1663,8 +1674,8 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d2Desc: 'Scientific and geometric tech badge with hexagon molecular network, glowing halo avatar, chevron divider, and verification QR code.',
     d2Tags: ['creative', 'tech', 'hexagons', 'chevron', 'scannable', 'hackathon'],
     d3Name: n => `Premium Editorial — ${n}`,
-    d3Desc: 'Minimal matte obsidian card with bold asymmetric rectangular photo framing, striking vertical accent block, and cyber typography.',
-    d3Tags: ['editorial', 'asymmetric', 'matte-obsidian', 'accent-block', 'prestige', 'hackathon'],
+    d3Desc: 'Clean warm editorial card with bold asymmetric rectangular photo framing, striking vertical accent block, and editorial typography.',
+    d3Tags: ['editorial', 'asymmetric', 'matte-obsidian', 'editorial-paper', 'accent-block', 'prestige', 'hackathon'],
   },
   robotics: {
     d1Name: n => `Engineering Precision — ${n}`,
@@ -1674,7 +1685,7 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d2Desc: 'Robotics lab credential with telemetry caliper brackets, technical circuit accents, and technical accreditation QR.',
     d2Tags: ['robotics', 'telemetry', 'circuits', 'scannable', 'tech'],
     d3Name: n => `Lab Accreditation — ${n}`,
-    d3Desc: 'Matte obsidian research credential with asymmetric photo frame, telemetry accent bar, and laboratory accreditation.',
+    d3Desc: 'Warm editorial research credential with asymmetric photo frame, telemetry accent bar, and laboratory accreditation.',
     d3Tags: ['robotics', 'lab', 'accreditation', 'editorial', 'prestige'],
   },
   conference: {
@@ -1685,8 +1696,8 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d2Desc: 'Prestigious conference badge with geometric crest accents, chevron divider, and keynote session credentials.',
     d2Tags: ['conference', 'summit', 'crest', 'keynote', 'scannable'],
     d3Name: n => `Prestigious Delegate — ${n}`,
-    d3Desc: 'Premium matte obsidian delegate pass with asymmetric portrait framing, champagne accent bar, and executive branding.',
-    d3Tags: ['conference', 'delegate', 'obsidian', 'editorial', 'vip'],
+    d3Desc: 'Premium editorial delegate pass with asymmetric portrait framing, champagne accent bar, and executive branding.',
+    d3Tags: ['conference', 'delegate', 'editorial-paper', 'editorial', 'vip'],
   },
   cultural: {
     d1Name: n => `Festive Radiance — ${n}`,
@@ -1696,7 +1707,7 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d2Desc: 'Vibrant cultural identity card with festive star diamond motifs, chevron apex, and festival access QR.',
     d2Tags: ['cultural', 'festive', 'mosaic', 'celebration', 'scannable'],
     d3Name: n => `Artisan VIP Pass — ${n}`,
-    d3Desc: 'Deep velvet festival pass with asymmetric artist portrait framing, vibrant accent block, and stage accreditation.',
+    d3Desc: 'Warm editorial festival pass with asymmetric artist portrait framing, vibrant accent block, and stage accreditation.',
     d3Tags: ['cultural', 'artisan', 'editorial', 'artist-pass', 'vip'],
   },
   business: {
@@ -1707,7 +1718,7 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d2Desc: 'High-stakes founder & investor credential with summit rays, growth metrics, chevron apex, and executive verification QR.',
     d2Tags: ['business', 'venture', 'founder', 'investor', 'growth', 'scannable'],
     d3Name: n => `Angel Syndicate VIP — ${n}`,
-    d3Desc: 'Premium obsidian executive pass with asymmetric portrait framing, champagne gold accent bar, and venture verification.',
+    d3Desc: 'Premium editorial executive pass with asymmetric portrait framing, champagne gold accent bar, and venture verification.',
     d3Tags: ['business', 'syndicate', 'angel', 'executive', 'editorial', 'vip'],
   },
   gaming: {
@@ -1718,8 +1729,8 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d2Desc: 'Futuristic gaming credential with laser matrix grid, halo avatar framing, battlestation watermark, and arena access QR.',
     d2Tags: ['gaming', 'battlestation', 'neon', 'cyber', 'scannable'],
     d3Name: n => `Pro Roster VIP — ${n}`,
-    d3Desc: 'Matte obsidian esports pass with asymmetric gamer portrait framing, electric violet accent bar, and tournament accreditation.',
-    d3Tags: ['gaming', 'pro-roster', 'editorial', 'obsidian', 'tournament'],
+    d3Desc: 'Editorial esports pass with asymmetric gamer portrait framing, electric violet accent bar, and tournament accreditation.',
+    d3Tags: ['gaming', 'pro-roster', 'editorial', 'editorial-paper', 'tournament'],
   },
   music: {
     d1Name: n => `Live Concert Arena — ${n}`,
@@ -1729,7 +1740,7 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d2Desc: 'High-voltage musical identity pass with dual stage lasers, concentric vinyl grooves, floating notes, and cheering audience silhouette.',
     d2Tags: ['music', 'concert', 'neon', 'soundwave', 'equalizer', 'lasers'],
     d3Name: n => `VIP Backstage Laminate — ${n}`,
-    d3Desc: 'Exclusive backstage tour laminate with matte obsidian stage depth, singer silhouette watermark, radiant accent block, and arena crowd horizon.',
+    d3Desc: 'Exclusive backstage tour laminate with editorial stage depth, singer silhouette watermark, radiant accent block, and arena crowd horizon.',
     d3Tags: ['music', 'vip', 'backstage', 'tour-pass', 'editorial', 'concert'],
   },
   workshop: {
@@ -1740,7 +1751,7 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d2Desc: 'Structured learning credential with technical motifs, chevron accent, and attendance verification QR.',
     d2Tags: ['workshop', 'cohort', 'bootcamp', 'scannable', 'learning'],
     d3Name: n => `Editorial Scholar — ${n}`,
-    d3Desc: 'Matte scholar credential with asymmetric portrait framing, cohort accent bar, and masterclass certification.',
+    d3Desc: 'Warm scholar credential with asymmetric portrait framing, cohort accent bar, and masterclass certification.',
     d3Tags: ['workshop', 'scholar', 'editorial', 'masterclass', 'certification'],
   },
   general: {
@@ -1751,8 +1762,8 @@ const CATEGORY_METADATA: Record<EventCategory, {
     d2Desc: 'Scientific and geometric badge with molecular network, glowing halo avatar, chevron divider, and verification QR code.',
     d2Tags: ['creative', 'geometric', 'chevron', 'scannable', 'modern'],
     d3Name: n => `Premium Editorial — ${n}`,
-    d3Desc: 'Minimal matte obsidian card with bold asymmetric rectangular photo framing, striking vertical accent block, and editorial typography.',
-    d3Tags: ['editorial', 'asymmetric', 'matte-obsidian', 'accent-block', 'prestige'],
+    d3Desc: 'Clean warm editorial card with bold asymmetric rectangular photo framing, striking vertical accent block, and editorial typography.',
+    d3Tags: ['editorial', 'asymmetric', 'editorial-paper', 'accent-block', 'prestige'],
   },
 }
 
@@ -1843,9 +1854,9 @@ export function generateDraftsDeterministic(
     roleElements: draft1RoleFront,
     roleBackElements: draft1RoleBack,
     tokens: {
-      primaryColor: llmD1?.primaryColor || '#6366f1',
-      accentColor: llmD1?.accentColor || '#ec4899',
-      backgroundColor: llmD1?.backgroundColor || '#090d16',
+      primaryColor: llmD1?.primaryColor || '#0F5C4D',
+      accentColor: llmD1?.accentColor || '#14201C',
+      backgroundColor: llmD1?.backgroundColor || '#FAF8F4',
       artworkPrompt: llmD1?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
     },
   }
@@ -1873,9 +1884,9 @@ export function generateDraftsDeterministic(
     roleElements: draft2RoleFront,
     roleBackElements: draft2RoleBack,
     tokens: {
-      primaryColor: llmD2?.primaryColor || '#06b6d4',
-      accentColor: llmD2?.accentColor || '#f59e0b',
-      backgroundColor: llmD2?.backgroundColor || '#0a101d',
+      primaryColor: llmD2?.primaryColor || '#0F5C4D',
+      accentColor: llmD2?.accentColor || '#D9D5C7',
+      backgroundColor: llmD2?.backgroundColor || '#FAF8F4',
       artworkPrompt: llmD2?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
     },
   }
@@ -1903,9 +1914,9 @@ export function generateDraftsDeterministic(
     roleElements: draft3RoleFront,
     roleBackElements: draft3RoleBack,
     tokens: {
-      primaryColor: llmD3?.primaryColor || '#ec4899',
-      accentColor: llmD3?.accentColor || '#a855f7',
-      backgroundColor: llmD3?.backgroundColor || '#070110',
+      primaryColor: llmD3?.primaryColor || '#0F5C4D',
+      accentColor: llmD3?.accentColor || '#14201C',
+      backgroundColor: llmD3?.backgroundColor || '#FAF8F4',
       artworkPrompt: llmD3?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
     },
   }
