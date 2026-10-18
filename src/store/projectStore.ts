@@ -52,6 +52,7 @@ export const useProjectStore = create<ProjectState>()(
   people:  [],
   instituteLogo: DEFAULT_SVNIT_LOGO,
   clubLogo:      DEFAULT_ACM_LOGO,
+  samplePhotoUrl: '',
 
   newProject(name = 'Untitled Project') {
     const project: DesignProject = {
@@ -69,7 +70,7 @@ export const useProjectStore = create<ProjectState>()(
       nlHistory:   [],
       versions:    [],
     }
-    set({ project, people: [] })
+    set({ project, people: [], samplePhotoUrl: '' })
     return project
   },
 
@@ -289,7 +290,6 @@ export const useProjectStore = create<ProjectState>()(
         people: state.people,
         instituteLogo: state.instituteLogo,
         clubLogo: state.clubLogo,
-        samplePhotoUrl: state.samplePhotoUrl,
       }),
     }
   )

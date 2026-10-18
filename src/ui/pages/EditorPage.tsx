@@ -36,13 +36,9 @@ export function EditorPage() {
   const setClubLogo        = useProjectStore(s => s.setClubLogo)
   const resetInstituteLogo = useProjectStore(s => s.resetInstituteLogo)
   const resetClubLogo      = useProjectStore(s => s.resetClubLogo)
-  const samplePhotoUrl     = useProjectStore(s => s.samplePhotoUrl)
-  const setSamplePhotoUrl  = useProjectStore(s => s.setSamplePhotoUrl)
 
   const instituteInputRef = useRef<HTMLInputElement>(null)
   const clubInputRef      = useRef<HTMLInputElement>(null)
-  const photoInputRef     = useRef<HTMLInputElement>(null)
-  const [personPhotoUrl, setPersonPhotoUrl] = useState<string>(samplePhotoUrl || '')
 
   const [selectedEl, setSelectedEl] = useState<string | null>(null)
   const [previewRole, setPreviewRole] = useState<string>('participant')
@@ -75,24 +71,11 @@ export function EditorPage() {
     reader.readAsDataURL(file)
   }
 
-  function handlePersonPhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setPersonPhotoUrl(reader.result)
-        setSamplePhotoUrl(reader.result)
-      }
-    }
-    reader.readAsDataURL(file)
-  }
-
   const brandKit = getDefaultBrandKit()
   const roles    = project?.roles?.length ? project.roles : DEFAULT_ROLES
   const template = project?.activeTemplate
   const role     = roles.find(r => r.id === previewRole) ?? roles[0]
-  const person   = { ...BASE_SAMPLE_PERSON, role: previewRole, photoUrl: personPhotoUrl }
+  const person   = { ...BASE_SAMPLE_PERSON, role: previewRole, photoUrl: '' }
 
   function pushHistory(tpl: CardTemplate) {
     const next = history.slice(0, historyIdx + 1)
@@ -248,48 +231,6 @@ export function EditorPage() {
 
         {/* Properties panel */}
         <div className="space-y-4">
-          {/* Owner Photo Upload */}
-          <div className="glass p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="section-heading text-sm">📸 Owner Photo</h3>
-              <span className="text-[10px] text-slate-400">ID card portrait</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-16 h-16 rounded-lg bg-surface-900 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden">
-                {personPhotoUrl ? (
-                  <img src={personPhotoUrl} alt="Owner" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-2xl">👤</span>
-                )}
-              </div>
-              <div className="flex flex-col gap-2 flex-1">
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handlePersonPhotoUpload}
-                />
-                <button
-                  type="button"
-                  onClick={() => photoInputRef.current?.click()}
-                  className="btn-secondary text-xs py-1.5 px-3"
-                >
-                  📁 Upload Photo
-                </button>
-                {personPhotoUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setPersonPhotoUrl('')}
-                    className="text-[11px] text-slate-400 hover:text-white underline text-left"
-                  >
-                    Remove photo
-                  </button>
-                )}
-              </div>
-            </div>
-            <p className="text-[10px] text-slate-500">Upload a portrait photo to preview on the ID card.</p>
-          </div>
 
           {/* Card Logos (Institute & Club) */}
           <div className="glass p-4 space-y-4">

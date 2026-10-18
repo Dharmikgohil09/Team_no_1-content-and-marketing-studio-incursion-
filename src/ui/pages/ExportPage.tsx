@@ -41,12 +41,9 @@ export function ExportPage() {
   const brandKit = getDefaultBrandKit()
   const roles    = (project?.roles && project.roles.length > 0) ? project.roles : DEFAULT_ROLES
   const template = project?.activeTemplate || project?.drafts?.[0] || listTemplates()[0]
-  const cardSize = template?.size || { name: 'CR80', widthMm: 54, heightMm: 85.6, bleedMm: 3, safeMarginMm: 3 }
-  const samplePhotoUrl = useProjectStore(s => s.samplePhotoUrl)
-
   const exportPeople = (people.length > 0 ? people : [SAMPLE_PERSON]).map(p => ({
     ...p,
-    photoUrl: p.photoUrl || samplePhotoUrl || '',
+    photoUrl: p.photoUrl || '',
   }))
   const previewRole  = roles.find(r => r.id === exportPeople[0]?.role) ?? roles[0] ?? DEFAULT_ROLES[0]
 
