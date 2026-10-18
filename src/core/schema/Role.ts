@@ -22,43 +22,43 @@ export const RoleSchema = z.object({
 })
 export type Role = z.infer<typeof RoleSchema>
 
-/** Default role definitions for ID card events */
+/** Default role definitions for ID card events matching editorial design tokens */
 export const DEFAULT_ROLES: Role[] = [
   {
     id: 'participant',
     label: 'Participant',
     accentShape: 'diagonal',
-    palette: { primary: '#1a35de', secondary: '#091124', accent: '#00d2ff', text: '#ffffff', pattern: 'stripe' },
+    palette: { primary: '#0F5C4D', secondary: '#14201C', accent: '#D9D5C7', text: '#ffffff', pattern: 'stripe' },
   },
   {
     id: 'organizer',
     label: 'Organizer',
     accentShape: 'full',
-    palette: { primary: '#0f172a', secondary: '#090b10', accent: '#f59e0b', text: '#ffffff', pattern: 'solid' },
+    palette: { primary: '#14201C', secondary: '#1E2B26', accent: '#0F5C4D', text: '#ffffff', pattern: 'solid' },
   },
   {
     id: 'mentor',
     label: 'Mentor',
     accentShape: 'band',
-    palette: { primary: '#6d28d9', secondary: '#14132b', accent: '#14b8a6', text: '#ffffff', pattern: 'dot' },
+    palette: { primary: '#8B5E3C', secondary: '#3D2817', accent: '#E9E5D8', text: '#ffffff', pattern: 'dot' },
   },
   {
     id: 'volunteer',
     label: 'Volunteer',
     accentShape: 'ribbon',
-    palette: { primary: '#059669', secondary: '#064e3b', accent: '#f59e0b', text: '#ffffff', pattern: 'cross' },
+    palette: { primary: '#2E5A44', secondary: '#193326', accent: '#D9D5C7', text: '#ffffff', pattern: 'cross' },
   },
   {
     id: 'judge',
     label: 'Judge',
     accentShape: 'corner',
-    palette: { primary: '#1e293b', secondary: '#0f172a', accent: '#e2e8f0', text: '#ffffff', pattern: 'solid' },
+    palette: { primary: '#3B4842', secondary: '#202824', accent: '#C4BFAE', text: '#ffffff', pattern: 'solid' },
   },
   {
     id: 'speaker',
     label: 'Speaker',
     accentShape: 'ribbon',
-    palette: { primary: '#be123c', secondary: '#2b0b18', accent: '#fbbf24', text: '#ffffff', pattern: 'solid' },
+    palette: { primary: '#7B3833', secondary: '#3E1C1A', accent: '#E9E5D8', text: '#ffffff', pattern: 'solid' },
   },
 ]
 
@@ -77,14 +77,14 @@ export function getRoleOrDefault(roleIdOrLabel: string, existingRoles?: Role[]):
   const builtIn = DEFAULT_ROLES.find(r => r.id === norm || r.label.toLowerCase() === norm)
   if (builtIn) return builtIn
 
-  // Curated palette pool for custom roles
+  // Curated palette pool for custom roles aligned with the editorial theme
   const CUSTOM_PALETTES: Array<{ primary: string; secondary: string; accent: string }> = [
-    { primary: '#0284c7', secondary: '#082f49', accent: '#38bdf8' }, // Sky
-    { primary: '#d97706', secondary: '#451a03', accent: '#fde047' }, // Amber
-    { primary: '#7c3aed', secondary: '#2e1065', accent: '#c084fc' }, // Violet
-    { primary: '#0d9488', secondary: '#134e4a', accent: '#2dd4bf' }, // Teal
-    { primary: '#db2777', secondary: '#500724', accent: '#f472b6' }, // Pink
-    { primary: '#475569', secondary: '#0f172a', accent: '#cbd5e1' }, // Slate
+    { primary: '#0F5C4D', secondary: '#14201C', accent: '#84A98C' }, // Forest Green
+    { primary: '#14201C', secondary: '#1E2B26', accent: '#D9D5C7' }, // Deep Ink
+    { primary: '#8B5E3C', secondary: '#3D2817', accent: '#E9E5D8' }, // Warm Sienna
+    { primary: '#2E5A44', secondary: '#193326', accent: '#C4BFAE' }, // Sage
+    { primary: '#7B3833', secondary: '#3E1C1A', accent: '#E9E5D8' }, // Earth Crimson
+    { primary: '#3B4842', secondary: '#202824', accent: '#D9D5C7' }, // Slate
   ]
   let hash = 0
   for (let i = 0; i < norm.length; i++) hash = (hash * 31 + norm.charCodeAt(i)) & 0xffff

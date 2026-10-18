@@ -21,7 +21,7 @@
       "id": "tech-hero-bg",
       "anchor": { "x": 0, "y": 0, "w": 54, "h": 48 },
       "shape": "rect",
-      "fill": "#160d38",
+      "fill": "#14201C",
       "fillBinding": "{{role.palette.secondary}}",
       "stroke": "transparent",
       "strokeWidth": 0,
@@ -34,12 +34,12 @@
       "anchor": { "x": 2, "y": 13, "w": 9, "h": 9 },
       "shape": "polygon",
       "points": "4.5,0 9,2.6 9,7.8 4.5,10.4 0,7.8 0,2.6",
-      "fill": "#6d28d9",
+      "fill": "#0F5C4D",
       "fillBinding": "{{role.palette.primary}}",
-      "stroke": "#c084fc",
-      "strokeWidth": 0.45,
+      "stroke": "#0F5C4D",
+      "strokeWidth": 0.35,
       "cornerRadius": 0,
-      "opacity": 0.38
+      "opacity": 0.25
     },
     {
       "type": "shape",
@@ -48,10 +48,10 @@
       "shape": "polygon",
       "points": "3.5,0 7,2 7,6 3.5,8 0,6 0,2",
       "fill": "transparent",
-      "stroke": "#c084fc",
+      "stroke": "#D9D5C7",
       "strokeWidth": 0.35,
       "cornerRadius": 0,
-      "opacity": 0.45
+      "opacity": 0.35
     },
     {
       "type": "shape",
@@ -60,10 +60,10 @@
       "shape": "polygon",
       "points": "4,0 8,2.3 8,6.9 4,9.2 0,6.9 0,2.3",
       "fill": "transparent",
-      "stroke": "#c084fc",
-      "strokeWidth": 0.45,
+      "stroke": "#0F5C4D",
+      "strokeWidth": 0.35,
       "cornerRadius": 0,
-      "opacity": 0.4
+      "opacity": 0.25
     },
     {
       "type": "shape",
@@ -71,10 +71,10 @@
       "anchor": { "x": 10, "y": 14.5, "w": 6, "h": 0.4 },
       "shape": "line",
       "fill": "transparent",
-      "stroke": "#c084fc",
-      "strokeWidth": 0.35,
+      "stroke": "#D9D5C7",
+      "strokeWidth": 0.3,
       "cornerRadius": 0,
-      "opacity": 0.5
+      "opacity": 0.3
     },
     {
       "type": "shape",
@@ -82,10 +82,10 @@
       "anchor": { "x": 37, "y": 21, "w": 6, "h": 0.4 },
       "shape": "line",
       "fill": "transparent",
-      "stroke": "#c084fc",
-      "strokeWidth": 0.35,
+      "stroke": "#D9D5C7",
+      "strokeWidth": 0.3,
       "cornerRadius": 0,
-      "opacity": 0.5
+      "opacity": 0.3
     },
     {
       "type": "image",
@@ -114,9 +114,9 @@
       "id": "event-name-header",
       "anchor": { "x": 11, "y": 3.0, "w": 32, "h": 6.5 },
       "content": "{{event.name.value}}",
-      "fontFamily": "Outfit",
-      "fontSize": 6.0,
-      "fontWeight": "800",
+      "fontFamily": "Instrument Serif",
+      "fontSize": 6.5,
+      "fontWeight": "400",
       "color": "#ffffff",
       "align": "center",
       "verticalAlign": "middle",
@@ -128,18 +128,18 @@
       "id": "org-subtitle",
       "anchor": { "x": 12, "y": 8.5, "w": 30, "h": 3.5 },
       "content": "ACM NIT SURAT",
-      "fontFamily": "Space Grotesk",
+      "fontFamily": "Hanken Grotesk",
       "fontSize": 3.2,
       "fontWeight": "600",
-      "color": "#c4b5fd",
+      "color": "#D9D5C7",
       "align": "center",
       "verticalAlign": "middle",
       "maxLines": 1,
       "minFontSize": 2.4,
       "roleConditional": {
-        "organizer": { "color": "#f59e0b" },
-        "judge":     { "color": "#e2e8f0" },
-        "speaker":   { "color": "#fbbf24" }
+        "organizer": { "color": "#E9E5D8" },
+        "judge":     { "color": "#C4BFAE" },
+        "speaker":   { "color": "#E9E5D8" }
       }
     },
     {
@@ -148,15 +148,15 @@
       "anchor": { "x": 15, "y": 14.5, "w": 24, "h": 24 },
       "shape": "circle",
       "fill": "transparent",
-      "stroke": "#c084fc",
+      "stroke": "#D9D5C7",
       "strokeWidth": 0.85,
       "cornerRadius": 12,
       "opacity": 0.9,
       "roleConditional": {
-        "organizer": { "stroke": "#f59e0b" },
-        "judge":     { "stroke": "#e2e8f0" },
-        "volunteer": { "stroke": "#34d399" },
-        "speaker":   { "stroke": "#fbbf24" }
+        "organizer": { "stroke": "#0F5C4D" },
+        "judge":     { "stroke": "#C4BFAE" },
+        "volunteer": { "stroke": "#2E5A44" },
+        "speaker":   { "stroke": "#E9E5D8" }
       }
     },
     {
@@ -176,7 +176,7 @@
       "id": "info-zone-bg",
       "anchor": { "x": 0, "y": 47, "w": 54, "h": 38.6 },
       "shape": "rect",
-      "fill": "#f8fafc",
+      "fill": "#FAF8F4",
       "stroke": "transparent",
       "strokeWidth": 0,
       "cornerRadius": 0,
@@ -188,7 +188,7 @@
       "anchor": { "x": 0, "y": 41, "w": 54, "h": 9 },
       "shape": "polygon",
       "points": "0,9 27,0 54,9 54,9 0,9",
-      "fill": "#f8fafc",
+      "fill": "#FAF8F4",
       "stroke": "transparent",
       "strokeWidth": 0,
       "cornerRadius": 0,
@@ -200,14 +200,14 @@
       "anchor": { "x": 13, "y": 39, "w": 28, "h": 6 },
       "shape": "rect",
       "cornerRadius": 3,
-      "fill": "#6d28d9",
+      "fill": "#0F5C4D",
       "fillBinding": "{{role.palette.primary}}",
       "stroke": "transparent",
       "strokeWidth": 0,
       "opacity": 1,
       "roleConditional": {
-        "organizer": { "stroke": "#f59e0b" },
-        "judge":     { "stroke": "#e2e8f0" }
+        "organizer": { "stroke": "#D9D5C7" },
+        "judge":     { "stroke": "#C4BFAE" }
       }
     },
     {
@@ -215,41 +215,38 @@
       "id": "role-label",
       "anchor": { "x": 13, "y": 39, "w": 28, "h": 6 },
       "content": "{{role.label}}",
-      "fontFamily": "Space Grotesk",
+      "fontFamily": "Hanken Grotesk",
       "fontSize": 4.4,
-      "fontWeight": "700",
+      "fontWeight": "600",
       "color": "#ffffff",
       "align": "center",
       "verticalAlign": "middle",
       "maxLines": 1,
-      "minFontSize": 3,
-      "roleConditional": {
-        "organizer": { "color": "#f59e0b" }
-      }
+      "minFontSize": 3
     },
     {
       "type": "text",
       "id": "person-name",
       "anchor": { "x": 2, "y": 47, "w": 50, "h": 7.2 },
       "content": "{{person.name}}",
-      "fontFamily": "Space Grotesk",
-      "fontSize": 8,
-      "fontWeight": "700",
-      "color": "#0f172a",
+      "fontFamily": "Instrument Serif",
+      "fontSize": 8.8,
+      "fontWeight": "400",
+      "color": "#14201C",
       "align": "center",
       "verticalAlign": "middle",
       "maxLines": 1,
-      "minFontSize": 5.2
+      "minFontSize": 5.5
     },
     {
       "type": "text",
       "id": "person-team",
       "anchor": { "x": 2, "y": 54.5, "w": 50, "h": 4 },
       "content": "{{person.team}}",
-      "fontFamily": "Inter",
+      "fontFamily": "Hanken Grotesk",
       "fontSize": 4,
-      "fontWeight": "600",
-      "color": "#334155",
+      "fontWeight": "500",
+      "color": "#4B5651",
       "align": "center",
       "verticalAlign": "middle",
       "maxLines": 1,
@@ -260,10 +257,10 @@
       "id": "event-venue-date",
       "anchor": { "x": 2, "y": 59, "w": 50, "h": 3.5 },
       "content": "{{event.venue.value}} - {{event.dateStart.value}}",
-      "fontFamily": "Inter",
+      "fontFamily": "Hanken Grotesk",
       "fontSize": 3.2,
       "fontWeight": "400",
-      "color": "#64748b",
+      "color": "#66706A",
       "align": "center",
       "verticalAlign": "middle",
       "maxLines": 1,
@@ -274,8 +271,8 @@
       "id": "person-qr",
       "anchor": { "x": 23, "y": 63.5, "w": 8, "h": 8 },
       "urlPattern": "https://acm.svnit.ac.in/verify/{{person.id}}",
-      "fgColor": "#160d38",
-      "bgColor": "#f1f5f9",
+      "fgColor": "#14201C",
+      "bgColor": "transparent",
       "errorCorrection": "M"
     },
     {
@@ -284,18 +281,18 @@
       "anchor": { "x": 7, "y": 73, "w": 40, "h": 8 },
       "valueBinding": "{{person.id}}",
       "format": "CODE128",
-      "fgColor": "#0f172a",
-      "bgColor": "#f8fafc"
+      "fgColor": "#14201C",
+      "bgColor": "transparent"
     },
     {
       "type": "text",
       "id": "footer-validity",
       "anchor": { "x": 2, "y": 82.5, "w": 50, "h": 2.4 },
       "content": "VERIFIED CREDENTIAL - ACM SVNIT SURAT",
-      "fontFamily": "Space Grotesk",
+      "fontFamily": "Hanken Grotesk",
       "fontSize": 2.2,
       "fontWeight": "600",
-      "color": "#94a3b8",
+      "color": "#66706A",
       "align": "center",
       "verticalAlign": "middle",
       "maxLines": 1,

@@ -118,8 +118,8 @@ function buildDefs(template: CardTemplate, role: Role, w?: number, h?: number): 
 
   return `
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;family=Space+Grotesk:wght@400;500;600;700;800&amp;display=swap');
-      text { font-family: 'Space Grotesk', 'Inter', -apple-system, sans-serif; }
+      @import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap');
+      text { font-family: 'Hanken Grotesk', 'Inter', -apple-system, sans-serif; }
     </style>
     <clipPath id="card-clip-${template.id}">
       <rect x="0" y="0" width="${cardW}" height="${cardH}"/>

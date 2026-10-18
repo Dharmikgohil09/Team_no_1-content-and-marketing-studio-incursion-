@@ -26,10 +26,10 @@ describe('Role Family Specifications', () => {
     const organizer = getRoleOrDefault('organizer');
     const judge = getRoleOrDefault('judge');
 
-    expect(participant.palette.primary).toBe('#1a35de');
-    expect(organizer.palette.primary).toBe('#0f172a');
-    expect(organizer.palette.accent).toBe('#f59e0b');
-    expect(judge.palette.primary).toBe('#1e293b');
+    expect(participant.palette.primary).toBe('#0F5C4D');
+    expect(organizer.palette.primary).toBe('#14201C');
+    expect(organizer.palette.accent).toBe('#0F5C4D');
+    expect(judge.palette.primary).toBe('#3B4842');
     expect(participant.palette.primary).not.toEqual(organizer.palette.primary);
   });
 
