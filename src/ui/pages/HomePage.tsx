@@ -74,7 +74,6 @@ export function HomePage() {
               <span className="font-semibold text-[17px] text-ink">Content</span>
               <span className="font-semibold text-[17px] text-ink">Studio</span>
             </div>
-            <span className="text-[14px] text-muted font-normal ml-6 hidden sm:inline">by ACM NIT Surat</span>
           </div>
 
           <div className="flex items-center gap-8">
@@ -95,14 +94,8 @@ export function HomePage() {
       {/* ── Hero ────────────────────────────────────────────── */}
       <section className="pt-16 pb-20">
         <div className="max-w-[1120px] mx-auto px-8 text-left">
-          {/* Badge */}
-          <div className="h-[36px] px-4 rounded-full border border-line-strong inline-flex items-center gap-2.5">
-            <span className="w-[7px] h-[7px] rounded-full bg-accent shrink-0" />
-            <span className="text-[14px] text-text font-normal">ACM NIT Surat — Content & Marketing Studio</span>
-          </div>
-
           {/* Heading */}
-          <h1 className="font-heading font-normal text-[52px] sm:text-[76px] lg:text-[104px] text-ink leading-[1] tracking-[-0.02em] max-w-[980px] mt-[36px]">
+          <h1 className="font-heading font-normal text-[52px] sm:text-[76px] lg:text-[104px] text-ink leading-[1] tracking-[-0.02em] max-w-[980px]">
             Design print-ready <span className="italic text-accent">ID</span><br className="hidden sm:inline" />
             <span className="italic text-accent">cards</span> in minutes
           </h1>

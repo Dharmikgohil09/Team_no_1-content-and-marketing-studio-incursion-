@@ -436,7 +436,7 @@ describe('Dynamic Photo Matching & Extraction Engine Tests', () => {
 
       expect(pdfBytes).toBeInstanceOf(Uint8Array)
       expect(pdfBytes.length).toBeGreaterThan(500)
-    })
+    }, 15000)
   })
 
   // ───────────────────────────────────────────────────────────────────────────

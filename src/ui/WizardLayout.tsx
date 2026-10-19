@@ -35,7 +35,6 @@ export function WizardLayout() {
               <span className="font-semibold text-[17px] text-ink">Content</span>
               <span className="font-semibold text-[17px] text-ink">Studio</span>
             </div>
-            <span className="text-[14px] text-muted font-normal ml-4 hidden sm:inline">by ACM NIT Surat</span>
           </button>
 
           {/* Stepper */}
