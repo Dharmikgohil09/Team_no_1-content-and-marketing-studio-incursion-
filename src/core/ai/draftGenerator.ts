@@ -153,8 +153,34 @@ function generateClientArtwork(options: {
   const waveAmp = 6 + ((hash >> 11) % 12)
   const mode = hash % 4
 
+  const isDance = /(?:dance|dancing|dancer|choreograph|garba|dandiya|ballet|hip\s*hop|salsa|kathak|bhangra)/i.test(seedText)
   let dynamicLayers = ''
-  if (mode === 0) {
+  if (isDance) {
+    // Dynamic fluid dance choreography motion curves, rhythmic stage illumination & kinetic ribbons
+    dynamicLayers = `
+      <defs>
+        <radialGradient id="danceStageGlow" cx="50%" cy="25%" r="65%">
+          <stop offset="0%" stop-color="${a}" stop-opacity="0.4"/>
+          <stop offset="50%" stop-color="${p}" stop-opacity="0.2"/>
+          <stop offset="100%" stop-color="${bg}" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="danceRibbon1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${a}" stop-opacity="0.7"/>
+          <stop offset="50%" stop-color="${p}" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="${bg}" stop-opacity="0.1"/>
+        </linearGradient>
+      </defs>
+      <circle cx="27" cy="24" r="30" fill="url(#danceStageGlow)"/>
+      <!-- Fluid dancing kinetic ribbon curves -->
+      <path d="M -5,${cy1 + 10} C 18,${cy1 - 12} 36,${cy1 + 22} 59,${cy1 - 5}" fill="none" stroke="url(#danceRibbon1)" stroke-width="1.8" opacity="0.75"/>
+      <path d="M -5,${cy1 + 14} C 20,${cy1 - 8} 34,${cy1 + 26} 59,${cy1 - 1}" fill="none" stroke="${p}" stroke-width="0.6" stroke-dasharray="3,1.5" opacity="0.6"/>
+      <path d="M -5,${cy2} C 15,${cy2 + 15} 38,${cy2 - 15} 59,${cy2 + 8}" fill="none" stroke="${a}" stroke-width="1.2" opacity="0.6"/>
+      <!-- Dynamic rhythmic poise arcs -->
+      <circle cx="${cx1}" cy="${cy1}" r="2.5" fill="${a}" opacity="0.9"/>
+      <circle cx="${cx2}" cy="${cy2}" r="2.5" fill="${p}" opacity="0.9"/>
+      <ellipse cx="27" cy="78" rx="22" ry="4" fill="${p}" opacity="0.25"/>
+    `
+  } else if (mode === 0) {
     dynamicLayers = `
       <defs>
         <radialGradient id="dynHalo1" cx="${cx1}%" cy="${cy1}%" r="60%">
@@ -262,7 +288,7 @@ export async function generateArtworkForDraft(
         draftId: draft.id,
         forceRegenerate,
       }),
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(20000),
     })
 
     if (artRes.ok) {
@@ -325,7 +351,8 @@ function buildModernMinimalFront(
   role: Role,
   event: EventContext,
   logos: { instLogo: string; clubLogo: string },
-  category: EventCategory = 'general'
+  category: EventCategory = 'general',
+  customPalette?: { primaryColor?: string; accentColor?: string; backgroundColor?: string }
 ): Element[] {
   const roleId = role.id.toLowerCase()
   const isOrganizer = roleId === 'organizer'
@@ -338,12 +365,17 @@ function buildModernMinimalFront(
   const pal = THEME_COLOR_PALETTES[category] || THEME_COLOR_PALETTES.general
   const headerBg = '#ffffff'
   const headerTextColor = '#14201C'
-  const badgeTypeColor = '#66706A'
-  const lowerBg = role.palette?.secondary || pal.d1LowerBg || '#14201C'
-  const accentColor = role.palette?.primary || pal.d1Accent || '#0F5C4D'
-  const ringStroke = '#D9D5C7'
+  const badgeTypeColor = customPalette?.accentColor || '#66706A'
+  const lowerBg = customPalette?.backgroundColor || role.palette?.secondary || pal.d1LowerBg || '#14201C'
+  const accentColor = customPalette?.primaryColor || role.palette?.primary || pal.d1Accent || '#0F5C4D'
+  const ringStroke = customPalette?.accentColor || '#D9D5C7'
 
-  const badgeTypeLabel = category === 'music'
+  const fullText = `${event.name?.value || ''} ${(event as any).description?.value || ''}`.toLowerCase()
+  const isDance = /(?:dance|dancing|dancer|choreograph|garba|dandiya|ballet|hip\s*hop|salsa|kathak|bhangra)/i.test(fullText)
+
+  const badgeTypeLabel = isDance
+    ? (isSpeaker ? 'HEADLINE CHOREOGRAPHER' : isOrganizer ? 'DANCE COMMITTEE' : isJudge ? 'JURY & JUDGE PASS' : isPlayer ? 'DANCE COMPETITOR' : 'DANCE FESTIVAL PASS')
+    : category === 'music'
     ? (isSpeaker ? 'HEADLINE VOCALIST' : isOrganizer ? 'CONCERT DIRECTOR' : isJudge ? 'MUSIC EVALUATOR' : isVolunteer ? 'STAGE & SOUND CREW' : 'LIVE CONCERT PASS')
     : category === 'business'
     ? (isSpeaker ? 'STARTUP FOUNDER' : isMentor ? 'VENTURE INVESTOR' : isJudge ? 'ANGEL JURY' : isOrganizer ? 'SUMMIT DIRECTOR' : 'VENTURE PASS')
@@ -629,7 +661,8 @@ function buildCreativeTechFront(
   role: Role,
   event: EventContext,
   logos: { instLogo: string; clubLogo: string },
-  category: EventCategory = 'general'
+  category: EventCategory = 'general',
+  customPalette?: { primaryColor?: string; accentColor?: string; backgroundColor?: string }
 ): Element[] {
   const roleId = role.id.toLowerCase()
   const isOrganizer = roleId === 'organizer'
@@ -640,9 +673,9 @@ function buildCreativeTechFront(
   const isPlayer = roleId === 'player' || roleId === 'artist' || roleId === 'gamer'
 
   const pal = THEME_COLOR_PALETTES[category] || THEME_COLOR_PALETTES.general
-  const techBg = pal.d2HeroBg
-  const lowerBg = pal.d2LowerBg
-  const accentColor = role.palette?.accent || pal.d2Accent
+  const techBg = customPalette?.accentColor || pal.d2HeroBg
+  const lowerBg = customPalette?.backgroundColor || pal.d2LowerBg
+  const accentColor = customPalette?.primaryColor || role.palette?.accent || pal.d2Accent
   const themeMotifs = buildThemeElementsDraft2(category, pal)
 
   // Dynamic category-based motifs
@@ -1188,7 +1221,8 @@ function buildPremiumEditorialFront(
   role: Role,
   event: EventContext,
   logos: { instLogo: string; clubLogo: string },
-  category: EventCategory = 'general'
+  category: EventCategory = 'general',
+  customPalette?: { primaryColor?: string; accentColor?: string; backgroundColor?: string }
 ): Element[] {
   const roleId = role.id.toLowerCase()
   const isOrganizer = roleId === 'organizer'
@@ -1199,10 +1233,15 @@ function buildPremiumEditorialFront(
   const isPlayer = roleId === 'player' || roleId === 'artist' || roleId === 'gamer'
 
   const pal = THEME_COLOR_PALETTES[category] || THEME_COLOR_PALETTES.general
-  const obsidianBg = pal.d3ObsidianBg
-  const accentColor = pal.d3Accent
+  const obsidianBg = customPalette?.backgroundColor || pal.d3ObsidianBg
+  const accentColor = customPalette?.primaryColor || pal.d3Accent
 
-  const headerCategoryText = category === 'music'
+  const fullText = `${event.name?.value || ''} ${(event as any).description?.value || ''}`.toLowerCase()
+  const isDance = /(?:dance|dancing|dancer|choreograph|garba|dandiya|ballet|hip\s*hop|salsa|kathak|bhangra)/i.test(fullText)
+
+  const headerCategoryText = isDance
+    ? 'DANCE VIP'
+    : category === 'music'
     ? 'CONCERT VIP'
     : category === 'business'
     ? 'VENTURE VIP'
@@ -1891,6 +1930,50 @@ export function generateDraftsDeterministic(
     ? llmSuggestions.drafts.find((d: any) => d.id === 'premium-editorial') || llmSuggestions.drafts[2]
     : null
 
+  const fullText = `${eventName} ${(event as any).description?.value || ''} ${(event as any).themeHint?.value || ''}`.toLowerCase()
+  const isDance = /(?:dance|dancing|dancer|choreograph|garba|dandiya|ballet|hip\s*hop|salsa|kathak|bhangra)/i.test(fullText)
+
+  const defaultThemeColors = isDance ? {
+    d1Primary: '#BE185D',
+    d1Accent: '#F59E0B',
+    d1Bg: '#FAF5F0',
+    d2Primary: '#9D174D',
+    d2Accent: '#EC4899',
+    d2Bg: '#FAF8F4',
+    d3Primary: '#831843',
+    d3Accent: '#FBBF24',
+    d3Bg: '#FAF5F0',
+  } : {
+    d1Primary: '#0F5C4D',
+    d1Accent: '#14201C',
+    d1Bg: '#FAF8F4',
+    d2Primary: '#0F5C4D',
+    d2Accent: '#D9D5C7',
+    d2Bg: '#FAF8F4',
+    d3Primary: '#0F5C4D',
+    d3Accent: '#14201C',
+    d3Bg: '#FAF8F4',
+  }
+
+  const draft1Tokens = {
+    primaryColor: llmD1?.primaryColor || defaultThemeColors.d1Primary,
+    accentColor: llmD1?.accentColor || defaultThemeColors.d1Accent,
+    backgroundColor: llmD1?.backgroundColor || defaultThemeColors.d1Bg,
+    artworkPrompt: llmD1?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
+  }
+  const draft2Tokens = {
+    primaryColor: llmD2?.primaryColor || defaultThemeColors.d2Primary,
+    accentColor: llmD2?.accentColor || defaultThemeColors.d2Accent,
+    backgroundColor: llmD2?.backgroundColor || defaultThemeColors.d2Bg,
+    artworkPrompt: llmD2?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
+  }
+  const draft3Tokens = {
+    primaryColor: llmD3?.primaryColor || defaultThemeColors.d3Primary,
+    accentColor: llmD3?.accentColor || defaultThemeColors.d3Accent,
+    backgroundColor: llmD3?.backgroundColor || defaultThemeColors.d3Bg,
+    artworkPrompt: llmD3?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
+  }
+
   // Build role elements for each draft family
   const draft1RoleFront: Record<string, Element[]> = {}
   const draft1RoleBack: Record<string, Element[]> = {}
@@ -1902,13 +1985,13 @@ export function generateDraftsDeterministic(
   const draft3RoleBack: Record<string, Element[]> = {}
 
   effectiveRoles.forEach(r => {
-    draft1RoleFront[r.id] = buildModernMinimalFront(r, event, logoBag, category)
+    draft1RoleFront[r.id] = buildModernMinimalFront(r, event, logoBag, category, draft1Tokens)
     draft1RoleBack[r.id] = buildCardBackElements(r, event, logoBag, 'modern-minimal', category)
 
-    draft2RoleFront[r.id] = buildCreativeTechFront(r, event, logoBag, category)
+    draft2RoleFront[r.id] = buildCreativeTechFront(r, event, logoBag, category, draft2Tokens)
     draft2RoleBack[r.id] = buildCardBackElements(r, event, logoBag, 'creative-tech', category)
 
-    draft3RoleFront[r.id] = buildPremiumEditorialFront(r, event, logoBag, category)
+    draft3RoleFront[r.id] = buildPremiumEditorialFront(r, event, logoBag, category, draft3Tokens)
     draft3RoleBack[r.id] = buildCardBackElements(r, event, logoBag, 'premium-editorial', category)
   })
 
@@ -1937,12 +2020,7 @@ export function generateDraftsDeterministic(
     backElements: draft1RoleBack[defaultRole.id],
     roleElements: draft1RoleFront,
     roleBackElements: draft1RoleBack,
-    tokens: {
-      primaryColor: llmD1?.primaryColor || '#0F5C4D',
-      accentColor: llmD1?.accentColor || '#14201C',
-      backgroundColor: llmD1?.backgroundColor || '#FAF8F4',
-      artworkPrompt: llmD1?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
-    },
+    tokens: draft1Tokens,
   }
 
   // Draft 2: Creative Dynamic (Chevron Banner & Visual Motifs)
@@ -1967,12 +2045,7 @@ export function generateDraftsDeterministic(
     backElements: draft2RoleBack[defaultRole.id],
     roleElements: draft2RoleFront,
     roleBackElements: draft2RoleBack,
-    tokens: {
-      primaryColor: llmD2?.primaryColor || '#0F5C4D',
-      accentColor: llmD2?.accentColor || '#D9D5C7',
-      backgroundColor: llmD2?.backgroundColor || '#FAF8F4',
-      artworkPrompt: llmD2?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
-    },
+    tokens: draft2Tokens,
   }
 
   // Draft 3: Premium Editorial (Matte Obsidian & Accent Block)
@@ -1997,12 +2070,7 @@ export function generateDraftsDeterministic(
     backElements: draft3RoleBack[defaultRole.id],
     roleElements: draft3RoleFront,
     roleBackElements: draft3RoleBack,
-    tokens: {
-      primaryColor: llmD3?.primaryColor || '#0F5C4D',
-      accentColor: llmD3?.accentColor || '#14201C',
-      backgroundColor: llmD3?.backgroundColor || '#FAF8F4',
-      artworkPrompt: llmD3?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
-    },
+    tokens: draft3Tokens,
   }
 
   return [draft1, draft2, draft3]

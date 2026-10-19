@@ -275,27 +275,50 @@ async function generateAiSvgArtworkWithGemini(
     primaryColor?: string
     accentColor?: string
     backgroundColor?: string
+    forceRegenerate?: boolean
   }
 ): Promise<{ url: string; modelName: string } | null> {
   const CANDIDATES = ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-3-flash-preview']
   const p = options.primaryColor || '#0F5C4D'
   const a = options.accentColor || '#14201C'
   const bg = options.backgroundColor || '#FAF8F4'
+  const eventDesc = options.eventDescription || options.prompt || options.eventName || 'Event'
 
   const prompt = `
 You are an expert generative graphics and vector artist creating an original vertical background artwork SVG for an official event ID card.
 Event Name: "${options.eventName || 'Event'}"
-Event Description: "${options.eventDescription || options.prompt || ''}"
+Event Description: "${eventDesc}"
 Artistic Direction / Concept: "${options.prompt || ''}"
-Color Palette: Primary ${p}, Accent ${a}, Deep Background ${bg}
+
+THEME & DISCIPLINE REQUIREMENTS:
+1. Deeply analyze the event description and title: "${options.eventName || ''} - ${eventDesc}".
+2. Your background MUST visually and symbolically express this specific event theme:
+   - If the event is about DANCE, choreography, or dance competition: incorporate dynamic fluid dancing silhouettes/postures, graceful kinetic motion ribbons, rhythm curves, stage spotlight cones, pirouette motion trails, and vibrant performance energy.
+   - If MUSIC or concert: acoustic soundwaves, audio equalizer bars, vinyl concentric grooves, musical notation motifs, stage lighting rays.
+   - If SPORTS or athletics: kinetic velocity chevrons, dynamic athletic posture silhouettes, sports arena track lines, energetic motion blurs.
+   - If HACKATHON or coding: matrix circuitry, cyber grid lines, terminal code flow patterns, neural network nodes.
+   - If ROBOTICS: mechanical blueprints, gear arcs, laser telemetry calipers, robotic precision shapes.
+   - If BUSINESS or summit: architectural ascendancy angles, venture growth trajectory rays, elegant geometric lattice.
+   - If CULTURAL: celebratory festive arches, ornamental flourishes, radiance bursts, cultural heritage patterns.
+   - For ANY other theme: deeply reflect the core activity, energy, and atmosphere of "${eventDesc}".
+
+COLOR HARMONY REQUIREMENTS:
+- Primary Theme Color: ${p}
+- Accent Theme Color: ${a}
+- Canvas / Deep Background: ${bg}
+- You MUST maintain this exact color palette so the background artwork harmonizes seamlessly with the badge theme.
+${options.forceRegenerate ? `
+REGENERATION INSTRUCTION:
+- The user clicked "Change Background" to see a new variation.
+- CRITICAL: KEEP THE EXACT SAME THEME (${options.eventName || ''} - ${eventDesc}) and THE EXACT SAME COLOR PALETTE (${p}, ${a}, ${bg}).
+- Change the composition, camera perspective, layout angle, flow of the lines, or arrangement of the visual motifs to give a distinct, fresh background design while preserving the event theme.` : ''}
 
 CRITICAL RULES:
 1. Root SVG element MUST be: <svg viewBox="0 0 54 85.6" width="54mm" height="85.6mm" xmlns="http://www.w3.org/2000/svg">
-2. Deeply analyze the unique theme, atmosphere, era, culture, rhythms, or discipline of "${options.eventName || 'this event'}".
-   - Create a rich, evocative, layered visual background (using gradients, lighting beams, rhythmic curves, geometric motifs, or atmospheric glow textures).
-   - Safe visual zone: keep the center area (x: 10 to 44, y: 18 to 48) and bottom credential area clean and darker with subtle gradient wash so an attendee photo and text badge remain completely legible.
-3. Absolutely NO text, NO typography, NO letters, NO words, NO logos.
-4. Return ONLY valid SVG code. No markdown code blocks, no explanation, no preamble.
+2. Keep the overall card canvas filled with a rect of ${bg} (or gradients blending ${bg} with ${p} and ${a}).
+3. SAFE BADGE ZONE: The attendee's photo and name card sit in the center area (x: 8 to 46, y: 18 to 52). Keep this central area less cluttered with lower opacity or a subtle gradient wash so the badge details remain legible.
+4. Absolutely NO text, NO typography, NO letters, NO words, NO numbers, NO logos. Only pure graphic/vector artwork.
+5. Return ONLY valid SVG code. No markdown code blocks, no explanation, no preamble.
 `
 
   for (const m of CANDIDATES) {
@@ -396,26 +419,9 @@ app.post('/api/image/generate-background', async (req, res) => {
       }
     }
 
-    // 1. Try Google Generative AI raster image models if key is present
-    if (process.env.GEMINI_API_KEY && prompt) {
+    // 1. Dynamic AI Vector SVG Generation: Use Gemini to generate custom artwork for this exact event description
+    if (process.env.GEMINI_API_KEY) {
       const genAI = getGenAI()
-      try {
-        const fullArtworkPrompt = `Cinematic vertical event ID card background artwork for "${eventName || 'Event'}". ${prompt}. High quality, rich lighting, detailed atmosphere and realistic textures, vertical portrait composition (3:4 aspect ratio). Completely clean negative space in the center for photo badge overlay. Absolutely NO text, NO typography, NO watermark, NO letters, NO numbers.`
-        const result = await generateImageWithGemini(genAI, fullArtworkPrompt)
-        const imageUrl = `data:${result.mimeType};base64,${result.data}`
-        artworkCache.set(cacheKey, { imageUrl, isGenerated: true, prompt: fullArtworkPrompt, model: result.modelName })
-        return res.json({
-          success: true,
-          imageUrl,
-          isGenerated: true,
-          model: result.modelName,
-          promptUsed: fullArtworkPrompt,
-        })
-      } catch (imgErr: any) {
-        console.warn('Gemini raster image model quota exceeded or unavailable:', imgErr.message?.slice(0, 100))
-      }
-
-      // 2. Dynamic AI Vector SVG Generation: Use Gemini to generate custom artwork for this exact event description
       try {
         const aiSvg = await generateAiSvgArtworkWithGemini(genAI, {
           prompt,
@@ -425,6 +431,7 @@ app.post('/api/image/generate-background', async (req, res) => {
           primaryColor,
           accentColor,
           backgroundColor,
+          forceRegenerate,
         })
         if (aiSvg) {
           artworkCache.set(cacheKey, { imageUrl: aiSvg.url, isGenerated: true, prompt: prompt || '', model: aiSvg.modelName })
@@ -482,13 +489,20 @@ Event: ${JSON.stringify(event)}
 Roles: ${JSON.stringify(roles)}
 
 CRITICAL DESIGN SYSTEM GUIDELINES:
-1. DESIGN AESTHETICS: The overall design system is an elegant, editorial warm-paper aesthetic. Backgrounds should generally be warm off-white / ivory (#FAF8F4, #FFFFFF) or deep ink (#14201C).
-2. COLOR PALETTES: Use sophisticated, curated palettes tailored to the event (e.g., deep forest green #0F5C4D, deep ink #14201C, warm gold, terracotta, deep sage, indigo). Do NOT suggest neon cyberpunk, saturated hot pink, or raw pitch-black backgrounds.
+1. EVENT-DRIVEN THEME & PALETTE: Deeply analyze the user's event description and name. The theme name, visual direction, description, and colors must directly match the event's unique domain and energy:
+   - For DANCE competitions or cultural performance fests: choose expressive, vibrant, elegant color palettes (e.g. radiant crimson, energetic ruby, performance gold, deep stage plum, or warm sunset terracotta) and dynamic titles.
+   - For MUSIC/CONCERTS: sonic purples, acoustic teals, dynamic stage indigos.
+   - For SPORTS: athletic energy navy, kinetic orange, varsity gold.
+   - For HACKATHONS: matrix emerald, cyber cyan, deep obsidian.
+   - For ROBOTICS: industrial slate, electric azure, cautionary amber.
+   - For BUSINESS/SUMMITS: executive obsidian, prestige bronze, warm gold.
+   - For any custom/general theme: extract the most appropriate, sophisticated colors that represent that event.
+2. HARMONIOUS CONTRAST: Each draft must provide a cohesive primaryColor, accentColor, and backgroundColor hex code. Backgrounds should generally be warm off-white/ivory (#FAF8F4, #FFFFFF) or deep rich ink (#14201C, #1A1024, #0B192C) depending on the mood.
 3. THREE DISTINCT DESIGN FAMILIES:
    - Draft 1 ("modern-minimal"): Dual-tone or clean split layout with white header and deep ink / paper lower base.
    - Draft 2 ("creative-tech"): Geometric chevron apex / crest layout on clean warm paper (#FAF8F4) with refined event accent colors.
    - Draft 3 ("premium-editorial"): Editorial paper pass (#FAF8F4) with asymmetric framing and elegant hairline borders (#D9D5C7).
-4. For each proposal, provide an artworkPrompt suitable for an image generator capturing the atmosphere, lighting, and composition (portrait 3:4, clean negative space in the center, absolutely NO text or letters).
+4. For each proposal, provide an artworkPrompt suitable for vector SVG artwork generation capturing the specific event motifs and discipline (portrait 3:4, clean negative space in the center, absolutely NO text or letters).
 
 Return ONLY a valid JSON object matching this exact shape (no markdown, no backticks):
 {

@@ -66,12 +66,13 @@ export function DraftsPage() {
 
       // Generate distinct background artwork for the drafts
       const eventName = project?.eventContext?.name?.value || 'Event'
+      const eventDesc = (project?.eventContext as any)?.description?.value || ''
       const withArtwork = await Promise.all(
         generated.map((d, i) =>
           generateArtworkForDraft(
             d,
             project!.eventContext,
-            `${eventName}: Variation ${i + 1} - ${Date.now()}`,
+            d.tokens?.artworkPrompt || `${eventName}: ${eventDesc} (Concept ${i + 1})`,
             true
           )
         )
@@ -93,10 +94,11 @@ export function DraftsPage() {
     setRegeneratingIdx(idx)
     try {
       const eventName = project.eventContext.name?.value || 'Event'
+      const eventDesc = (project.eventContext as any)?.description?.value || ''
       const updated = await generateArtworkForDraft(
         draft,
         project.eventContext,
-        `${eventName}: Concept ${idx + 1} - ${Date.now()}`,
+        draft.tokens?.artworkPrompt || `${eventName}: ${eventDesc}`,
         true
       )
       const newDrafts = [...drafts]
