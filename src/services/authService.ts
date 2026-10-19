@@ -242,6 +242,26 @@ export class AuthService {
   }
 
   /**
+   * Direct Register or Login via Google OAuth.
+   */
+  static async signInWithGoogle(): Promise<void> {
+    const redirectUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}${AUTH_CONFIG.routes.defaultRedirect}`
+      : undefined
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl,
+      },
+    })
+
+    if (error) {
+      throw new Error(error.message || 'Google sign-in failed. Please try again.')
+    }
+  }
+
+  /**
    * Log out and invalidate active session.
    */
   static async signOut(): Promise<void> {
