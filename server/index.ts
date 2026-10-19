@@ -21,7 +21,7 @@ function getGenAI() {
 }
 
 async function generateWithGemini(genAI: GoogleGenerativeAI, prompt: string): Promise<string> {
-  const models = ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-3-flash-preview', 'gemini-3.8-flash']
+  const models = ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-3-flash-preview']
   let lastErr: any = null
   for (const m of models) {
     try {
@@ -277,7 +277,7 @@ async function generateAiSvgArtworkWithGemini(
     backgroundColor?: string
   }
 ): Promise<{ url: string; modelName: string } | null> {
-  const CANDIDATES = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest']
+  const CANDIDATES = ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-3-flash-preview']
   const p = options.primaryColor || '#0F5C4D'
   const a = options.accentColor || '#14201C'
   const bg = options.backgroundColor || '#FAF8F4'
