@@ -68,11 +68,11 @@ export function HomePage() {
         <div className="max-w-[1120px] mx-auto px-8 h-full flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-[36px] h-[36px] rounded-[8px] bg-accent flex items-center justify-center shrink-0">
-              <span className="text-white font-semibold text-[12px] leading-none">CMS</span>
+              <span className="text-white font-semibold text-[12px] leading-none">EC</span>
             </div>
             <div className="flex flex-col leading-[1.15]">
-              <span className="font-semibold text-[17px] text-ink">Content</span>
-              <span className="font-semibold text-[17px] text-ink">Studio</span>
+              <span className="font-semibold text-[17px] text-ink">Event</span>
+              <span className="font-semibold text-[17px] text-ink">Canvas</span>
             </div>
           </div>
 
@@ -230,7 +230,7 @@ export function HomePage() {
       {/* ── Footer ──────────────────────────────────────────── */}
       <footer className="border-t border-line py-8 px-8 text-center text-xs text-muted">
         <div className="max-w-[1120px] mx-auto">
-          <p>© 2024 ACM Student Chapter, NIT Surat (SVNIT) · Content & Marketing Studio</p>
+          <p>© 2024 EventCanvas</p>
           <p className="mt-1">Built with React, TypeScript, SVG rendering, pdf-lib · Open source</p>
         </div>
       </footer>

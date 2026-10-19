@@ -29,11 +29,11 @@ export function WizardLayout() {
             className="flex items-center gap-3 shrink-0 group text-left"
           >
             <div className="w-[36px] h-[36px] rounded-[8px] bg-accent flex items-center justify-center shrink-0">
-              <span className="text-white font-semibold text-[12px] leading-none">CMS</span>
+              <span className="text-white font-semibold text-[12px] leading-none">EC</span>
             </div>
             <div className="flex flex-col leading-[1.15]">
-              <span className="font-semibold text-[17px] text-ink">Content</span>
-              <span className="font-semibold text-[17px] text-ink">Studio</span>
+              <span className="font-semibold text-[17px] text-ink">Event</span>
+              <span className="font-semibold text-[17px] text-ink">Canvas</span>
             </div>
           </button>
 
