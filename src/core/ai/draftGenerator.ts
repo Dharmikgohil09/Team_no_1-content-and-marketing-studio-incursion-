@@ -69,7 +69,16 @@ export function attachArtworkToDraft(
     opacity: 0.15,
   }
 
-  const OPAQUE_BG_IDS = new Set(['header-bg', 'lower-bg', 'tech-hero-bg', 'tech-lower-bg', 'bg-obsidian', 'back-bg'])
+  const OPAQUE_BG_IDS = new Set([
+    'header-bg',
+    'lower-bg',
+    'tech-hero-bg',
+    'tech-lower-bg',
+    'bg-obsidian',
+    'back-bg',
+    'info-zone-bg',
+    'photo-frame-bg',
+  ])
 
   const updateElementList = (elements: Element[]): Element[] => {
     const filtered = elements.filter(e => {
@@ -116,6 +125,116 @@ export function attachArtworkToDraft(
   }
 }
 
+function generateClientArtwork(options: {
+  eventName?: string
+  eventDescription?: string
+  primaryColor?: string
+  accentColor?: string
+  backgroundColor?: string
+  seed?: string | number
+}): string {
+  const p = options.primaryColor || '#0F5C4D'
+  const a = options.accentColor || '#14201C'
+  const bg = options.backgroundColor || '#FAF8F4'
+  const salt = options.seed !== undefined ? String(options.seed) : String(Date.now() + Math.random())
+  const seedText = `${options.eventName || ''} ${options.eventDescription || ''} ${salt}`.trim()
+
+  let h = 5381
+  for (let i = 0; i < seedText.length; i++) {
+    h = ((h << 5) + h) + seedText.charCodeAt(i)
+    h |= 0
+  }
+  const hash = Math.abs(h)
+
+  const cx1 = 10 + ((hash >> 3) % 34)
+  const cy1 = 12 + ((hash >> 5) % 24)
+  const cx2 = 10 + ((hash >> 7) % 34)
+  const cy2 = 60 + ((hash >> 9) % 22)
+  const waveAmp = 6 + ((hash >> 11) % 12)
+  const mode = hash % 4
+
+  let dynamicLayers = ''
+  if (mode === 0) {
+    dynamicLayers = `
+      <defs>
+        <radialGradient id="dynHalo1" cx="${cx1}%" cy="${cy1}%" r="60%">
+          <stop offset="0%" stop-color="${a}" stop-opacity="0.35"/>
+          <stop offset="50%" stop-color="${p}" stop-opacity="0.2"/>
+          <stop offset="100%" stop-color="${bg}" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="${cx1}" cy="${cy1}" r="32" fill="url(#dynHalo1)" />
+      <path d="M -5,${cy1} Q ${cx1},${cy1 + waveAmp} 59,${cy1 - waveAmp}" fill="none" stroke="${a}" stroke-width="0.8" opacity="0.6"/>
+      <path d="M -5,${cy1 + 6} Q ${cx1},${cy1 + waveAmp + 6} 59,${cy1 - waveAmp + 6}" fill="none" stroke="${p}" stroke-width="0.5" opacity="0.4" stroke-dasharray="2,2"/>
+      <path d="M -5,${cy2} Q ${cx2},${cy2 - waveAmp} 59,${cy2 + waveAmp}" fill="none" stroke="${p}" stroke-width="0.7" opacity="0.5"/>
+    `
+  } else if (mode === 1) {
+    dynamicLayers = `
+      <defs>
+        <linearGradient id="rayGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${a}" stop-opacity="0.4"/>
+          <stop offset="100%" stop-color="${p}" stop-opacity="0.1"/>
+        </linearGradient>
+      </defs>
+      <polygon points="0,0 ${cx1},0 ${cx2},85.6 0,85.6" fill="url(#rayGrad)"/>
+      <line x1="0" y1="${cy1}" x2="54" y2="${cy1 + 10}" stroke="${a}" stroke-width="0.5" opacity="0.6"/>
+      <line x1="0" y1="${cy2}" x2="54" y2="${cy2 - 8}" stroke="${p}" stroke-width="0.5" opacity="0.6"/>
+      <circle cx="${cx1}" cy="${cy1}" r="3" fill="${a}" opacity="0.8"/>
+      <circle cx="${cx2}" cy="${cy2}" r="3" fill="${p}" opacity="0.8"/>
+    `
+  } else if (mode === 2) {
+    dynamicLayers = `
+      <defs>
+        <radialGradient id="prismGlow" cx="${cx2}%" cy="${cy2}%" r="65%">
+          <stop offset="0%" stop-color="${p}" stop-opacity="0.3"/>
+          <stop offset="60%" stop-color="${a}" stop-opacity="0.15"/>
+          <stop offset="100%" stop-color="${bg}" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="${cx2}" cy="${cy2}" r="35" fill="url(#prismGlow)"/>
+      <polyline points="0,${cy1} ${cx1},${cy1 - 5} 54,${cy1 + 8}" fill="none" stroke="${a}" stroke-width="0.7" opacity="0.6"/>
+      <circle cx="8" cy="18" r="2" fill="${a}" opacity="0.85"/>
+      <circle cx="46" cy="72" r="2" fill="${p}" opacity="0.85"/>
+    `
+  } else {
+    dynamicLayers = `
+      <defs>
+        <radialGradient id="auraGlow" cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stop-color="${p}" stop-opacity="0.4"/>
+          <stop offset="70%" stop-color="${a}" stop-opacity="0.15"/>
+          <stop offset="100%" stop-color="${bg}" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="27" cy="42" r="38" fill="url(#auraGlow)"/>
+      <path d="M 0,20 Q 27,10 54,20 T 54,65 Q 27,75 0,65 Z" fill="none" stroke="${a}" stroke-width="0.4" opacity="0.4"/>
+      <circle cx="${cx1}" cy="${cy1}" r="1.8" fill="${p}" opacity="0.9"/>
+      <circle cx="${cx2}" cy="${cy2}" r="1.8" fill="${a}" opacity="0.9"/>
+    `
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 54 85.6" width="54mm" height="85.6mm">
+    <defs>
+      <radialGradient id="procBaseGlow" cx="50%" cy="30%" r="70%">
+        <stop offset="0%" stop-color="${p}" stop-opacity="0.32"/>
+        <stop offset="65%" stop-color="${bg}" stop-opacity="0.85"/>
+        <stop offset="100%" stop-color="${bg}" stop-opacity="1"/>
+      </radialGradient>
+      <linearGradient id="procCardWash" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="${p}" stop-opacity="0.25"/>
+        <stop offset="50%" stop-color="${bg}" stop-opacity="0.85"/>
+        <stop offset="100%" stop-color="${a}" stop-opacity="0.25"/>
+      </linearGradient>
+    </defs>
+    <rect width="54" height="85.6" fill="${bg}"/>
+    <rect width="54" height="85.6" fill="url(#procBaseGlow)"/>
+    <rect width="54" height="85.6" fill="url(#procCardWash)"/>
+    ${dynamicLayers}
+    <rect width="54" height="85.6" fill="none" stroke="${p}" stroke-width="0.4" opacity="0.3"/>
+  </svg>`
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+}
+
 /**
  * Regenerate background artwork for a specific draft
  */
@@ -143,7 +262,7 @@ export async function generateArtworkForDraft(
         draftId: draft.id,
         forceRegenerate,
       }),
-      signal: AbortSignal.timeout(25000),
+      signal: AbortSignal.timeout(8000),
     })
 
     if (artRes.ok) {
@@ -153,9 +272,19 @@ export async function generateArtworkForDraft(
       }
     }
   } catch (err) {
-    console.warn(`generateArtworkForDraft failed:`, err)
+    console.warn(`generateArtworkForDraft fetch notice, using dynamic client generator:`, err)
   }
-  return draft
+
+  // Guaranteed dynamic client generation fallback: ensures background ALWAYS changes immediately!
+  const clientArtUrl = generateClientArtwork({
+    eventName,
+    eventDescription: eventDesc,
+    primaryColor: draft.tokens?.primaryColor,
+    accentColor: draft.tokens?.accentColor,
+    backgroundColor: draft.tokens?.backgroundColor,
+    seed: `${Date.now()}_${Math.random()}`,
+  })
+  return attachArtworkToDraft(draft, clientArtUrl, false, prompt)
 }
 
 /**
