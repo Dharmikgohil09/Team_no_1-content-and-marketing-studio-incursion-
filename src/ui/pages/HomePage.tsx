@@ -1,5 +1,7 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useProjectStore } from '../../store/projectStore'
+import { useAuthStore } from '../../store/authStore'
+import { AUTH_CONFIG } from '../../config/auth'
 import { CardPreview } from '../components/CardPreview'
 import { getDefaultBrandKit } from '../../brandKits/loader'
 import { listTemplates } from '../../templates/registry'
@@ -40,7 +42,15 @@ export function HomePage() {
   const brandKit   = getDefaultBrandKit()
   const templates  = listTemplates('idCard')
 
+  const user = useAuthStore(s => s.user)
+  const profile = useAuthStore(s => s.profile)
+  const signOut = useAuthStore(s => s.signOut)
+
   function handleStart() {
+    if (!user) {
+      navigate(AUTH_CONFIG.routes.login, { state: { from: { pathname: '/studio/describe' } } })
+      return
+    }
     newProject()
     try {
       sessionStorage.removeItem('cms_event_description')
@@ -76,17 +86,55 @@ export function HomePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-8">
-            <a href="https://github.com" className="text-[15px] font-medium text-text hover:text-ink transition-colors">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <a href="https://github.com" className="text-[14px] sm:text-[15px] font-medium text-text hover:text-ink transition-colors hidden md:inline">
               GitHub
             </a>
-            <button
-              id="home-start-btn"
-              onClick={handleStart}
-              className="h-[44px] px-[22px] rounded-[8px] bg-ink hover:bg-ink-hover text-white text-[15px] font-medium inline-flex items-center justify-center transition-colors"
-            >
-              Start Designing →
-            </button>
+            {user ? (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted hidden sm:inline max-w-32 truncate" title={profile?.full_name || user.email || ''}>
+                  {profile?.full_name || user.email?.split('@')[0]}
+                </span>
+                <button
+                  id="home-logout-btn"
+                  onClick={async () => {
+                    await signOut()
+                  }}
+                  className="text-xs sm:text-[14px] font-medium text-text hover:text-ink transition-colors cursor-pointer"
+                >
+                  Log out
+                </button>
+                <button
+                  id="home-start-btn"
+                  onClick={handleStart}
+                  className="h-[38px] sm:h-[44px] px-3.5 sm:px-[22px] rounded-[8px] bg-ink hover:bg-ink-hover text-white text-xs sm:text-[15px] font-medium inline-flex items-center justify-center transition-colors"
+                >
+                  Studio →
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 sm:gap-4">
+                <Link
+                  to={AUTH_CONFIG.routes.login}
+                  className="text-xs sm:text-[14px] font-medium text-text hover:text-ink transition-colors"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  to={AUTH_CONFIG.routes.register}
+                  className="text-xs sm:text-[14px] font-medium text-accent hover:text-accent-hover transition-colors hidden sm:inline"
+                >
+                  Register
+                </Link>
+                <button
+                  id="home-start-btn"
+                  onClick={handleStart}
+                  className="h-[38px] sm:h-[44px] px-3.5 sm:px-[22px] rounded-[8px] bg-ink hover:bg-ink-hover text-white text-xs sm:text-[15px] font-medium inline-flex items-center justify-center transition-colors"
+                >
+                  Start Designing →
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>

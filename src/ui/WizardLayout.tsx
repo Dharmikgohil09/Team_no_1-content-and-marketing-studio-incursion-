@@ -1,5 +1,7 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useProjectStore } from '../store/projectStore'
+import { useAuthStore } from '../store/authStore'
+import { AUTH_CONFIG } from '../config/auth'
 
 const STEPS = [
   { id: 'describe', label: 'Describe',  icon: '✦', path: '/studio/describe'  },
@@ -14,6 +16,9 @@ export function WizardLayout() {
   const navigate   = useNavigate()
   const location   = useLocation()
   const project    = useProjectStore(s => s.project)
+  const user       = useAuthStore(s => s.user)
+  const profile    = useAuthStore(s => s.profile)
+  const signOut    = useAuthStore(s => s.signOut)
   const step       = project?.wizardStep ?? 0
 
   const currentIdx = STEPS.findIndex(s => location.pathname.includes(s.id))
@@ -73,13 +78,34 @@ export function WizardLayout() {
             })}
           </nav>
 
-          {/* Project name */}
-          {project && (
-            <div className="shrink-0 hidden lg:flex items-center gap-2">
-              <span className="text-xs text-muted">Project:</span>
-              <span className="text-xs font-medium text-ink max-w-32 truncate">{project.name}</span>
-            </div>
-          )}
+          {/* User profile & Logout */}
+          <div className="shrink-0 flex items-center gap-3">
+            {project && (
+              <div className="hidden xl:flex items-center gap-1.5 text-xs">
+                <span className="text-muted">Project:</span>
+                <span className="font-medium text-ink max-w-28 truncate">{project.name}</span>
+              </div>
+            )}
+            {user && (
+              <div className="flex items-center gap-2 pl-2 border-l border-line">
+                <span className="text-xs text-ink font-medium max-w-32 truncate hidden sm:inline" title={profile?.full_name || user.email || ''}>
+                  {profile?.full_name || user.email?.split('@')[0]}
+                </span>
+                <button
+                  id="wizard-logout-btn"
+                  type="button"
+                  onClick={async () => {
+                    await signOut()
+                    navigate(AUTH_CONFIG.routes.login)
+                  }}
+                  className="text-xs py-1 px-2.5 rounded-md border border-line hover:border-line-strong text-muted hover:text-ink transition-colors cursor-pointer"
+                  title="Sign out of EventCanvas"
+                >
+                  Log out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 

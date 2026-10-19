@@ -552,6 +552,49 @@ Template JSON: ${JSON.stringify(template)}
   }
 })
 
+// ─── Auth: Check if email exists (Privileged check) ──────────────────────
+
+app.post('/api/auth/check-email', async (req, res) => {
+  try {
+    const { email } = req.body as { email?: string }
+    if (!email || typeof email !== 'string') {
+      res.status(400).json({ error: 'Valid email required' })
+      return
+    }
+
+    const normalized = email.trim().toLowerCase()
+
+    // 1. Check profiles table first
+    const { data: profile, error: profileErr } = await supabaseServer
+      .from('profiles')
+      .select('id, email')
+      .ilike('email', normalized)
+      .maybeSingle()
+
+    if (!profileErr && profile) {
+      res.json({ exists: true })
+      return
+    }
+
+    // 2. If service role key is available, check auth.admin listUsers
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const { data: usersData, error: usersErr } = await supabaseServer.auth.admin.listUsers()
+      if (!usersErr && usersData?.users) {
+        const found = usersData.users.some(u => u.email?.toLowerCase() === normalized)
+        if (found) {
+          res.json({ exists: true })
+          return
+        }
+      }
+    }
+
+    res.json({ exists: false })
+  } catch (err: any) {
+    console.error('Error in /api/auth/check-email:', err.message)
+    res.json({ exists: false, error: err.message })
+  }
+})
+
 // ─── Health check ────────────────────────────────────────────────────────
 
 app.get('/api/health', async (_req, res) => {
