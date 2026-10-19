@@ -146,6 +146,9 @@ async function generateImageWithGemini(
     } catch (e: any) {
       lastErr = e
       console.warn(`Image model ${m} unavailable: ${e.message?.slice(0, 100)}`)
+      if (e.message?.includes('API key not valid') || e.message?.includes('API_KEY_INVALID')) {
+        break
+      }
     }
   }
 
@@ -162,11 +165,13 @@ function generateEventSpecificFallbackArtwork(options: {
   accentColor?: string
   backgroundColor?: string
   concept?: string
+  seed?: string | number
 }): string {
   const p = options.primaryColor || '#0F5C4D'
   const a = options.accentColor || '#14201C'
   const bg = options.backgroundColor || '#FAF8F4'
-  const seedText = `${options.eventName || ''} ${options.eventDescription || ''} ${options.concept || ''}`.trim()
+  const salt = options.seed !== undefined ? String(options.seed) : ''
+  const seedText = `${options.eventName || ''} ${options.eventDescription || ''} ${options.concept || ''} ${salt}`.trim()
 
   // Compute a 32-bit polynomial hash from the event text for dynamic procedural variation
   let h = 5381
@@ -272,7 +277,7 @@ async function generateAiSvgArtworkWithGemini(
     backgroundColor?: string
   }
 ): Promise<{ url: string; modelName: string } | null> {
-  const CANDIDATES = ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-flash-latest']
+  const CANDIDATES = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest']
   const p = options.primaryColor || '#0F5C4D'
   const a = options.accentColor || '#14201C'
   const bg = options.backgroundColor || '#FAF8F4'
@@ -444,6 +449,7 @@ app.post('/api/image/generate-background', async (req, res) => {
       accentColor,
       backgroundColor,
       concept,
+      seed: forceRegenerate ? `${Date.now()}_${Math.random()}` : undefined,
     })
 
     return res.json({

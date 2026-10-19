@@ -63,8 +63,25 @@ export function DraftsPage() {
     try {
       const activeRoles = rolesToUse || (project?.roles?.length ? project.roles : DEFAULT_ROLES)
       const generated = await generateDrafts(project!.eventContext, activeRoles, { instituteLogo, clubLogo })
-      setLocalDrafts(generated)
-      setDrafts(generated)
+
+      // Generate distinct background artwork for the drafts
+      const eventName = project?.eventContext?.name?.value || 'Event'
+      const withArtwork = await Promise.all(
+        generated.map((d, i) =>
+          generateArtworkForDraft(
+            d,
+            project!.eventContext,
+            `${eventName}: Variation ${i + 1} - ${Date.now()}`,
+            true
+          )
+        )
+      )
+
+      setLocalDrafts(withArtwork)
+      setDrafts(withArtwork)
+      if (withArtwork[selectedIdx]) {
+        setActiveTemplate(withArtwork[selectedIdx])
+      }
     } finally {
       setLoading(false)
     }
@@ -75,7 +92,13 @@ export function DraftsPage() {
     if (!draft || !project) return
     setRegeneratingIdx(idx)
     try {
-      const updated = await generateArtworkForDraft(draft, project.eventContext, undefined, true)
+      const eventName = project.eventContext.name?.value || 'Event'
+      const updated = await generateArtworkForDraft(
+        draft,
+        project.eventContext,
+        `${eventName}: Concept ${idx + 1} - ${Date.now()}`,
+        true
+      )
       const newDrafts = [...drafts]
       newDrafts[idx] = updated
       setLocalDrafts(newDrafts)
