@@ -63,11 +63,16 @@ export class AuthService {
       throw error
     }
 
-    // 2. Request OTP code with user metadata
+    // 2. Request OTP code / confirmation link with user metadata and redirect URL
+    const redirectUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}${AUTH_CONFIG.routes.defaultRedirect}`
+      : undefined
+
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
       options: {
         shouldCreateUser: true,
+        emailRedirectTo: redirectUrl,
         data: {
           full_name: cleanName,
         },
@@ -84,7 +89,7 @@ export class AuthService {
   }
 
   /**
-   * Send OTP for login.
+   * Send OTP / magic link for login.
    * Enforces:
    * 1. shouldCreateUser: false (unregistered emails will NOT be created).
    * 2. Clear error if email not registered.
@@ -100,11 +105,16 @@ export class AuthService {
       throw error
     }
 
-    // 2. Send login OTP strictly without creating user
+    // 2. Send login OTP / magic link strictly without creating user
+    const redirectUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}${AUTH_CONFIG.routes.defaultRedirect}`
+      : undefined
+
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
       options: {
         shouldCreateUser: false,
+        emailRedirectTo: redirectUrl,
       },
     })
 

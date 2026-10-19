@@ -64,6 +64,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         set({ session: newSession, user: currentUser })
 
         if (currentUser) {
+          // If a pending registration had a full name, ensure profile is upserted
+          const pending = get().pendingAuth
+          const fallbackName = pending?.fullName || (currentUser.user_metadata?.full_name as string)
+          if (fallbackName) {
+            await AuthService.upsertProfile(currentUser, fallbackName).catch(() => {})
+          }
           const profile = await AuthService.fetchProfile(currentUser.id)
           set({ profile, isLoading: false })
         } else {

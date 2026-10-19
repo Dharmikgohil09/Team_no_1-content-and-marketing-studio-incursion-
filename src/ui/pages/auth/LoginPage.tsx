@@ -128,7 +128,7 @@ export function LoginPage() {
                 <p className="mt-1 text-[11px] text-red-600 font-medium">{emailError}</p>
               )}
               <p className="mt-1.5 text-[11px] text-muted">
-                Enter your registered email. We will send a secure one-time code to sign in.
+                Enter your registered email. We will send a secure login link and code to sign in.
               </p>
             </div>
 
@@ -143,10 +143,10 @@ export function LoginPage() {
                 {isSubmitting ? (
                   <>
                     <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                    <span>Sending code...</span>
+                    <span>Sending email...</span>
                   </>
                 ) : (
-                  <span>Send Login Code →</span>
+                  <span>Send Login Link & Code →</span>
                 )}
               </button>
             </div>

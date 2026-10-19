@@ -152,7 +152,7 @@ export function RegisterPage() {
                 <p className="mt-1 text-[11px] text-red-600 font-medium">{fieldErrors.email}</p>
               )}
               <p className="mt-1.5 text-[11px] text-muted">
-                We will email a one-time verification code to this address.
+                We will email a confirmation link and verification code to this address.
               </p>
             </div>
 
@@ -167,10 +167,10 @@ export function RegisterPage() {
                 {isSubmitting ? (
                   <>
                     <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                    <span>Sending code...</span>
+                    <span>Sending email...</span>
                   </>
                 ) : (
-                  <span>Continue with Email Code →</span>
+                  <span>Continue with Email →</span>
                 )}
               </button>
             </div>

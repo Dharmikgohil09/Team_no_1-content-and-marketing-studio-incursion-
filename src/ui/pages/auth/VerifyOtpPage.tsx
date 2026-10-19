@@ -7,7 +7,7 @@ import { AUTH_CONFIG } from '../../../config/auth'
 export function VerifyOtpPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { pendingAuth, clearPendingAuth } = useAuthStore()
+  const { user, pendingAuth, clearPendingAuth } = useAuthStore()
 
   // Retrieve auth context from route state or pending store
   const stateData = location.state as { email?: string; flow?: 'register' | 'login'; fullName?: string; from?: any } | null
@@ -27,12 +27,20 @@ export function VerifyOtpPage() {
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
+  // If user gets authenticated via email confirmation link, auto-redirect immediately!
+  useEffect(() => {
+    if (user) {
+      clearPendingAuth()
+      navigate(destination, { replace: true })
+    }
+  }, [user, navigate, destination, clearPendingAuth])
+
   // If no email is available, redirect to Login
   useEffect(() => {
-    if (!email) {
+    if (!email && !user) {
       navigate(AUTH_CONFIG.routes.login, { replace: true })
     }
-  }, [email, navigate])
+  }, [email, user, navigate])
 
   // Focus the first input on mount
   useEffect(() => {
@@ -192,13 +200,34 @@ export function VerifyOtpPage() {
         </Link>
         <h1 className="text-2xl font-bold tracking-tight text-ink">Check your email</h1>
         <p className="mt-2 text-xs text-muted max-w-sm mx-auto">
-          We sent a {otpLength}-digit code to{' '}
+          We sent a verification link and code to{' '}
           <span className="font-semibold text-ink break-all">{email}</span>.
         </p>
       </div>
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
         <div className="glass p-6 sm:p-8">
+          {/* Primary Action: Confirmation link callout banner */}
+          <div className="mb-6 p-4 rounded-xl bg-accent/10 border border-accent/20 text-center flex flex-col items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-accent text-white flex items-center justify-center font-bold text-sm shadow-sm">
+              ✉
+            </div>
+            <h2 className="text-sm font-bold text-ink">Confirmation link sent!</h2>
+            <p className="text-xs text-muted leading-relaxed">
+              Open your email and click <strong className="text-ink">"Confirm your mail"</strong> to complete registration and log in instantly.
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="relative my-5">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-line" />
+            </div>
+            <div className="relative flex justify-center text-[10px] uppercase tracking-wider font-semibold">
+              <span className="bg-bg px-2.5 text-muted rounded">Or enter code manually</span>
+            </div>
+          </div>
+
           {/* Error Notice */}
           {errorMsg && (
             <div className="mb-5 p-3.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
@@ -224,7 +253,7 @@ export function VerifyOtpPage() {
           >
             <div>
               <label className="block text-xs font-semibold text-ink text-center mb-3">
-                Enter {otpLength}-Digit Verification Code
+                {otpLength}-Digit Verification Code (if provided in email)
               </label>
 
               {/* Segmented Digit Inputs */}
