@@ -67,9 +67,21 @@ export function registerTemplate(raw: unknown): CardTemplate | undefined {
   }
 }
 
-/** Get a template by ID */
+export const ARCHETYPE_ID_MAP: Record<string, string> = {
+  'modern-minimal': 'bold-band',
+  'creative-tech': 'modern-gradient',
+  'premium-editorial': 'minimal-clean',
+  'bold-band': 'bold-band',
+  'modern-gradient': 'modern-gradient',
+  'minimal-clean': 'minimal-clean',
+}
+
+/** Get a template by ID or Archetype */
 export function getTemplate(id: string): CardTemplate | undefined {
-  return registry.get(id)
+  if (registry.has(id)) return registry.get(id)
+  const mapped = ARCHETYPE_ID_MAP[id]
+  if (mapped && registry.has(mapped)) return registry.get(mapped)
+  return undefined
 }
 
 /** List all templates, optionally filtered by designType */
@@ -79,6 +91,15 @@ export function listTemplates(designType?: string): CardTemplate[] {
   return all.filter(t => t.designType === designType)
 }
 
+/** Get distinct layout archetypes from registry */
+export function listLayoutArchetypes(): { id: string; name: string; archetype: string }[] {
+  return [
+    { id: 'bold-band', name: 'Modern Minimal', archetype: 'modern-minimal' },
+    { id: 'modern-gradient', name: 'Creative Tech', archetype: 'creative-tech' },
+    { id: 'minimal-clean', name: 'Premium Editorial', archetype: 'premium-editorial' },
+  ]
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Auto-register built-in templates
 // ─────────────────────────────────────────────────────────────────────────────
@@ -86,5 +107,10 @@ export function listTemplates(designType?: string): CardTemplate[] {
 registerTemplate(boldBand)
 registerTemplate(minimalClean)
 registerTemplate(modernGradient)
+
+// Also register archetype aliases so lookups by archetype ID resolve seamlessly
+registerTemplate({ ...boldBand, id: 'modern-minimal', archetype: 'modern-minimal' })
+registerTemplate({ ...modernGradient, id: 'creative-tech', archetype: 'creative-tech' })
+registerTemplate({ ...minimalClean, id: 'premium-editorial', archetype: 'premium-editorial' })
 
 export { registry }

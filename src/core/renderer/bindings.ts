@@ -2,6 +2,7 @@ import type { EventContext } from '../schema/EventContext'
 import type { Role } from '../schema/Role'
 import type { Person } from '../schema/Person'
 import type { BrandKit } from '../schema/BrandKit'
+import type { Theme } from '../schema/Theme'
 
 /** Context object passed to binding resolver */
 export interface BindingContext {
@@ -9,6 +10,7 @@ export interface BindingContext {
   role:    Role
   person:  Person
   brandKit: BrandKit
+  theme?:  Theme
 }
 
 /** Resolve all {{token}} bindings in a string */
@@ -59,6 +61,9 @@ function resolvePath(path: string, ctx: BindingContext): unknown {
       return ctx.person?.team || ctx.person?.extra?.college || ctx.person?.extra?.department || ''
     }
     if (trimmed === 'person.id' || trimmed === 'person.uid' || trimmed === 'person.regNo') return ctx.person?.id || ''
+    if (trimmed === 'person.website' || trimmed === 'person.url' || trimmed === 'person.link') {
+      return ctx.person?.website || ctx.person?.extra?.website || ctx.person?.extra?.url || ctx.person?.extra?.link || ctx.event?.website?.value || ''
+    }
     if (trimmed === 'role.label' || trimmed === 'person.role') return ctx.role?.label || 'Participant'
   }
   return obj

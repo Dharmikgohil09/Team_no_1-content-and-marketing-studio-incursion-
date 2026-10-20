@@ -33,6 +33,7 @@ const KNOWN_COLUMNS: Record<string, string[]> = {
   email:    ['email', 'e-mail', 'mail', 'email address'],
   team:     ['team', 'team name', 'group', 'organization', 'org', 'college', 'institute', 'department', 'company'],
   photoUrl: ['photo', 'photo url', 'image', 'picture', 'avatar', 'photo_url', 'image url', 'profile', 'photo_filename', 'filename', 'image_name'],
+  website:  ['website', 'website link', 'url', 'link', 'web', 'site', 'portfolio', 'linkedin', 'github', 'profile link', 'qr link', 'qr', 'qr url'],
 }
 
 export function DataPage() {
@@ -56,6 +57,7 @@ export function DataPage() {
   const [rawRows, setRawRows]             = useState<Record<string, string>[]>([])
   const [rowStatuses, setRowStatuses]     = useState<PersonRowStatus[]>([])
   const [csvError, setCsvError]           = useState('')
+  const [batchWebsiteInput, setBatchWebsiteInput] = useState<string>(() => project?.eventContext?.website?.value || '')
   // Redirect to Describe if project or input is missing
   useEffect(() => {
     const hasInput = Boolean(project?.eventContext?.description?.value?.trim() || project?.eventContext?.name?.value?.trim())
@@ -86,9 +88,10 @@ export function DataPage() {
         email: p.email || '',
         team: p.team || '',
         photoUrl: p.photoUrl || '',
+        website: p.website || '',
         ...(p.extra || {}),
       }))
-      const cols = ['name', 'id', 'role', 'team', 'email']
+      const cols = ['name', 'id', 'role', 'team', 'email', 'website']
       processImportedRows(rows, cols)
     }
   }, [people.length])
@@ -437,6 +440,10 @@ export function DataPage() {
         const matchedImage = currentMatchMap.get(idx)
         const matchedPhotoUrl = matchedImage?.dataUrl || people[idx]?.photoUrl || (inverseMap.photoUrl ? String(row[inverseMap.photoUrl] ?? '') : undefined)
 
+        const website = inverseMap.website && row[inverseMap.website]
+          ? String(row[inverseMap.website]).trim()
+          : (row['website'] || row['url'] || row['link'] || people[idx]?.website || batchWebsiteInput || undefined)
+
         const person: Person = {
           id: id || `P-${idx + 1}`,
           name: name || `Participant ${idx + 1}`,
@@ -444,6 +451,7 @@ export function DataPage() {
           email: inverseMap.email && row[inverseMap.email] ? String(row[inverseMap.email]) : undefined,
           team: inverseMap.team ? String(row[inverseMap.team] ?? '') : String(row['college'] ?? row['team'] ?? ''),
           photoUrl: matchedPhotoUrl,
+          website: website ? String(website).trim() : undefined,
           extra,
         }
 
@@ -624,12 +632,15 @@ export function DataPage() {
       const inverseMap: Record<string, string> = {}
       for (const [col, field] of Object.entries(columnMap)) inverseMap[field] = col
 
+      const website = (row[inverseMap.website] || row['website'] || row['url'] || row['link'] || batchWebsiteInput || '').trim()
+
       return {
         id: activeMatch.identifier || 'ID-042',
         name: (row[inverseMap.name] ?? 'Participant Name').trim(),
         role: (row[inverseMap.role] ?? 'participant').toLowerCase(),
         team: row[inverseMap.team] ?? '',
         photoUrl: activeMatch.assignedImage?.dataUrl || '',
+        website: website || undefined,
         extra: {},
       }
     }
@@ -639,9 +650,75 @@ export function DataPage() {
       role: 'participant',
       team: 'Team Alpha',
       photoUrl: '',
+      website: batchWebsiteInput.trim() || undefined,
       extra: {},
     }
-  }, [people, activeMatch, previewIdx, columnMap])
+  }, [people, activeMatch, previewIdx, columnMap, batchWebsiteInput])
+
+  function handleUpdatePersonWebsite(idx: number, url: string) {
+    const trimmed = url.trim()
+    if (people.length > idx) {
+      const updated = people.map((p, i) =>
+        i === idx ? { ...p, website: trimmed || undefined } : p
+      )
+      setPeople(updated)
+    } else {
+      const base = people[idx] || previewPerson
+      const updatedPerson: Person = { ...base, website: trimmed || undefined }
+      const newPeople = [...people]
+      newPeople[idx] = updatedPerson
+      setPeople(newPeople)
+    }
+
+    if (rawRows.length > idx) {
+      const updatedRows = [...rawRows]
+      updatedRows[idx] = { ...updatedRows[idx], website: url }
+      setRawRows(updatedRows)
+    }
+    if (allParsedRows.length > idx) {
+      const updatedAll = [...allParsedRows]
+      updatedAll[idx] = { ...updatedAll[idx], website: url }
+      setAllParsedRows(updatedAll)
+    }
+    if (matchResult && matchResult.matches && matchResult.matches[idx]) {
+      const updatedMatches = [...matchResult.matches]
+      updatedMatches[idx] = {
+        ...updatedMatches[idx],
+        record: { ...updatedMatches[idx].record, website: url },
+      }
+      setMatchResult({
+        ...matchResult,
+        matches: updatedMatches,
+      })
+    }
+  }
+
+  function handleBatchApplyWebsite(url: string) {
+    const trimmed = url.trim()
+    if (!trimmed) return
+    if (people.length > 0) {
+      const updated = people.map(p => ({ ...p, website: trimmed }))
+      setPeople(updated)
+    }
+    if (rawRows.length > 0) {
+      const updated = rawRows.map(r => ({ ...r, website: trimmed }))
+      setRawRows(updated)
+    }
+    if (allParsedRows.length > 0) {
+      const updated = allParsedRows.map(r => ({ ...r, website: trimmed }))
+      setAllParsedRows(updated)
+    }
+    if (matchResult && matchResult.matches) {
+      const updatedMatches = matchResult.matches.map(m => ({
+        ...m,
+        record: { ...m.record, website: trimmed },
+      }))
+      setMatchResult({
+        ...matchResult,
+        matches: updatedMatches,
+      })
+    }
+  }
 
   return (
     <div className="animate-slide-up pb-12">
@@ -660,11 +737,46 @@ export function DataPage() {
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
         <div className="space-y-6">
 
-          {/* ── SECTION 1: CSV Upload & Dynamic Mapping ───────────────────── */}
+          {/* ── SECTION 1: Website Link / QR Code Destination ───────────────── */}
+          <div style={{ background: 'linear-gradient(135deg,#0f4c35 0%,#0d3d2c 100%)', border: '1.5px solid rgba(255,255,255,0.12)', borderRadius: '16px', padding: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>🌐</div>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#fff' }}>1. Event Website / QR Code Link</h2>
+                <p style={{ margin: '3px 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.65)' }}>Paste your event URL — it will be converted to a QR code on every ID card.</p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input
+                id="batch-website-input"
+                type="url"
+                placeholder="e.g. https://my-event.com"
+                value={batchWebsiteInput}
+                onChange={e => setBatchWebsiteInput(e.target.value)}
+                style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1.5px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: '13px', fontFamily: 'monospace', outline: 'none' }}
+              />
+              <button
+                type="button"
+                onClick={() => handleBatchApplyWebsite(batchWebsiteInput)}
+                disabled={!batchWebsiteInput.trim()}
+                style={{ padding: '10px 18px', borderRadius: '10px', background: batchWebsiteInput.trim() ? '#fff' : 'rgba(255,255,255,0.15)', color: batchWebsiteInput.trim() ? '#0f4c35' : 'rgba(255,255,255,0.4)', border: 'none', fontWeight: 700, fontSize: '13px', cursor: batchWebsiteInput.trim() ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap', flexShrink: 0 }}
+                title="Apply this website link to all participants"
+              >
+                🔗 Apply to All
+              </button>
+            </div>
+            {batchWebsiteInput.trim() && (
+              <p style={{ margin: '10px 0 0', fontSize: '11px', color: '#6ee7b7', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <span>✓</span> QR will be generated for: <span style={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '300px' }}>{batchWebsiteInput.trim()}</span>
+              </p>
+            )}
+          </div>
+
+          {/* ── SECTION 2: CSV Upload & Dynamic Mapping ───────────────────── */}
           <div className="glass p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-display font-semibold text-white flex items-center gap-2">
-                <span>📊</span> 1. Import Participant CSV / JSON
+                <span>📊</span> 2. Import Participant CSV / JSON
               </h2>
               {rawRows.length > 0 && (
                 <div className="flex items-center gap-2">
@@ -1199,6 +1311,7 @@ export function DataPage() {
                       <th className="text-left py-2 px-3 w-12">#</th>
                       <th className="text-left py-2 px-3 w-16">Photo</th>
                       <th className="text-left py-2 px-3">Participant & ID</th>
+                      <th className="text-left py-2 px-3">Website / QR Link</th>
                       <th className="text-left py-2 px-3">Matched File</th>
                       <th className="text-left py-2 px-3">Status</th>
                       <th className="text-right py-2 px-3">Action</th>
@@ -1207,7 +1320,7 @@ export function DataPage() {
                   <tbody className="divide-y divide-white/5">
                     {filteredMatches.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="text-center py-8 text-slate-500">
+                        <td colSpan={7} className="text-center py-8 text-slate-500">
                           No records match this filter
                         </td>
                       </tr>
@@ -1216,6 +1329,7 @@ export function DataPage() {
                         const isSelected = previewIdx === m.rowIndex
                         const name = (m.record[columnMap[columnMap.name] || 'name'] || m.record.name || 'Participant Name').trim()
                         const role = (m.record.role || 'participant').toLowerCase()
+                        const personWebsite = people[m.rowIndex]?.website || m.record.website || m.record.url || m.record.link || ''
 
                         return (
                           <tr
@@ -1246,6 +1360,16 @@ export function DataPage() {
                                 ID: <span className="text-slate-300">{m.identifier || '—'}</span>
                                 {role ? ` · ${role}` : ''}
                               </div>
+                            </td>
+                            <td className="py-2.5 px-3" onClick={e => e.stopPropagation()}>
+                              <input
+                                type="url"
+                                placeholder="https://... (QR code link)"
+                                value={personWebsite}
+                                onChange={e => handleUpdatePersonWebsite(m.rowIndex, e.target.value)}
+                                className="input text-[11px] py-1 px-2 w-full min-w-[140px] max-w-[200px] bg-surface-900 border border-white/10 rounded font-mono text-slate-300 placeholder:text-slate-600 focus:border-acm-500"
+                                title="Website link for QR Code"
+                              />
                             </td>
                             <td className="py-2.5 px-3 font-mono text-[11px]">
                               {m.assignedImage ? (
@@ -1443,6 +1567,33 @@ export function DataPage() {
                     <span>{previewPerson.photoUrl ? 'Change Photo' : 'Upload Photo'}</span>
                   </button>
                 </div>
+              </div>
+
+              {/* Individual Website / QR Code Link Editor for the previewed participant */}
+              <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5 text-left">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="participant-website-input" className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                    <span>🔗</span> Website Link (QR Code)
+                  </label>
+                  {previewPerson.website ? (
+                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                      Unique QR
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-500">Default QR</span>
+                  )}
+                </div>
+                <input
+                  id="participant-website-input"
+                  type="url"
+                  placeholder="e.g. https://linkedin.com/in/... or https://portfolio.com"
+                  value={previewPerson.website || ''}
+                  onChange={e => handleUpdatePersonWebsite(previewIdx, e.target.value)}
+                  className="input text-xs w-full py-1.5 px-2.5 bg-surface-900 border border-white/10 rounded-lg text-white font-mono placeholder:text-slate-600 focus:border-acm-500"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Unique QR code is automatically generated on the ID card for this link.
+                </p>
               </div>
             </div>
           ) : (

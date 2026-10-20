@@ -8,6 +8,7 @@ export const PersonSchema = z.object({
   team:      z.string().optional(),
   photoUrl:  z.string().optional(),
   photoFile: z.any().optional(),  // File object (not serializable)
+  website:   z.string().optional(),
   /** Dynamic extra columns from CSV (preserved as-is) */
   extra:     z.record(z.string(), z.string()).default({}),
 })

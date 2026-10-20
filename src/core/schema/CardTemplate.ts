@@ -16,10 +16,13 @@ export const STANDARD_SIZES: Record<string, CardSize> = {
   '100x70': { name: '100×70 mm',        widthMm: 100,  heightMm: 70,    bleedMm: 3, safeMarginMm: 5 },
 }
 
+import { ThemeSchema, BackgroundLayerSchema } from './Theme'
+
 export const CardTemplateSchema = z.object({
   id:             z.string(),
   name:           z.string(),
   designType:     z.string().default('idCard'),
+  archetype:      z.string().optional(),
   description:    z.string().optional(),
   thumbnail:      z.string().optional(),
   version:        z.number().default(1),
@@ -42,5 +45,9 @@ export const CardTemplateSchema = z.object({
   supportedRoles: z.array(z.string()).default([]),
   /** template-level design tokens (override brand kit) */
   tokens:         z.record(z.string(), z.string()).optional(),
+  /** template theme tokens */
+  theme:          ThemeSchema.optional(),
+  /** separate background layer (solid, gradient, or artwork) */
+  backgroundLayer: BackgroundLayerSchema.optional(),
 })
 export type CardTemplate = z.infer<typeof CardTemplateSchema>

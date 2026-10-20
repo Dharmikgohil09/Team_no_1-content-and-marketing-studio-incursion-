@@ -1,9 +1,19 @@
+import { z } from 'zod'
 import type { CardTemplate } from '../schema/CardTemplate'
 import type { EventContext } from '../schema/EventContext'
 import type { Role } from '../schema/Role'
 import type { Element } from '../schema/Element'
+import type { Theme } from '../schema/Theme'
 import { getRoleOrDefault, DEFAULT_ROLES } from '../schema/Role'
 import { DEFAULT_SVNIT_LOGO, DEFAULT_ACM_LOGO } from '../../brandKits/defaultLogos'
+import {
+  extractBaseHue,
+  generateThemeFromHue,
+  passesWcag,
+  getHueDistance,
+  MIN_HUE_DISTANCE,
+} from './colorConfig'
+import { listLayoutArchetypes, getTemplate } from '../../templates/registry'
 
 import {
   type EventCategory,
@@ -13,6 +23,38 @@ import {
   buildThemeElementsDraft3,
 } from './themeVisuals'
 export type { EventCategory }
+
+const HexColor = z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)
+
+export const AiThemeSchema = z.object({
+  background: HexColor,
+  surface: HexColor,
+  primary: HexColor,
+  secondary: HexColor,
+  accent: HexColor,
+  text: HexColor,
+  mutedText: HexColor,
+  onAccent: HexColor,
+})
+
+export const AiDraftProposalSchema = z.object({
+  layoutId: z.string().optional(),
+  id: z.string().optional(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  moodTags: z.array(z.string()).default([]),
+  theme: AiThemeSchema.optional(),
+  primaryColor: HexColor.optional(),
+  accentColor: HexColor.optional(),
+  backgroundColor: HexColor.optional(),
+  artworkPrompt: z.string().optional(),
+})
+
+export const AiDesignBriefSchema = z.object({
+  category: z.string().optional(),
+  visualDirection: z.string().optional(),
+  drafts: z.array(AiDraftProposalSchema),
+})
 
 export function detectEventCategory(event: EventContext): EventCategory {
   const catObj = (event as any).category
@@ -59,46 +101,30 @@ export function attachArtworkToDraft(
     isLogo: false,
   }
 
-  const updateElementList = (elements: Element[]): Element[] => {
-    // 1. Remove previous artwork or contrast overlay
-    const cleanList = elements.filter(
-      e => e.id !== 'bg-artwork' && e.id !== 'bg-contrast-overlay'
-    )
+  // Filter out previous artwork without modifying any existing element's geometry or styles
+  const cleanElements = draft.elements.filter(
+    e => e.id !== 'bg-artwork' && e.id !== 'bg-contrast-overlay'
+  )
 
-    // 2. Adjust base template background layers so the base template design from the first page is preserved:
-    // - In Modern Minimal: header-bg stays solid pure white (#ffffff, opacity: 1), lower-bg has opacity: 0.35 so artwork shines in lower base!
-    // - In Creative Tech: info-zone-bg and chevron-banner stay solid pure white paper (#FAF8F4, opacity: 1), tech-hero-bg has opacity: 0.35!
-    // - In Premium Editorial: accent-block stays solid, card background allows subtle artwork watermark!
-    const tunedList = cleanList.map(e => {
-      if (e.id === 'header-bg') {
-        return { ...e, fill: '#ffffff', opacity: 1 }
-      }
-      if (e.id === 'lower-bg') {
-        return { ...e, opacity: 0.35 }
-      }
-      if (e.id === 'tech-hero-bg') {
-        return { ...e, opacity: 0.35 }
-      }
-      if (e.id === 'info-zone-bg' || e.id === 'chevron-banner') {
-        return { ...e, fill: '#FAF8F4', opacity: 1 }
-      }
-      return e
-    })
+  const newElements = [bgArtworkElement, ...cleanElements]
 
-    // Place bg-artwork at index 0 so it sits behind official logos, white headers, and text
-    return [bgArtworkElement, ...tunedList]
-  }
-
-  const newElements = updateElementList(draft.elements)
   const newRoleElements: Record<string, Element[]> = {}
   if (draft.roleElements) {
     for (const [roleId, rElements] of Object.entries(draft.roleElements)) {
-      newRoleElements[roleId] = updateElementList(rElements)
+      const cleanRoleList = rElements.filter(
+        e => e.id !== 'bg-artwork' && e.id !== 'bg-contrast-overlay'
+      )
+      newRoleElements[roleId] = [bgArtworkElement, ...cleanRoleList]
     }
   }
 
   return {
     ...draft,
+    backgroundLayer: {
+      type: 'artwork',
+      imageUrl,
+      opacity: isEditorial ? 0.25 : 0.85,
+    },
     elements: newElements,
     roleElements: newRoleElements,
     tokens: {
@@ -298,33 +324,117 @@ export async function generateArtworkForDraft(
   return attachArtworkToDraft(draft, clientArtUrl, false, prompt)
 }
 
+/** Validate structured AI response against schema and WCAG contrast */
+export function validateAiResponse(data: unknown, allowedLayoutIds: string[]): boolean {
+  const parse = AiDesignBriefSchema.safeParse(data)
+  if (!parse.success || !parse.data.drafts || parse.data.drafts.length === 0) {
+    return false
+  }
+
+  const drafts = parse.data.drafts
+  for (const d of drafts) {
+    const layoutId = d.layoutId || d.id
+    if (!layoutId) return false
+    // Layout id must exist in registry
+    if (!allowedLayoutIds.includes(layoutId) && !getTemplate(layoutId)) {
+      return false
+    }
+
+    // Validate theme tokens & contrast if theme is provided
+    if (d.theme) {
+      const { text, background, surface, onAccent, accent } = d.theme
+      const hasBgContrast = passesWcag(text, background, 4.5) || passesWcag(text, surface, 4.5)
+      const hasAccentContrast = passesWcag(onAccent, accent, 3.0)
+      if (!hasBgContrast || !hasAccentContrast) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
+
+export interface GenerateDraftsOptions {
+  logos?: { instituteLogo?: string; clubLogo?: string }
+  clarifyAnswers?: Record<string, string>
+  styleKeywords?: string[]
+  brandKitTokens?: Record<string, string>
+  seed?: number
+  excludedPairs?: string[]
+  onAiFallback?: (fallback: boolean) => void
+}
+
 /**
  * Generate 3 distinct draft templates customized based on the user's event description,
  * missing questions answered, role definitions, and event category.
- * Requests background artwork from backend image generation.
  */
 export async function generateDrafts(
   event: EventContext,
   roles: (Role | string)[],
-  logos?: { instituteLogo?: string; clubLogo?: string }
+  options?: GenerateDraftsOptions
 ): Promise<CardTemplate[]> {
+  const logos = options?.logos
+  const seed = options?.seed ?? 1
+  const excludedPairs = options?.excludedPairs || []
   let llmData: any = null
-  try {
+  let isAiValid = false
+
+  const allowedArchetypes = listLayoutArchetypes()
+  const allowedLayoutIds = allowedArchetypes.map(a => a.id)
+
+  const sendPayload = async () => {
     const res = await fetch('/api/llm/generate-drafts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event, roles }),
+      body: JSON.stringify({
+        event,
+        roles,
+        description: (event as any).description?.value || event.name?.value || '',
+        clarifyAnswers: options?.clarifyAnswers || {},
+        styleKeywords: options?.styleKeywords || [],
+        brandKitTokens: options?.brandKitTokens || {},
+        allowedLayoutIds,
+        seed,
+        excludedPairs,
+      }),
       signal: AbortSignal.timeout(15000),
     })
-    if (res.ok) {
-      llmData = await res.json()
-    }
-  } catch (err) {
-    console.warn('generate-drafts fetch failed:', err)
+    if (!res.ok) return null
+    return await res.json()
   }
 
-  // Generate drafts based directly on the three registered template design families from the first page
-  return generateDraftsDeterministic(event, roles, logos, llmData)
+  // Attempt 1
+  try {
+    const data = await sendPayload()
+    if (data && validateAiResponse(data, allowedLayoutIds)) {
+      llmData = data
+      isAiValid = true
+    }
+  } catch (err) {
+    console.warn('generate-drafts attempt 1 failed:', err)
+  }
+
+  // Retry once on failure
+  if (!isAiValid) {
+    try {
+      const data = await sendPayload()
+      if (data && validateAiResponse(data, allowedLayoutIds)) {
+        llmData = data
+        isAiValid = true
+      }
+    } catch (err) {
+      console.warn('generate-drafts retry failed:', err)
+    }
+  }
+
+  if (!isAiValid) {
+    options?.onAiFallback?.(true)
+  } else {
+    options?.onAiFallback?.(false)
+  }
+
+  // Generate drafts using AI brief if valid, otherwise fallback palette harmony engine
+  return generateDraftsDeterministic(event, roles, logos, llmData, seed, excludedPairs)
 }
 
 
@@ -1883,7 +1993,9 @@ export function generateDraftsDeterministic(
   event: EventContext,
   roles: (Role | string)[],
   logos?: { instituteLogo?: string; clubLogo?: string },
-  llmSuggestions?: any
+  llmSuggestions?: any,
+  seed = 1,
+  excludedPairs: string[] = []
 ): CardTemplate[] {
   const rawRoles = roles && roles.length > 0 ? roles : DEFAULT_ROLES
   const effectiveRoles: Role[] = rawRoles.map(r => {
@@ -1906,56 +2018,72 @@ export function generateDraftsDeterministic(
 
   // Dynamic LLM proposal overrides if provided
   const llmD1 = Array.isArray(llmSuggestions?.drafts)
-    ? llmSuggestions.drafts.find((d: any) => d.id === 'modern-minimal') || llmSuggestions.drafts[0]
+    ? llmSuggestions.drafts.find((d: any) => d.id === 'modern-minimal' || d.layoutId === 'bold-band') || llmSuggestions.drafts[0]
     : null
   const llmD2 = Array.isArray(llmSuggestions?.drafts)
-    ? llmSuggestions.drafts.find((d: any) => d.id === 'creative-tech' || d.id === 'bold-dynamic') || llmSuggestions.drafts[1]
+    ? llmSuggestions.drafts.find((d: any) => d.id === 'creative-tech' || d.layoutId === 'modern-gradient' || d.id === 'bold-dynamic') || llmSuggestions.drafts[1]
     : null
   const llmD3 = Array.isArray(llmSuggestions?.drafts)
-    ? llmSuggestions.drafts.find((d: any) => d.id === 'premium-editorial') || llmSuggestions.drafts[2]
+    ? llmSuggestions.drafts.find((d: any) => d.id === 'premium-editorial' || d.layoutId === 'minimal-clean') || llmSuggestions.drafts[2]
     : null
 
-  const fullText = `${eventName} ${(event as any).description?.value || ''} ${(event as any).themeHint?.value || ''}`.toLowerCase()
-  const isDance = /(?:dance|dancing|dancer|choreograph|garba|dandiya|ballet|hip\s*hop|salsa|kathak|bhangra)/i.test(fullText)
+  const fullText = `${eventName} ${(event as any).description?.value || ''} ${(event as any).themeHint?.value || ''} ${(event as any).category?.value || ''}`
+  const baseHue = extractBaseHue(fullText, (event as any).brandPrimary)
 
-  const defaultThemeColors = isDance ? {
-    d1Primary: '#BE185D',
-    d1Accent: '#F59E0B',
-    d1Bg: '#FAF5F0',
-    d2Primary: '#9D174D',
-    d2Accent: '#EC4899',
-    d2Bg: '#FAF8F4',
-    d3Primary: '#831843',
-    d3Accent: '#FBBF24',
-    d3Bg: '#FAF5F0',
-  } : {
-    d1Primary: '#0F5C4D',
-    d1Accent: '#14201C',
-    d1Bg: '#FAF8F4',
-    d2Primary: '#0F5C4D',
-    d2Accent: '#D9D5C7',
-    d2Bg: '#FAF8F4',
-    d3Primary: '#0F5C4D',
-    d3Accent: '#14201C',
-    d3Bg: '#FAF8F4',
-  }
+  // Apply seed offset for regeneration variety (rotating hues)
+  const seedShift = ((seed - 1) * 55) % 360
+  const effectiveBaseHue = (baseHue + seedShift) % 360
+
+  // Derive 3 themes with distinct harmony schemes guaranteeing hue distance >= MIN_HUE_DISTANCE
+  const theme1: Theme = llmD1?.theme || (llmD1?.primaryColor ? {
+    background: llmD1.backgroundColor || '#FAF8F4',
+    surface: '#ffffff',
+    primary: llmD1.primaryColor,
+    secondary: llmD1.accentColor || '#14201C',
+    accent: llmD1.accentColor || llmD1.primaryColor,
+    text: '#14201C',
+    mutedText: '#66706A',
+    onAccent: '#ffffff',
+  } : generateThemeFromHue(effectiveBaseHue, 'analogous'))
+
+  const theme2: Theme = llmD2?.theme || (llmD2?.primaryColor ? {
+    background: llmD2.backgroundColor || '#FAF8F4',
+    surface: '#ffffff',
+    primary: llmD2.primaryColor,
+    secondary: llmD2.accentColor || '#14201C',
+    accent: llmD2.accentColor || llmD2.primaryColor,
+    text: '#14201C',
+    mutedText: '#66706A',
+    onAccent: '#ffffff',
+  } : generateThemeFromHue((effectiveBaseHue + 120) % 360, 'complementary'))
+
+  const theme3: Theme = llmD3?.theme || (llmD3?.primaryColor ? {
+    background: llmD3.backgroundColor || '#FAF8F4',
+    surface: '#ffffff',
+    primary: llmD3.primaryColor,
+    secondary: llmD3.accentColor || '#14201C',
+    accent: llmD3.accentColor || llmD3.primaryColor,
+    text: '#14201C',
+    mutedText: '#66706A',
+    onAccent: '#ffffff',
+  } : generateThemeFromHue((effectiveBaseHue + 240) % 360, 'triadic'))
 
   const draft1Tokens = {
-    primaryColor: llmD1?.primaryColor || defaultThemeColors.d1Primary,
-    accentColor: llmD1?.accentColor || defaultThemeColors.d1Accent,
-    backgroundColor: llmD1?.backgroundColor || defaultThemeColors.d1Bg,
+    primaryColor: theme1.primary,
+    accentColor: theme1.accent,
+    backgroundColor: theme1.background,
     artworkPrompt: llmD1?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
   }
   const draft2Tokens = {
-    primaryColor: llmD2?.primaryColor || defaultThemeColors.d2Primary,
-    accentColor: llmD2?.accentColor || defaultThemeColors.d2Accent,
-    backgroundColor: llmD2?.backgroundColor || defaultThemeColors.d2Bg,
+    primaryColor: theme2.primary,
+    accentColor: theme2.accent,
+    backgroundColor: theme2.background,
     artworkPrompt: llmD2?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
   }
   const draft3Tokens = {
-    primaryColor: llmD3?.primaryColor || defaultThemeColors.d3Primary,
-    accentColor: llmD3?.accentColor || defaultThemeColors.d3Accent,
-    backgroundColor: llmD3?.backgroundColor || defaultThemeColors.d3Bg,
+    primaryColor: theme3.primary,
+    accentColor: theme3.accent,
+    backgroundColor: theme3.background,
     artworkPrompt: llmD3?.artworkPrompt || `${eventName}: ${(event as any).description?.value || ''}`,
   }
 
@@ -1999,6 +2127,7 @@ export function generateDraftsDeterministic(
     },
     orientation: 'portrait',
     hasFrontBack: true,
+    archetype: 'modern-minimal',
     tags: meta.d1Tags,
     supportedRoles: effectiveRoles.map(r => r.id),
     elements: draft1RoleFront[defaultRole.id],
@@ -2006,6 +2135,7 @@ export function generateDraftsDeterministic(
     roleElements: draft1RoleFront,
     roleBackElements: draft1RoleBack,
     tokens: draft1Tokens,
+    theme: theme1,
   }
 
   // Draft 2: Creative Dynamic (Chevron Banner & Visual Motifs)
@@ -2024,6 +2154,7 @@ export function generateDraftsDeterministic(
     },
     orientation: 'portrait',
     hasFrontBack: true,
+    archetype: 'creative-tech',
     tags: meta.d2Tags,
     supportedRoles: effectiveRoles.map(r => r.id),
     elements: draft2RoleFront[defaultRole.id],
@@ -2031,6 +2162,7 @@ export function generateDraftsDeterministic(
     roleElements: draft2RoleFront,
     roleBackElements: draft2RoleBack,
     tokens: draft2Tokens,
+    theme: theme2,
   }
 
   // Draft 3: Premium Editorial (Matte Obsidian & Accent Block)
@@ -2049,6 +2181,7 @@ export function generateDraftsDeterministic(
     },
     orientation: 'portrait',
     hasFrontBack: true,
+    archetype: 'premium-editorial',
     tags: meta.d3Tags,
     supportedRoles: effectiveRoles.map(r => r.id),
     elements: draft3RoleFront[defaultRole.id],
@@ -2056,9 +2189,20 @@ export function generateDraftsDeterministic(
     roleElements: draft3RoleFront,
     roleBackElements: draft3RoleBack,
     tokens: draft3Tokens,
+    theme: theme3,
   }
 
-  return [draft1, draft2, draft3]
+  const allDrafts = [draft1, draft2, draft3]
+  if (seed > 1) {
+    const rot = (seed - 1) % 3
+    return [
+      allDrafts[rot],
+      allDrafts[(rot + 1) % 3],
+      allDrafts[(rot + 2) % 3],
+    ]
+  }
+
+  return allDrafts
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2102,6 +2246,8 @@ export function applyDeterministicRefinement(template: CardTemplate, instruction
   // 1. Detect requested intents
   const wantsDarker = /dark(?:er)?|black|obsidian|night|dim|shadow|dark\s*theme|dark\s*mode/.test(lower)
   const wantsLighter = /light(?:er)?|white|clean|paper|cream|bright|light\s*theme|light\s*mode/.test(lower)
+  const wantsWarmer = /warm(?:er)?|sunset|amber|terracotta|golden/.test(lower)
+  const wantsMinimal = /minimal|minimalist|cleaner|simple|simplify/.test(lower)
 
   // Color accents
   const wantsBlue   = /\b(?:blue|cyan|azure|navy|indigo|cobalt)\b/.test(lower)
@@ -2149,8 +2295,61 @@ export function applyDeterministicRefinement(template: CardTemplate, instruction
   else if (wantsOrange) targetAccent = '#EA580C'
   else if (wantsGold) targetAccent = '#D97706'
 
+  let newTheme: Theme = template.theme ? { ...template.theme } : {
+    background: '#FAF8F4',
+    surface: '#ffffff',
+    primary: '#0F5C4D',
+    secondary: '#14201C',
+    accent: '#0F5C4D',
+    text: '#14201C',
+    mutedText: '#66706A',
+    onAccent: '#ffffff',
+  }
+
+  if (wantsDarker && !wantsLighter) {
+    newTheme = {
+      ...newTheme,
+      background: '#0B0F19',
+      surface: '#151D2C',
+      text: '#F8FAFC',
+      mutedText: '#94A3B8',
+    }
+  } else if (wantsLighter && !wantsDarker) {
+    newTheme = {
+      ...newTheme,
+      background: '#FAF8F4',
+      surface: '#FFFFFF',
+      text: '#0F172A',
+      mutedText: '#64748B',
+    }
+  } else if (wantsWarmer) {
+    newTheme = {
+      ...newTheme,
+      background: '#FFFBEB',
+      surface: '#FEF3C7',
+      primary: '#D97706',
+      accent: '#B45309',
+      text: '#78350F',
+      mutedText: '#92400E',
+    }
+  } else if (wantsMinimal) {
+    newTheme = {
+      ...newTheme,
+      background: '#FFFFFF',
+      surface: '#F8FAFC',
+      mutedText: '#94A3B8',
+    }
+  }
+  if (targetAccent) {
+    newTheme = {
+      ...newTheme,
+      primary: targetAccent,
+      accent: targetAccent,
+    }
+  }
+
   // Generic fallback: if no known keywords matched, apply subtle layout polish & contrast
-  const isGenericEdit = !wantsDarker && !wantsLighter && !targetAccent && !wantsBiggerPhoto && !wantsSmallerPhoto &&
+  const isGenericEdit = !wantsDarker && !wantsLighter && !wantsWarmer && !wantsMinimal && !targetAccent && !wantsBiggerPhoto && !wantsSmallerPhoto &&
     !wantsPhotoUp && !wantsPhotoDown && !wantsSquarePhoto && !wantsCirclePhoto && !wantsRoundedPhoto &&
     !wantsCenterLogo && !wantsLeftLogo && !wantsRightLogo && !wantsBiggerLogo && !wantsSmallerLogo &&
     !wantsBiggerName && !wantsSmallerName && !wantsBiggerFont && !wantsSmallerFont && !wantsTextUp && !wantsTextDown &&
@@ -2407,6 +2606,7 @@ export function applyDeterministicRefinement(template: CardTemplate, instruction
   return {
     ...template,
     version: (template.version || 1) + 1,
+    theme: newTheme,
     elements,
     roleElements: Object.keys(roleElements).length > 0 ? roleElements : template.roleElements,
   }

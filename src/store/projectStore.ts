@@ -21,6 +21,11 @@ interface ProjectState {
   instituteLogo: string
   clubLogo:      string
 
+  // Regeneration tracking and AI fallback state
+  seed: number
+  shownDraftHistory: string[]
+  isAiFallback: boolean
+
   // Actions
   newProject: (name?: string) => DesignProject
   loadProject: (id: string) => Promise<void>
@@ -39,6 +44,11 @@ interface ProjectState {
   setClubLogo: (dataUrl: string) => void
   resetInstituteLogo: () => void
   resetClubLogo: () => void
+
+  setSeed: (seed: number) => void
+  addShownDrafts: (hashes: string[]) => void
+  setIsAiFallback: (val: boolean) => void
+  clearDraftHistory: () => void
 
   saveVersion: (label: string) => void
 }
@@ -94,6 +104,16 @@ export const useProjectStore = create<ProjectState>()(
   people:  [],
   instituteLogo: DEFAULT_SVNIT_LOGO,
   clubLogo:      DEFAULT_ACM_LOGO,
+  seed: 1,
+  shownDraftHistory: [],
+  isAiFallback: false,
+
+  setSeed: (seed) => set({ seed }),
+  addShownDrafts: (hashes) => set(s => ({
+    shownDraftHistory: Array.from(new Set([...s.shownDraftHistory, ...hashes]))
+  })),
+  setIsAiFallback: (isAiFallback) => set({ isAiFallback }),
+  clearDraftHistory: () => set({ shownDraftHistory: [] }),
 
   newProject(name = 'Untitled Project') {
     const project: DesignProject = {

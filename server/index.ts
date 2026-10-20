@@ -481,64 +481,108 @@ app.post('/api/image/generate-background', async (req, res) => {
 
 app.post('/api/llm/generate-drafts', async (req, res) => {
   try {
-    const { event, roles } = req.body
+    const {
+      event,
+      roles,
+      description,
+      clarifyAnswers,
+      styleKeywords,
+      brandKitTokens,
+      allowedLayoutIds = ['bold-band', 'modern-gradient', 'minimal-clean'],
+      seed = 1,
+      excludedPairs = [],
+    } = req.body
+
     if (!process.env.GEMINI_API_KEY) {
       return res.status(200).json({ mode: 'deterministic' })
     }
 
     const genAI = getGenAI()
     const prompt = `
-You are a world-class art director and identity designer creating 3 distinct, event-specific ID badge proposals.
-Event: ${JSON.stringify(event)}
-Roles: ${JSON.stringify(roles)}
+You are an elite art director and identity designer creating 3 distinct, event-specific ID badge proposals.
+Event Name: ${event?.name?.value || 'Official Event'}
+Event Description: ${description || event?.description?.value || 'Annual Event'}
+Clarify Answers: ${JSON.stringify(clarifyAnswers || {})}
+Style & Mood Keywords: ${JSON.stringify(styleKeywords || [])}
+Brand Kit Colors: ${JSON.stringify(brandKitTokens || {})}
+Available Layout Archetype IDs: ${JSON.stringify(allowedLayoutIds)}
+Generation Seed: ${seed}
+Previously Shown Excluded Layout+Theme Pairs: ${JSON.stringify(excludedPairs)}
 
-CRITICAL DESIGN SYSTEM GUIDELINES:
-1. EVENT-DRIVEN THEME & PALETTE: Deeply analyze the user's event description and name. The theme name, visual direction, description, and colors must directly match the event's unique domain and energy:
-   - For DANCE competitions or cultural performance fests: choose expressive, vibrant, elegant color palettes (e.g. radiant crimson, energetic ruby, performance gold, deep stage plum, or warm sunset terracotta) and dynamic titles.
-   - For MUSIC/CONCERTS: sonic purples, acoustic teals, dynamic stage indigos.
-   - For SPORTS: athletic energy navy, kinetic orange, varsity gold.
-   - For HACKATHONS: matrix emerald, cyber cyan, deep obsidian.
-   - For ROBOTICS: industrial slate, electric azure, cautionary amber.
-   - For BUSINESS/SUMMITS: executive obsidian, prestige bronze, warm gold.
-   - For any custom/general theme: extract the most appropriate, sophisticated colors that represent that event.
-2. HARMONIOUS CONTRAST: Each draft must provide a cohesive primaryColor, accentColor, and backgroundColor hex code. Backgrounds should generally be warm off-white/ivory (#FAF8F4, #FFFFFF) or deep rich ink (#14201C, #1A1024, #0B192C) depending on the mood.
-3. THREE DISTINCT DESIGN FAMILIES:
-   - Draft 1 ("modern-minimal"): Dual-tone or clean split layout with white header and deep ink / paper lower base.
-   - Draft 2 ("creative-tech"): Geometric chevron apex / crest layout on clean warm paper (#FAF8F4) with refined event accent colors.
-   - Draft 3 ("premium-editorial"): Editorial paper pass (#FAF8F4) with asymmetric framing and elegant hairline borders (#D9D5C7).
-4. For each proposal, provide an artworkPrompt suitable for vector SVG artwork generation capturing the specific event motifs and discipline (portrait 3:4, clean negative space in the center, absolutely NO text or letters).
+CRITICAL DESIGN SYSTEM REQUIREMENTS:
+1. EVENT-DRIVEN PALETTES:
+   - Deeply analyze the user's description, clarify answers, and style keywords.
+   - For DANCE, GARBA, or CULTURAL fests: select radiant, vibrant, festive palettes (e.g. ruby, crimson, performance gold, sunset coral).
+   - For TECH, HACKATHONS, or ROBOTICS: cyber emerald, dynamic electric cyan, matrix slate.
+   - For CORPORATE, WORKSHOPS, or SUMMITS: prestigious navy, refined charcoal, executive bronze/gold.
+   - For MUSIC, CONCERTS: sonic purple, acoustic teal, stage indigo.
+   - For SPORTS: kinetic orange, varsity gold, high-energy navy.
+2. STRICT LAYOUT VARIETY:
+   - The 3 drafts MUST use 3 DIFFERENT layout IDs chosen strictly from Available Layout Archetype IDs: ${JSON.stringify(allowedLayoutIds)}.
+   - No two drafts may share the same layoutId!
+   - Do not repeat any combination in Previously Shown Excluded Pairs.
+3. THEME TOKENS & CONTRAST (WCAG COMPLIANCE):
+   - Each draft must provide a cohesive Theme object with 8 valid 6-character hex colors:
+     { "background", "surface", "primary", "secondary", "accent", "text", "mutedText", "onAccent" }
+   - Contrast Requirement: "text" vs "background" MUST have WCAG contrast >= 4.5:1.
+   - Contrast Requirement: "onAccent" vs "accent" MUST have contrast >= 4.5:1 (use #FFFFFF or #000000).
+4. Provide an artworkPrompt for each draft tailored for vector SVG portrait generation without text.
 
 Return ONLY a valid JSON object matching this exact shape (no markdown, no backticks):
 {
   "category": "music|business|sports|hackathon|robotics|cultural|conference|gaming|workshop|general",
-  "visualDirection": "Detailed summary of the event visual concept and artistic identity",
+  "visualDirection": "1-2 sentence creative rationale",
   "drafts": [
     {
-      "id": "modern-minimal",
-      "name": "Creative Event-Specific Title",
-      "description": "Specific 1-2 sentence description explaining the visual elements chosen for this event",
-      "primaryColor": "#hex",
-      "accentColor": "#hex",
-      "backgroundColor": "#hex",
-      "artworkPrompt": "A highly descriptive image-generation prompt for a vertical portrait background artwork capturing the essence of the event, realistic lighting and scenery, absolutely NO text or typography"
+      "layoutId": "${allowedLayoutIds[0] || 'bold-band'}",
+      "name": "Creative Concept Title",
+      "description": "Why this design fits the event",
+      "moodTags": ["tag1", "tag2"],
+      "theme": {
+        "background": "#hex",
+        "surface": "#hex",
+        "primary": "#hex",
+        "secondary": "#hex",
+        "accent": "#hex",
+        "text": "#hex",
+        "mutedText": "#hex",
+        "onAccent": "#hex"
+      },
+      "artworkPrompt": "Vector artwork prompt"
     },
     {
-      "id": "creative-tech",
-      "name": "Creative Event-Specific Title",
-      "description": "Specific 1-2 sentence description explaining the visual elements chosen for this event",
-      "primaryColor": "#hex",
-      "accentColor": "#hex",
-      "backgroundColor": "#hex",
-      "artworkPrompt": "A highly descriptive image-generation prompt for a vertical portrait background artwork capturing the essence of the event, realistic lighting and scenery, absolutely NO text or typography"
+      "layoutId": "${allowedLayoutIds[1] || 'modern-gradient'}",
+      "name": "Creative Concept Title",
+      "description": "Why this design fits the event",
+      "moodTags": ["tag1", "tag2"],
+      "theme": {
+        "background": "#hex",
+        "surface": "#hex",
+        "primary": "#hex",
+        "secondary": "#hex",
+        "accent": "#hex",
+        "text": "#hex",
+        "mutedText": "#hex",
+        "onAccent": "#hex"
+      },
+      "artworkPrompt": "Vector artwork prompt"
     },
     {
-      "id": "premium-editorial",
-      "name": "Creative Event-Specific Title",
-      "description": "Specific 1-2 sentence description explaining the visual elements chosen for this event",
-      "primaryColor": "#hex",
-      "accentColor": "#hex",
-      "backgroundColor": "#hex",
-      "artworkPrompt": "A highly descriptive image-generation prompt for a vertical portrait background artwork capturing the essence of the event, realistic lighting and scenery, absolutely NO text or typography"
+      "layoutId": "${allowedLayoutIds[2] || 'minimal-clean'}",
+      "name": "Creative Concept Title",
+      "description": "Why this design fits the event",
+      "moodTags": ["tag1", "tag2"],
+      "theme": {
+        "background": "#hex",
+        "surface": "#hex",
+        "primary": "#hex",
+        "secondary": "#hex",
+        "accent": "#hex",
+        "text": "#hex",
+        "mutedText": "#hex",
+        "onAccent": "#hex"
+      },
+      "artworkPrompt": "Vector artwork prompt"
     }
   ]
 }

@@ -30,6 +30,13 @@ export function DraftsPage() {
   const instituteLogo     = useProjectStore(s => s.instituteLogo)
   const clubLogo          = useProjectStore(s => s.clubLogo)
 
+  const seed              = useProjectStore(s => s.seed)
+  const setSeed           = useProjectStore(s => s.setSeed)
+  const shownDraftHistory = useProjectStore(s => s.shownDraftHistory)
+  const addShownDrafts    = useProjectStore(s => s.addShownDrafts)
+  const isAiFallback      = useProjectStore(s => s.isAiFallback)
+  const setIsAiFallback   = useProjectStore(s => s.setIsAiFallback)
+
   const [loading, setLoading]                 = useState(false)
   const [drafts, setLocalDrafts]              = useState<CardTemplate[]>([])
   const [selectedIdx, setSelectedIdx]         = useState(0)
@@ -58,11 +65,31 @@ export function DraftsPage() {
     generate()
   }, [])
 
-  async function generate(rolesToUse?: Role[]) {
+  async function generate(rolesToUse?: Role[], forceNewSeed = false) {
     setLoading(true)
     try {
       const activeRoles = rolesToUse || (project?.roles?.length ? project.roles : DEFAULT_ROLES)
-      const generated = await generateDrafts(project!.eventContext, activeRoles, { instituteLogo, clubLogo })
+      const currentSeed = forceNewSeed ? seed + 1 : seed
+      if (forceNewSeed) {
+        setSeed(currentSeed)
+      }
+
+      const eventContext = project!.eventContext
+      const generated = await generateDrafts(eventContext, activeRoles, {
+        logos: { instituteLogo, clubLogo },
+        clarifyAnswers: (eventContext as any)?.clarifyAnswers || {},
+        styleKeywords: (eventContext as any)?.styleKeywords || [],
+        brandKitTokens: brandKit?.colors || {},
+        seed: currentSeed,
+        excludedPairs: shownDraftHistory,
+        onAiFallback: setIsAiFallback,
+      })
+
+      // Record hashes in shownDraftHistory
+      const newHashes = generated.map(d =>
+        `${d.archetype || d.id}:${d.tokens?.primaryColor || d.theme?.primary || ''}:${d.tokens?.accentColor || d.theme?.accent || ''}`
+      )
+      addShownDrafts(newHashes)
 
       // Generate distinct background artwork for the drafts
       const eventName = project?.eventContext?.name?.value || 'Event'
@@ -183,6 +210,13 @@ export function DraftsPage() {
           Switch roles or add custom communities to see how each design adapts.
         </p>
       </div>
+
+      {isAiFallback && (
+        <div className="mb-6 max-w-xl mx-auto px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs flex items-center justify-center gap-2 font-medium">
+          <span>⚠️</span>
+          <span>AI unavailable, showing generated alternatives</span>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex flex-col items-center gap-6 py-24">
@@ -355,7 +389,7 @@ export function DraftsPage() {
               <button onClick={() => navigate('/studio/clarify')} className="btn-ghost">
                 ← Back to Clarify
               </button>
-              <button onClick={() => generate()} className="btn-secondary">
+              <button onClick={() => generate(undefined, true)} className="btn-secondary">
                 ↺ Regenerate Layouts
               </button>
             </div>

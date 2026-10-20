@@ -8,6 +8,7 @@ import { DEFAULT_ROLES } from '../../core/schema/Role'
 import { listTemplates } from '../../templates/registry'
 import type { CardTemplate } from '../../core/schema/CardTemplate'
 import type { Element, TextElement, ShapeElement, ImageElement } from '../../core/schema/Element'
+import type { Theme, BackgroundLayer } from '../../core/schema/Theme'
 
 const BASE_SAMPLE_PERSON = {
   id: '',
@@ -118,7 +119,49 @@ export function EditorPage() {
     updateTemplate(newTpl)
   }
 
-  const activeElementList = face === 'front'
+  function updateTheme(patch: Partial<Theme>) {
+    if (!template) return
+    const currentTheme: Theme = template.theme || {
+      background: template.tokens?.backgroundColor || '#FAF8F4',
+      surface: '#ffffff',
+      primary: template.tokens?.primaryColor || '#0F5C4D',
+      secondary: '#14201C',
+      accent: template.tokens?.accentColor || '#0F5C4D',
+      text: '#14201C',
+      mutedText: '#66706A',
+      onAccent: '#ffffff',
+    }
+    const newTheme: Theme = { ...currentTheme, ...patch }
+    const newTpl: CardTemplate = {
+      ...template,
+      theme: newTheme,
+      tokens: {
+        ...template.tokens,
+        primaryColor: newTheme.primary,
+        accentColor: newTheme.accent,
+        backgroundColor: newTheme.background,
+      },
+    }
+    pushHistory(template)
+    updateTemplate(newTpl)
+  }
+
+  function updateBackgroundLayer(patch: Partial<BackgroundLayer>) {
+    if (!template) return
+    const currentBg: BackgroundLayer = template.backgroundLayer || {
+      type: 'solid',
+      color: template.theme?.background || '#FAF8F4',
+      opacity: 1,
+    }
+    const newTpl: CardTemplate = {
+      ...template,
+      backgroundLayer: { ...currentBg, ...patch } as BackgroundLayer,
+    }
+    pushHistory(template)
+    updateTemplate(newTpl)
+  }
+
+  const activeElementList: Element[] = face === 'front'
     ? (template?.roleElements?.[previewRole] ?? template?.elements ?? [])
     : (template?.roleBackElements?.[previewRole] ?? template?.backElements ?? [])
 
@@ -359,6 +402,84 @@ export function EditorPage() {
               <ElementProperties element={selected} onChange={(patch) => updateElement(selected.id, patch)} />
             </div>
           )}
+
+          {/* Card Theme & Background */}
+          <div className="glass p-4 space-y-3">
+            <h3 className="section-heading text-sm">Theme & Background</h3>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <label className="label text-[10px]">Background</label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="color"
+                    className="w-8 h-7 rounded cursor-pointer bg-surface-700 p-0.5 border border-line"
+                    value={template.theme?.background || '#FAF8F4'}
+                    onChange={e => {
+                      updateTheme({ background: e.target.value })
+                      if (template.backgroundLayer?.type === 'solid') {
+                        updateBackgroundLayer({ color: e.target.value })
+                      }
+                    }}
+                  />
+                  <span className="font-mono text-[10px] text-muted truncate">{template.theme?.background || '#FAF8F4'}</span>
+                </div>
+              </div>
+              <div>
+                <label className="label text-[10px]">Primary Color</label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="color"
+                    className="w-8 h-7 rounded cursor-pointer bg-surface-700 p-0.5 border border-line"
+                    value={template.theme?.primary || '#0F5C4D'}
+                    onChange={e => updateTheme({ primary: e.target.value })}
+                  />
+                  <span className="font-mono text-[10px] text-muted truncate">{template.theme?.primary || '#0F5C4D'}</span>
+                </div>
+              </div>
+              <div>
+                <label className="label text-[10px]">Accent Color</label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="color"
+                    className="w-8 h-7 rounded cursor-pointer bg-surface-700 p-0.5 border border-line"
+                    value={template.theme?.accent || '#0F5C4D'}
+                    onChange={e => updateTheme({ accent: e.target.value })}
+                  />
+                  <span className="font-mono text-[10px] text-muted truncate">{template.theme?.accent || '#0F5C4D'}</span>
+                </div>
+              </div>
+              <div>
+                <label className="label text-[10px]">Text Color</label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="color"
+                    className="w-8 h-7 rounded cursor-pointer bg-surface-700 p-0.5 border border-line"
+                    value={template.theme?.text || '#14201C'}
+                    onChange={e => updateTheme({ text: e.target.value })}
+                  />
+                  <span className="font-mono text-[10px] text-muted truncate">{template.theme?.text || '#14201C'}</span>
+                </div>
+              </div>
+            </div>
+
+            {template.backgroundLayer && (
+              <div className="pt-2 border-t border-line space-y-1.5 text-xs">
+                <div className="flex justify-between items-center text-[10px] text-muted">
+                  <span>Layer: <strong className="capitalize text-ink">{template.backgroundLayer.type}</strong></span>
+                  <span>Opacity: {Math.round((template.backgroundLayer.opacity ?? 1) * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  className="w-full h-1"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={template.backgroundLayer.opacity ?? 1}
+                  onChange={e => updateBackgroundLayer({ opacity: Number(e.target.value) })}
+                />
+              </div>
+            )}
+          </div>
 
           {/* Card size info */}
           <div className="glass-sm p-4">

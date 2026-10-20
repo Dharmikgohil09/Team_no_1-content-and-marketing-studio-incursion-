@@ -40,6 +40,22 @@ export interface RenderResult {
   warnings: string[]
 }
 
+import type { Theme, BackgroundLayer } from '../schema/Theme'
+
+function renderBackgroundLayer(bg: BackgroundLayer, theme: Theme, w: number, h: number): string {
+  if (bg.type === 'solid') {
+    const fill = bg.color || theme.background
+    return `<rect id="bg-layer-solid" x="0" y="0" width="${w}" height="${h}" fill="${fill}" opacity="${bg.opacity ?? 1}"/>`
+  }
+  if (bg.type === 'gradient' && bg.gradient) {
+    return `<rect id="bg-layer-gradient" x="0" y="0" width="${w}" height="${h}" fill="${bg.gradient}" opacity="${bg.opacity ?? 1}"/>`
+  }
+  if (bg.type === 'artwork' && bg.imageUrl) {
+    return `<image id="bg-layer-artwork" href="${bg.imageUrl}" xlink:href="${bg.imageUrl}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" opacity="${bg.opacity ?? 0.85}"/>`
+  }
+  return ''
+}
+
 export function renderCard(opts: RenderOptions): RenderResult {
   const { template, role, person, event, face, includeBleed } = opts
   const brandKit = opts.brandKit || getDefaultBrandKit()
@@ -61,12 +77,24 @@ export function renderCard(opts: RenderOptions): RenderResult {
   const totalW = w + bleed * 2
   const totalH = h + bleed * 2
 
-  const ctx: BindingContext = { event, role, person, brandKit }
+  const theme: Theme = template.theme || {
+    background: template.tokens?.backgroundColor || '#FAF8F4',
+    surface: '#ffffff',
+    primary: template.tokens?.primaryColor || '#0F5C4D',
+    secondary: '#14201C',
+    accent: template.tokens?.accentColor || '#0F5C4D',
+    text: '#14201C',
+    mutedText: '#66706A',
+    onAccent: '#ffffff',
+  }
+
+  const ctx: BindingContext = { event, role, person, brandKit, theme }
   const elements = face === 'front'
     ? (template.roleElements?.[role.id] ?? template.elements)
     : (template.roleBackElements?.[role.id] ?? template.backElements ?? [])
 
   const elementsSVG = elements.map(el => renderElement(el, ctx, { w, h, bleed }, warnings)).join('\n')
+  const bgLayerSVG = template.backgroundLayer ? renderBackgroundLayer(template.backgroundLayer, theme, w, h) : ''
 
   const svg = `<svg
   xmlns="http://www.w3.org/2000/svg"
@@ -88,6 +116,7 @@ export function renderCard(opts: RenderOptions): RenderResult {
   ${bleed > 0 ? `<rect x="${-bleed}" y="${-bleed}" width="${totalW}" height="${totalH}" fill="none" stroke="#cccccc" stroke-width="0.25" stroke-dasharray="1,1"/>` : ''}
   <!-- Card face — clipped to card bounds -->
   <g id="card-face" clip-path="url(#card-clip-${template.id})" transform="translate(0,0)">
+${bgLayerSVG}
 ${elementsSVG}
   </g>
   ${bleed > 0 ? cropMarksSVG(w, h, bleed) : ''}
@@ -203,12 +232,12 @@ function renderElement(el: Element, ctx: BindingContext, bounds: CardBounds, war
 
 function renderText(el: TextElement, ctx: BindingContext, warnings: string[]): string {
   const a = el.anchor
-  let color = el.color
+  let color = el.color ? resolveBindings(el.color, ctx) : el.color
   let fontWeight = el.fontWeight
 
   // Apply role-conditional overrides
   const roleOverride = el.roleConditional?.[ctx.role.id]
-  if (roleOverride?.color) color = roleOverride.color
+  if (roleOverride?.color) color = resolveBindings(roleOverride.color, ctx)
   if (roleOverride?.fontWeight) fontWeight = roleOverride.fontWeight as typeof fontWeight
 
   // Resolve binding
@@ -332,13 +361,13 @@ function renderImage(el: ImageElement, ctx: BindingContext, warnings: string[]):
 
 function renderShape(el: ShapeElement, ctx: BindingContext): string {
   const a     = el.anchor
-  let fill    = el.fill
-  let stroke  = el.stroke
+  let fill    = el.fill ? resolveBindings(el.fill, ctx) : el.fill
+  let stroke  = el.stroke ? resolveBindings(el.stroke, ctx) : el.stroke
 
   // Resolve fill binding (e.g. role palette)
   if (el.fillBinding) {
     const bound = resolveBindings(el.fillBinding, ctx)
-    fill = bound || el.fill || '#091128'
+    fill = bound || fill || '#091128'
   }
   if (!fill || fill === 'transparent') {
     fill = el.fill || '#091128'
@@ -346,8 +375,8 @@ function renderShape(el: ShapeElement, ctx: BindingContext): string {
 
   // Role-conditional overrides
   const roleOverride = el.roleConditional?.[ctx.role.id]
-  if (roleOverride?.fill)   fill   = roleOverride.fill
-  if (roleOverride?.stroke) stroke = roleOverride.stroke
+  if (roleOverride?.fill)   fill   = resolveBindings(roleOverride.fill, ctx)
+  if (roleOverride?.stroke) stroke = resolveBindings(roleOverride.stroke, ctx)
 
   const baseAttrs = `fill="${fill}" stroke="${stroke || 'transparent'}" stroke-width="${el.strokeWidth || 0}" opacity="${el.opacity ?? 1}"`
 
@@ -414,7 +443,11 @@ function renderPhoto(el: PhotoElement, ctx: BindingContext, warnings: string[]):
 
 function renderQR(el: QRElement, ctx: BindingContext): string {
   const a   = el.anchor
-  const url = resolveBindings(el.urlPattern, ctx) || 'https://acm.svnit.ac.in'
+  const personWebsite = ctx.person?.website || (ctx.person?.extra && (ctx.person.extra.website || ctx.person.extra.url || ctx.person.extra.link))
+  const rawUrl = (personWebsite && personWebsite.trim())
+    ? personWebsite.trim()
+    : (el.urlPattern || 'https://acm.svnit.ac.in')
+  const url = resolveBindings(rawUrl, ctx) || rawUrl
 
   try {
     const qr = QRCode.create(url, { errorCorrectionLevel: el.errorCorrection || 'M' })
