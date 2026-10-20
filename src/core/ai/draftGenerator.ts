@@ -45,6 +45,8 @@ export function attachArtworkToDraft(
   isGenerated: boolean,
   prompt?: string
 ): CardTemplate {
+  const isEditorial = draft.id === 'premium-editorial' || draft.id === 'minimal-clean'
+
   const bgArtworkElement: Element = {
     type: 'image',
     id: 'bg-artwork',
@@ -52,56 +54,39 @@ export function attachArtworkToDraft(
     src: imageUrl,
     fit: 'cover',
     cornerRadius: 0,
-    opacity: 0.95,
+    opacity: isEditorial ? 0.25 : 0.85,
     preserveAspectRatio: true,
     isLogo: false,
   }
 
-  const bgOverlayElement: Element = {
-    type: 'shape',
-    id: 'bg-contrast-overlay',
-    anchor: { x: 0, y: 0, w: 54, h: 85.6 },
-    shape: 'rect',
-    fill: '#14201C',
-    stroke: 'transparent',
-    strokeWidth: 0,
-    cornerRadius: 0,
-    opacity: 0.15,
-  }
-
-  const OPAQUE_BG_IDS = new Set([
-    'header-bg',
-    'lower-bg',
-    'tech-hero-bg',
-    'tech-lower-bg',
-    'bg-obsidian',
-    'back-bg',
-    'info-zone-bg',
-    'photo-frame-bg',
-  ])
-
   const updateElementList = (elements: Element[]): Element[] => {
-    const filtered = elements.filter(e => {
-      if (e.id === 'bg-artwork' || e.id === 'bg-contrast-overlay') return false
-      // Filter out opaque background shapes so bg-artwork is not hidden beneath them
-      if (OPAQUE_BG_IDS.has(e.id)) return false
-      // Filter out hardcoded preset theme motifs so the AI generated artwork is unhindered
-      if (
-        e.id?.startsWith('music-') ||
-        e.id?.startsWith('sports-') ||
-        e.id?.startsWith('cultural-') ||
-        e.id?.startsWith('startup-') ||
-        e.id?.startsWith('investor-') ||
-        e.id?.startsWith('theme-motif') ||
-        e.id?.startsWith('robotics-') ||
-        e.id?.startsWith('cyber-') ||
-        e.id?.startsWith('festive-')
-      ) {
-        return false
+    // 1. Remove previous artwork or contrast overlay
+    const cleanList = elements.filter(
+      e => e.id !== 'bg-artwork' && e.id !== 'bg-contrast-overlay'
+    )
+
+    // 2. Adjust base template background layers so the base template design from the first page is preserved:
+    // - In Modern Minimal: header-bg stays solid pure white (#ffffff, opacity: 1), lower-bg has opacity: 0.35 so artwork shines in lower base!
+    // - In Creative Tech: info-zone-bg and chevron-banner stay solid pure white paper (#FAF8F4, opacity: 1), tech-hero-bg has opacity: 0.35!
+    // - In Premium Editorial: accent-block stays solid, card background allows subtle artwork watermark!
+    const tunedList = cleanList.map(e => {
+      if (e.id === 'header-bg') {
+        return { ...e, fill: '#ffffff', opacity: 1 }
       }
-      return true
+      if (e.id === 'lower-bg') {
+        return { ...e, opacity: 0.35 }
+      }
+      if (e.id === 'tech-hero-bg') {
+        return { ...e, opacity: 0.35 }
+      }
+      if (e.id === 'info-zone-bg' || e.id === 'chevron-banner') {
+        return { ...e, fill: '#FAF8F4', opacity: 1 }
+      }
+      return e
     })
-    return [bgArtworkElement, bgOverlayElement, ...filtered]
+
+    // Place bg-artwork at index 0 so it sits behind official logos, white headers, and text
+    return [bgArtworkElement, ...tunedList]
   }
 
   const newElements = updateElementList(draft.elements)
@@ -366,7 +351,7 @@ function buildModernMinimalFront(
   const headerBg = '#ffffff'
   const headerTextColor = '#14201C'
   const badgeTypeColor = customPalette?.accentColor || '#66706A'
-  const lowerBg = customPalette?.backgroundColor || role.palette?.secondary || pal.d1LowerBg || '#14201C'
+  const lowerBg = role.palette?.secondary || pal.d1LowerBg || '#14201C'
   const accentColor = customPalette?.primaryColor || role.palette?.primary || pal.d1Accent || '#0F5C4D'
   const ringStroke = customPalette?.accentColor || '#D9D5C7'
 
@@ -673,8 +658,8 @@ function buildCreativeTechFront(
   const isPlayer = roleId === 'player' || roleId === 'artist' || roleId === 'gamer'
 
   const pal = THEME_COLOR_PALETTES[category] || THEME_COLOR_PALETTES.general
-  const techBg = customPalette?.accentColor || pal.d2HeroBg
-  const lowerBg = customPalette?.backgroundColor || pal.d2LowerBg
+  const techBg = role.palette?.secondary || pal.d2HeroBg || '#14201C'
+  const lowerBg = pal.d2LowerBg || '#FAF8F4'
   const accentColor = customPalette?.primaryColor || role.palette?.accent || pal.d2Accent
   const themeMotifs = buildThemeElementsDraft2(category, pal)
 

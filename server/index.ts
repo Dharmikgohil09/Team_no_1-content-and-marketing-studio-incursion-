@@ -276,6 +276,7 @@ async function generateAiSvgArtworkWithGemini(
     accentColor?: string
     backgroundColor?: string
     forceRegenerate?: boolean
+    draftId?: string
   }
 ): Promise<{ url: string; modelName: string } | null> {
   const CANDIDATES = ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-3-flash-preview']
@@ -312,6 +313,8 @@ REGENERATION INSTRUCTION:
 - The user clicked "Change Background" to see a new variation.
 - CRITICAL: KEEP THE EXACT SAME THEME (${options.eventName || ''} - ${eventDesc}) and THE EXACT SAME COLOR PALETTE (${p}, ${a}, ${bg}).
 - Change the composition, camera perspective, layout angle, flow of the lines, or arrangement of the visual motifs to give a distinct, fresh background design while preserving the event theme.` : ''}
+
+${options.draftId === 'modern-minimal' ? `LAYOUT INTEGRATION: This artwork will be framed in the lower credential zone of a dual-tone badge (the top header remains pure white).` : options.draftId === 'creative-tech' ? `LAYOUT INTEGRATION: This artwork will be framed in the upper hero zone of a chevron tech badge (the lower half remains clean white paper).` : options.draftId === 'premium-editorial' ? `LAYOUT INTEGRATION: This artwork serves as an elegant, subtle watermark across warm editorial paper.` : ''}
 
 CRITICAL RULES:
 1. Root SVG element MUST be: <svg viewBox="0 0 54 85.6" width="54mm" height="85.6mm" xmlns="http://www.w3.org/2000/svg">
@@ -432,6 +435,7 @@ app.post('/api/image/generate-background', async (req, res) => {
           accentColor,
           backgroundColor,
           forceRegenerate,
+          draftId,
         })
         if (aiSvg) {
           artworkCache.set(cacheKey, { imageUrl: aiSvg.url, isGenerated: true, prompt: prompt || '', model: aiSvg.modelName })
