@@ -21,7 +21,7 @@ function getGenAI() {
 }
 
 async function generateWithGemini(genAI: GoogleGenerativeAI, prompt: string): Promise<string> {
-  const models = ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-3-flash-preview']
+  const models = ['gemini-flash-lite-latest', 'gemini-3.8-flash', 'gemini-3.1-flash-lite']
   let lastErr: any = null
   for (const m of models) {
     try {
@@ -589,6 +589,43 @@ Return ONLY a valid JSON object matching this exact shape (no markdown, no backt
 `
     const raw = await generateWithGemini(genAI, prompt)
     const json = JSON.parse(raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim())
+
+    // Ensure WCAG contrast compliance for returned drafts
+    if (Array.isArray(json.drafts)) {
+      const getHexLuminance = (hex: string) => {
+        const clean = (hex || '').replace('#', '')
+        if (clean.length !== 6) return 0.5
+        const r = parseInt(clean.substring(0, 2), 16) / 255
+        const g = parseInt(clean.substring(2, 4), 16) / 255
+        const b = parseInt(clean.substring(4, 6), 16) / 255
+        const srgb = [r, g, b].map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4))
+        return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2]
+      }
+      const getContrast = (h1: string, h2: string) => {
+        const l1 = getHexLuminance(h1)
+        const l2 = getHexLuminance(h2)
+        return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
+      }
+      for (const d of json.drafts) {
+        if (d?.theme?.accent) {
+          const whiteRatio = getContrast('#FFFFFF', d.theme.accent)
+          const blackRatio = getContrast('#000000', d.theme.accent)
+          if (getContrast(d.theme.onAccent || '#FFFFFF', d.theme.accent) < 3.0) {
+            d.theme.onAccent = whiteRatio >= blackRatio ? '#FFFFFF' : '#000000'
+          }
+        }
+        if (d?.theme?.background && d?.theme?.surface && d?.theme?.text) {
+          const bgRatio = getContrast(d.theme.text, d.theme.background)
+          const surfRatio = getContrast(d.theme.text, d.theme.surface)
+          if (bgRatio < 4.5 && surfRatio < 4.5) {
+            const whiteRatio = Math.max(getContrast('#FFFFFF', d.theme.background), getContrast('#FFFFFF', d.theme.surface))
+            const blackRatio = Math.max(getContrast('#000000', d.theme.background), getContrast('#000000', d.theme.surface))
+            d.theme.text = whiteRatio >= blackRatio ? '#FFFFFF' : '#000000'
+          }
+        }
+      }
+    }
+
     res.json(json)
   } catch (err: any) {
     console.error('LLM generate-drafts error:', err.message)
